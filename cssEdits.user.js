@@ -2,7 +2,7 @@
 // @name         CSS upravy
 // @namespace    http://tvoj-namespace.example
 // @version      1.1
-// @description  Prepis Stylebot CSS na Tampermonkey script + zväčšenie tlačidla accept a skrytie posuvníkov v celej tabuľke
+// @description  CSS styly
 // @match        https://moduly.faxcopy.sk/*
 // @grant        none
 // @run-at       document-start
