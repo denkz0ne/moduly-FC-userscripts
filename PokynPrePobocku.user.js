@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Pokyn pre .. automaticke dopnenie pobocky
+// @name         PokynPrePobocku
 // @namespace    http://your-namespace.example
-// @version      1.0
+// @version      1.1
 // @description  Nastav 2. select na 2. možnosť, 1. select podle textu "Pridelenie" a skontroluj aj p[5]/strong
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
