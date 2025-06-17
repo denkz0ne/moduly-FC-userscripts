@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Zmena stavu na cely element
+// @name         changeIndustrialState
 // @namespace    http://tvoj-namespace.example
 // @version      1.3
 // @description  Klik na strong element prepne display div[2] v rámci formu
