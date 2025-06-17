@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Cislo VP + kopirovanie na kliknutie
+// @name         Cislo VP + kopirovanie na kliknuti
 // @namespace    http://your-namespace.example
 // @version      1.0
 // @description  Klikni na strong.red, skopíruje text, zmení farbu a vráti späť
