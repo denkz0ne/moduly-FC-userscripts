@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         CSS upravy
+// @name         stylesheetTune
 // @namespace    http://tvoj-namespace.example
 // @version      1.1
 // @description  CSS styly
