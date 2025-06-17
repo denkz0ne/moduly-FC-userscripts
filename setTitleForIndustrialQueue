@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         Zmeny TITLE podla url
-// @namespace    http://tvoj-namespace.example
-// @version      1.4
-// @description  Nastavuje title na (total) skratka, aj pri oneskorenom načítaní
+// @name         Set Title for Industrial Queue
+// @namespace    http://your-namespace/example
+// @version      1.0
+// @description  Sets the page title to (totalRecords) shortcut
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/industrialQueue/detail/*
-// @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
-// @run-at       document-idle
+// @updateURL    https://denkz0ne.github.io/moduly-FC-userscripts/setTitleForIndustrialQueue.user.js
+// @downloadURL  https://denkz0ne.github.io/moduly-FC-userscripts/setTitleForIndustrialQueue.user.js
 // ==/UserScript==
 
 (function() {
