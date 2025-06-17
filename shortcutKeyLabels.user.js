@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Klavesove skratky
+// @name         shortcutKeyLabels
 // @namespace    http://tvoj-namespace.example
 // @version      1.3
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea. P otvori prislusenstvo.
