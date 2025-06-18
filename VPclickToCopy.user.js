@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         VpNumberClickToCopy
+// @name         VPclickToCopy
 // @namespace    http://your-namespace.example
-// @version      1.1
+// @version      1.0
 // @description  Klikni na strong.red, skopíruje text, zmení farbu a vráti späť
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VpNumberClickToCopy.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VpNumberClickToCopy.user.js
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPclickToCopy.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPclickToCopy.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
 // @run-at       document-idle
