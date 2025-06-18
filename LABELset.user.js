@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LABELset
 // @namespace    http://your-namespace.example
-// @version      1.1
+// @version      1.2
 // @description  Úprava VP do čierneho rámčeka a doplnenie 60x40 vľavo aj vpravo vedľa seba, obsah textov je globalne nastaviteľný
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
@@ -10,6 +10,16 @@
 // ==/UserScript==
 
 (function() {
+
+    // Načítaj hodnoty z sessionStorage (fallback na prázdny string)
+    window.TM_testoLeft = sessionStorage.getItem('TM_testoLeft') || "";
+    window.TM_testoRight = sessionStorage.getItem('TM_testoRight') || "";
+
+    // Po zavretí alebo reload stránku vymaž hodnoty zo sessionStorage
+    window.addEventListener('unload', () => {
+        sessionStorage.removeItem('TM_testoLeft');
+        sessionStorage.removeItem('TM_testoRight');
+    });
 
     // Zväčšíme len text v predajni, NIE celý div
     const predajnaText = document.querySelector("#predajna .rotate");
@@ -56,7 +66,7 @@
         const testoLeft = document.createElement("div");
         const testoRight = testoLeft.cloneNode(true);
 
-        // TU prichadza magia: text z globalnych premennych, ak existuju
+        // Tu prichádza magia: text z globalnych premennych, ak existuju
         // fallback na prázdny string, ak nie su definovane
         testoLeft.textContent = window.TM_testoLeft || "";
         testoRight.textContent = window.TM_testoRight || "";
