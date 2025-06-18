@@ -63,7 +63,7 @@
             return;
         }
         const pr = detectPriecka();
-        const tm = pr === '+' ? `${dim}+` : dim;
+        const tm = pr === ' ' ? `${dim}+` : dim;
         sessionStorage.setItem('TM_testoLeft', tm);
         console.log('✅ TM_testoLeft =', tm);
         showLabel(tm);
