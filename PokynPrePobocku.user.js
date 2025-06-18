@@ -3,6 +3,8 @@
 // @namespace    http://your-namespace.example
 // @version      1.1
 // @description  Nastav 2. select na 2. možnosť, 1. select podle textu "Pridelenie" a skontroluj aj p[5]/strong
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/PokynPrePobocku.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/PokynPrePobocku.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
 // @run-at       document-idle
@@ -17,7 +19,7 @@
     let secondSelect = document.evaluate('/html/body/div[9]/div/div[2]/div/div/div[2]/div[2]/strong/strong/form/div[2]/div/select', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
     if (secondSelect) {
-        console.log("[UserScript] 2. select náj­dený.");
+        console.log("[UserScript] 2. select nájdený.");
 
         if (secondSelect.options.length > 1) {
             console.log("[UserScript] Má viac ako 1 možnosť.");
@@ -30,7 +32,7 @@
             console.warn("[UserScript] 2. select má len jednu možnosť.");
         }
     } else {
-        console.warn("[UserScript] 2. select nenáj­dený.");
+        console.warn("[UserScript] 2. select nenájdený.");
     }
 
 
@@ -39,7 +41,7 @@
     let textElem = document.evaluate('/html/body/div[9]/div/div[2]/div/div/div[1]/div[2]/div[2]/p[5]/strong', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
     if (textElem) {
-        console.log("[UserScript] Textový element s pridelením náj­dený.");
+        console.log("[UserScript] Textový element s pridelením nájdený.");
 
         let text = textElem.textContent.trim();
         console.log("[UserScript] Text z elementu :", text);
@@ -47,7 +49,7 @@
         let firstSelect = document.evaluate('/html/body/div[9]/div/div[2]/div/div/div[2]/div[2]/strong/strong/form/div[4]/div/select', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
         if (firstSelect) {
-            console.log("[UserScript] 1. select náj­dený.");
+            console.log("[UserScript] 1. select nájdený.");
 
             let option = Array.from(firstSelect.options).find(o => o.text.trim() === text);
             if (option) {
@@ -55,13 +57,13 @@
                 firstSelect.dispatchEvent(new Event('change', { bubbles: true }))
                 console.log("[UserScript] Úspešne nastavená hodnota 1. selectu.");
             } else {
-                console.warn("[UserScript] Nenáj­dená option s textom :", text);
+                console.warn("[UserScript] Nenájdená option s textom :", text);
             }
         } else {
-            console.warn("[UserScript] 1. select nenáj­dený.");
+            console.warn("[UserScript] 1. select nenájdený.");
         }
     } else {
-        console.warn("[UserScript] Textový element nenáj­dený.");
+        console.warn("[UserScript] Textový element nenájdený.");
     }
 
 
@@ -70,10 +72,10 @@
     let p5Elem = document.evaluate('/html/body/div[9]/div/div[2]/div/div/div[1]/div[2]/div[3]/p[5]/strong', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
     if (p5Elem) {
-        console.log("[UserScript] p[5]/strong element náj­dený.");
+        console.log("[UserScript] p[5]/strong element nájdený.");
         console.log("[UserScript] Text v p[5]/strong :", p5Elem.textContent.trim());
     } else {
-        console.warn("[UserScript] p[5]/strong element nenáj­dený.");
+        console.warn("[UserScript] p[5]/strong element nenájdený.");
     }
 
 

@@ -1,8 +1,10 @@
 // ==UserScript==
 // @name         shortcutKeyLabels
 // @namespace    http://tvoj-namespace.example
-// @version      1.3
-// @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea. P otvori prislusenstvo.
+// @version      1.4
+// @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabels.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabels.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
 // @run-at       document-idle
@@ -11,11 +13,35 @@
 (function() {
     'use strict';
 
-    // Funkcia pre získanie VP čísla
+    // Funkcia pre ziskanie VP
     function getVpNumber() {
         const strong = document.querySelector('strong.red');
         return strong ? strong.textContent.trim() : null;
     }
+
+    // Funkcia na kontrolu fotoobrazu
+    function checkFotoObraz() {
+        // Hľadaáme text "Fotoobraz na plátne so skrytým rámom"
+        if (document.body.textContent.indexOf("Fotoobraz na plátne so skrytým rámom") !== -1) {
+            // Máme fotoobraz
+            let rozmerFO = '';
+            // Hľadaáme rozmer
+            const match = document.body.textContent.match(/48r[p]?(\d{2}\d{2})/);
+            if (match) {
+                rozmerFO = match[1]; // xxYY
+            }
+            // Kontrola Spevňovacia priečka
+            if (document.body.textContent.indexOf("Spevňovacia priečka ") !== -1) {
+                rozmerFO += "+"; // pridáme plus
+            }
+            console.log('🎨 rozmerFO =', rozmerFO);
+            return rozmerFO;
+        }
+        return '';
+    }
+
+    // Zavoláme pri načítaní dokumentu
+    const rozmerFO = checkFotoObraz();
 
     // Počúvame na stlačenie kláves
     window.addEventListener('keydown', function(e) {

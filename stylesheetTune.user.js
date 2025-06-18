@@ -2,7 +2,9 @@
 // @name         stylesheetTune
 // @namespace    http://tvoj-namespace.example
 // @version      1.1
-// @description  CSS styly
+// @description  Prepis Stylebot CSS na Tampermonkey script + zväčšenie tlačidla accept a skrytie posuvníkov v celej tabuľke
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/stylesheetTune.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/stylesheetTune.user.js
 // @match        https://moduly.faxcopy.sk/*
 // @grant        none
 // @run-at       document-start
