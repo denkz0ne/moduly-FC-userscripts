@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         changeIndustrialState
 // @namespace    http://tvoj-namespace.example
-// @version      1.3
-// @description  Klik na strong element prepne display div[2] v rámci formu
+// @version      1.4
+// @description  Rozsirenie plochy pre rozbalenie ponuky zmeny stavu VP.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/changeIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/changeIndustrialState.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
