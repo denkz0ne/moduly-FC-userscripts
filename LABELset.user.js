@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         LABELset
 // @namespace    http://your-namespace.example
-// @version      0.1
+// @version      1.0
 // @description  Zmena layoutu stitka.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
