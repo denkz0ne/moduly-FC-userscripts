@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         shortcutKeyLabel
 // @namespace    http://tvoj-namespace.example
-// @version      2.1
+// @version      2.1.1
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -63,7 +63,7 @@
             return;
         }
         const pr = detectPriecka();
-        const tm = pr === ' ' ? `${dim}+` : dim;
+        const tm = pr === '+' ? `${dim}+` : dim;
         sessionStorage.setItem('TM_testoLeft', tm);
         console.log('✅ TM_testoLeft =', tm);
         showLabel(tm);
