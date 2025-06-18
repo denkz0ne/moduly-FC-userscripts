@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         PokynPrePobocku
+// @name         setPokynPrePobocku
 // @namespace    http://your-namespace.example
-// @version      1.1
-// @description  Nastav 2. select na 2. možnosť, 1. select podle textu "Pridelenie" a skontroluj aj p[5]/strong
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/PokynPrePobocku.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/PokynPrePobocku.user.js
+// @version      1.0
+// @description  Nastav form Pokyn pre pobocku na Vybavujucu pobocku
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setPokynPrePobocku.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setPokynPrePobocku.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
 // @run-at       document-idle
