@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         shortcutKeyLabel
 // @namespace    http://tvoj-namespace.example
-// @version      1.0
+// @version      2.0
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -13,73 +13,101 @@
 (function() {
     'use strict';
 
-    // Funkcia pre ziskanie VP
     function getVpNumber() {
         const strong = document.querySelector('strong.red');
         return strong ? strong.textContent.trim() : null;
     }
 
-    // Funkcia na kontrolu fotoobrazu
-    function checkFotoObraz() {
-        // Hľadaáme text "Fotoobraz na plátne so skrytým rámom"
-        if (document.body.textContent.indexOf("Fotoobraz na plátne so skrytým rámom") !== -1) {
-            // Máme fotoobraz
-            let rozmerFO = '';
-            // Hľadaáme rozmer
-            const match = document.body.textContent.match(/48r[p]?(\d{2}\d{2})/);
-            if (match) {
-                rozmerFO = match[1]; // xxYY
-            }
-            // Kontrola Spevňovacia priečka
-            if (document.body.textContent.indexOf("Spevňovacia priečka ") !== -1) {
-                rozmerFO += "+"; // pridáme plus
-            }
-            console.log('🎨 rozmerFO =', rozmerFO);
-            return rozmerFO;
+    // Funkcia, čo vyparsuje rozmer a priecku z tabuľky produktov (podľa originálneho FoVpSizeExtractor)
+    function extractFoVpSize() {
+        const vpElem = document.querySelector('strong.red');
+        const cisloVP = vpElem ? vpElem.textContent.trim() : '????';
+
+        const productRows = document.querySelectorAll('tr[title="ceny bez DPH"]');
+        if (!productRows.length) {
+            console.warn('⚠️ Nenašli sa produkty na vyparsovanie FO rozmeru.');
+            return null;
         }
-        return '';
+
+        // Spracujeme prvý riadok (alebo uprav podľa potreby)
+        const row = productRows[0];
+        const columns = row.querySelectorAll('td');
+        if (columns.length <= 2) {
+            console.warn('⚠️ Riadok nemá dostatok stĺpcov na vyparsovanie.');
+            return null;
+        }
+
+        const itemName = columns[2].textContent.trim();
+        const rozmerMatch = itemName.match(/(\d{2,4}x\d{2,4})/);
+        let rozmerFO = rozmerMatch ? rozmerMatch[1].replace('x', '') : '????';
+
+        // Skontrolujeme priecku v detailnom riadku
+        let priecka = '-';
+        const detailRow = row.nextElementSibling;
+        if (detailRow && detailRow.classList.contains('detail-price-tr')) {
+            const detailTable = detailRow.querySelector('.detail-price-in-order');
+            if (detailTable) {
+                const materialRows = detailTable.querySelectorAll('tr');
+                materialRows.forEach(tr => {
+                    const td = tr.querySelector('td');
+                    if (td && td.textContent.toLowerCase().includes('priecka')) {
+                        priecka = '+';
+                    }
+                });
+            }
+        }
+
+        const vysledok = `${cisloVP},${rozmerFO},${priecka}`;
+        window.FoVpSize = vysledok;
+        console.log('📦 FoVpSize:', vysledok);
+
+        let tmHodnota = rozmerFO;
+        if(priecka === '+') tmHodnota += '+';
+
+        sessionStorage.setItem('TM_testoLeft', tmHodnota);
+        console.log('🚀 sessionStorage TM_testoLeft nastavené na:', tmHodnota);
+
+        return vysledok;
     }
 
-    // Zavoláme pri načítaní dokumentu
-    const rozmerFO = checkFotoObraz();
-
-    // Počúvame na stlačenie kláves
-    window.addEventListener('keydown', function(e) {
-        // Kontrola, či sme v inpute, textarea, selecte
-        if (e.target.tagName === 'INPUT' ||
-            e.target.tagName === 'TEXTAREA' ||
-            e.target.tagName === 'SELECT') {
-            return; // nič nerobíme, sme vo formulári
+    // Hlavný handler na stlačenie L
+    function handleLpress() {
+        const vpNumber = getVpNumber();
+        if (!vpNumber) {
+            console.warn('🚀 Číslo VP (strong.red) sa nenašlo!');
+            return;
         }
 
-        // Má to bežať len pri stlačení L
+        // Vyparsujeme rozmer + priecku a uložíme do sessionStorage
+        const sizeInfo = extractFoVpSize();
+        if (!sizeInfo) {
+            console.warn('⚠️ Nepodarilo sa vyparsovať FO rozmer/priecku, nebudem otvárať print.');
+            return;
+        }
+
+        const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
+        const newWindow = window.open(url, '_blank');
+        if (!newWindow) {
+            console.warn('🚀 Pop-up blokátor zabránil otvoreniu nového okna!');
+            return;
+        }
+
+        newWindow.onload = () => {
+            console.log('🚀 Okno načítané, spúšťam tlač');
+            newWindow.print();
+            setTimeout(() => {
+                console.log('🚀 Zatváram okno po 2 sekundách');
+                newWindow.close();
+            }, 2000);
+        };
+    }
+
+    // Počúvame na klávesy, nech nerušíme formuláre
+    window.addEventListener('keydown', (e) => {
+        if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
         if (e.key.toLowerCase() === 'l' && !e.repeat) {
-            const vpNumber = getVpNumber();
-            if (!vpNumber) {
-                console.warn('🚀 Číslo VP (strong.red) sa nenašlo!');
-                return;
-            }
-            const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
-
-            // Otvoríme nový tab
-            const newWindow = window.open(url, '_blank');
-
-            if (!newWindow) {
-                console.warn('🚀 Pop-up blokátor zabránil otvoreniu nového okna!');
-                return;
-            }
-
-            // Keď načíta, vytlačí a po chvíľke sám zavrie
-            newWindow.onload = () => {
-                console.log('🚀 Okno načítané, spúšťam tlač');
-                newWindow.print();
-
-                setTimeout(function(){
-                    console.log('🚀 Zatváram okno po 2 sekundách');
-                    newWindow.close();
-                }, 1000);
-            };
+            handleLpress();
         }
     });
-
 })();
+
