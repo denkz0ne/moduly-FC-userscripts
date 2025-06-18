@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         Úprava labelu + L shortcut + fotoobraz detekcia
+// @name         workflowFO
 // @namespace    http://your-namespace.example
 // @version      1.0
-// @description  Úprava VP, 60x40, L shortcut, detekcia fotoobrazu
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/Úprava labelu + L shortcut + fotoobraz detekcia.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/Úprava labelu + L shortcut + fotoobraz detekcia.user.js
+// @description  L pre tlac stitku, inject rozmeru a datumu expedicie do stitku. plati len pre obrazy.
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/workflowFO.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/workflowFO.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/*
 // @run-at       document-end
 // ==/UserScript==
