@@ -21,7 +21,7 @@
     // Funkcia, čo vyparsuje rozmer a priecku z tabuľky produktov (podľa originálneho FoVpSizeExtractor)
     function extractFoVpSize() {
         const vpElem = document.querySelector('strong.red');
-        const cisloVP = vpElem ? vpElem.textContent.trim() : '????';
+        const cisloVP = vpElem ? vpElem.textContent.trim() : '';
 
         const productRows = document.querySelectorAll('tr[title="ceny bez DPH"]');
         if (!productRows.length) {
