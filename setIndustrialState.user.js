@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         changeIndustrialState
+// @name         setIndustrialState
 // @namespace    http://tvoj-namespace.example
-// @version      1.4
+// @version      1.0
 // @description  Rozsirenie plochy pre rozbalenie ponuky zmeny stavu VP.
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/changeIndustrialState.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/changeIndustrialState.user.js
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
 // @run-at       document-idle
