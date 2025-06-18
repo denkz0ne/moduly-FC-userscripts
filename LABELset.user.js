@@ -1,11 +1,11 @@
 
 // ==UserScript==
-// @name         LABEL
+// @name         LABELset
 // @namespace    http://your-namespace.example
 // @version      0.1
-// @description  Úprava VP do čierneho rámčeka a doplnenie 60x40 vľavo aj vpravo vedľa seba
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABEL.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABEL.user.js
+// @description  Zmena layoutu stitka.
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/*
 // @run-at       document-end
 // ==/UserScript==
