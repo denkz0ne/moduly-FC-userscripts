@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         shortcutKeyLabel
 // @namespace    http://tvoj-namespace.example
-// @version      2.0
+// @version      2.0.1
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
