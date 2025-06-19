@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name         Label Layout
 // @namespace    https://moduly.faxcopy.sk/
+// @author       mato e.
 // @version      1.2.1
 // @description  Úprava VP do čierneho rámčeka a doplnenie 60x40 vľavo aj vpravo vedľa seba, obsah textov je globalne nastaviteľný
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
