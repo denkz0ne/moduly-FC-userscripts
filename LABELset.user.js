@@ -103,7 +103,7 @@
     const label = document.querySelector("#label");
     if (label) {
         label.style.height = "58mm";
-        label.style.border = "1mm solid black";
+        label.style.border = "0mm solid black";
     }
 
 })();
