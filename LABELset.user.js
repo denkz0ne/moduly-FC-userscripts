@@ -2,39 +2,33 @@
 // @name         Label Layout
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.2.3
-// @description  Úprava VP do čierneho rámčeka a doplnenie 60x40 vľavo aj vpravo vedľa seba, obsah textov je globalne nastaviteľný + štýlový font
+// @version      1.2.5
+// @description  Úprava VP do čierneho rámčeka a doplnenie 60x40 vľavo aj vpravo vedľa seba, obsah textov je globalne nastaviteľný
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/*
-// @grant        GM_addStyle
-// @require      https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap
 // @run-at       document-end
 // ==/UserScript==
 
-(function () {
-    'use strict';
+(function() {
 
-    // 🔤 Aplikačný globálny štýl pre Patrick Hand
-    GM_addStyle(`
-        .patrick-hand {
-            font-family: 'Patrick Hand', cursive !important;
-        }
-    `);
-
+    // Načítaj hodnoty z sessionStorage (fallback na prázdny string)
     window.TM_testoLeft = sessionStorage.getItem('TM_testoLeft') || "";
     window.TM_testoRight = sessionStorage.getItem('TM_testoRight') || "";
 
+    // Po zavretí alebo reload stránku vymaž hodnoty zo sessionStorage
     window.addEventListener('unload', () => {
         sessionStorage.removeItem('TM_testoLeft');
         sessionStorage.removeItem('TM_testoRight');
     });
 
+    // Zväčšíme len text v predajni, NIE celý div
     const predajnaText = document.querySelector("#predajna .rotate");
     if (predajnaText) {
         predajnaText.style.fontSize = "27pt";
     }
 
+    // Nájdi rodiča, kde máš "VP <span>2740706</span>"
     const wrapper = document.querySelector("#data > div");
 
     if (wrapper) {
@@ -73,17 +67,22 @@
         const testoLeft = document.createElement("div");
         const testoRight = testoLeft.cloneNode(true);
 
+        // Tu prichádza magia: text z globalnych premennych, ak existuju
+        // fallback na prázdny string, ak nie su definovane
         testoLeft.textContent = window.TM_testoLeft || "";
         testoRight.textContent = window.TM_testoRight || "";
-
-        testoLeft.classList.add("patrick-hand");
-        testoRight.classList.add("patrick-hand");
 
         testoLeft.style.color = "#000";
         testoLeft.style.padding = "0 1mm";
         testoLeft.style.margin = "0px";
-        testoLeft.style.fontSize = "19pt";
+        testoLeft.style.fontSize = "23pt";
         testoLeft.style.display = "inline-block";
+        testoLeft.style.fontFamily = "Segoe Script";
+        testoLeft.style.transform = "translateY(-1mm)";
+        testoLeft.style.marginTop = "-3mm";
+
+
+        // testoRight má rovnaký štýl, text už nastavený vyššie
 
         wrapper60.prepend(testoLeft);
         wrapper60.append(testoRight);
@@ -106,4 +105,5 @@
         label.style.height = "58mm";
         label.style.border = "1mm solid black";
     }
+
 })();
