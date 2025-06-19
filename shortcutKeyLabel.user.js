@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
+// @author       mato e.
 // @version      2.1.2
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
