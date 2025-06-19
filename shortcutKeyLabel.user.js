@@ -20,7 +20,7 @@
 
     function extractDimensionFromText(text) {
         const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
-        return match ? `${match[1]}x${match[2]}` : null;
+        return match ? `${match[1]} ${match[2]}` : null;
     }
 
     function findDimensionInRows() {
