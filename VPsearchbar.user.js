@@ -25,8 +25,8 @@
         vpInput.type = 'text';
         vpInput.id = 'vp-quick-access';
         vpInput.placeholder = 'VP číslo...';
-
-        // Štýly aby to ladilo s pôvodným
+        vpInput.autocomplete = 'off';         // vypni ukladanie histórie
+        vpInput.spellcheck = false;           // žiadne červené vlnky
         vpInput.style.marginRight = '10px';
         vpInput.style.padding = originalInput.style.padding || '5px';
         vpInput.style.border = originalInput.style.border || '1px solid #ccc';
@@ -34,7 +34,7 @@
         vpInput.style.height = originalInput.offsetHeight + 'px';
         vpInput.style.boxSizing = 'border-box';
 
-        // Pridaj pred pôvodný input
+        // Pridaj input pred pôvodný
         wrapper.insertBefore(vpInput, originalInput);
 
         // Enter event
