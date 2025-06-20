@@ -2,8 +2,8 @@
 // @name         Label Layout
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.2.5
-// @description  Úprava VP do čierneho rámčeka a doplnenie 60x40 vľavo aj vpravo vedľa seba, obsah textov je globalne nastaviteľný
+// @version      1.2.6
+// @description  Úprava VP do čierneho rámčeka a doplnenie rozmeru FO vľavo / obsah textov je globalne nastaviteľný
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/*
@@ -80,6 +80,10 @@
         testoLeft.style.fontFamily = "Segoe Script";
         testoLeft.style.transform = "translateY(-1mm)";
         testoLeft.style.marginTop = "-3mm";
+        testoLeft.style.fontWeight = "bold";
+        testoLeft.style.transform = "scaleX(0.7)";
+        testoLeft.style.transformOrigin = "left";
+
 
 
         // testoRight má rovnaký štýl, text už nastavený vyššie
