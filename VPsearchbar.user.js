@@ -1,9 +1,12 @@
 // ==UserScript==
 // @name         VP Searchbar
-// @namespace    http://tvoj-namespace.example
+// @namespace    https://moduly.faxcopy.sk/
+// @author       mato e.
 // @version      1.1
 // @description  Pridá input pre číslo VP nalavo od pôvodného vyhľadávania
 // @match        https://moduly.faxcopy.sk/*
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPsearchbar.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPsearchbar.user.js
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
