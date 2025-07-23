@@ -2,7 +2,7 @@
 // @name         VP Searchbar
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.1
+// @version      1.2
 // @description  Pridá input pre číslo VP nalavo od pôvodného vyhľadávania
 // @match        https://moduly.faxcopy.sk/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPsearchbar.user.js
