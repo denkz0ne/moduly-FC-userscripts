@@ -2,7 +2,7 @@
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.1.4
+// @version      2.1.5
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -19,8 +19,8 @@
         return strong ? strong.textContent.trim() : null;
     }
 
-    // Funkcia na ziskanie rozmeru FO + priečka + PREMIUM/HEXA
-    function extractFoText() {
+    // 1️⃣ Detekcia FO (rozmer, priecka, PREMIUM, HEXA)
+    function detectFoText() {
         const trs = document.querySelectorAll("tr[title='ceny bez DPH']");
         let text = '';
         for (const tr of trs) {
@@ -56,7 +56,9 @@
         return result;
     }
 
-    function showLabel(text) {
+    // 2️⃣ Vytvorenie badge
+    function createBadge(text) {
+        if (!text) return;
         let el = document.querySelector('#shortcut-info-label');
         if (!el) {
             const h = document.querySelector('h1, h2');
@@ -69,18 +71,20 @@
         el.textContent = text;
     }
 
-    function updateSession() {
-        const tm = extractFoText();
-        if (!tm) {
+    // 3️⃣ Uloženie do globalnej premennej pre iný script
+    function updateGlobalFo() {
+        const foText = detectFoText();
+        if (!foText) {
             console.warn('FO rozmer nenájdený.');
-            sessionStorage.removeItem('TM_testoLeft');
+            window.TM_testoLeft = '';
             return;
         }
-        sessionStorage.setItem('TM_testoLeft', tm);
-        console.log('✅ TM_testoLeft =', tm);
-        showLabel(tm);
+        createBadge(foText);  // badge sa vytvorí hneď
+        window.TM_testoLeft = foText; // uložíme do global premennej
+        console.log('✅ window.TM_testoLeft =', foText);
     }
 
+    // L shortcut pre tlač štítku
     function pressLAction() {
         if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
         const vpNumber = getVpNumber();
@@ -88,7 +92,7 @@
             console.warn('🚀 Číslo VP (strong.red) sa nenašlo!');
             return;
         }
-        updateSession();
+        updateGlobalFo();
         const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
         const w = window.open(url, '_blank');
         if (!w) return console.warn('🚀 Popup blokátor :)');
@@ -98,7 +102,8 @@
         };
     }
 
-    window.addEventListener('load', updateSession);
+    // inicializácia
+    window.addEventListener('load', updateGlobalFo);
     window.addEventListener('keydown', e => {
         if (e.key.toLowerCase() === 'l' && !e.repeat) pressLAction();
     });
