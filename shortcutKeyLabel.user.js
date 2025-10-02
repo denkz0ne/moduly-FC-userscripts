@@ -2,7 +2,7 @@
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.6
+// @version      2.6.1
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -60,7 +60,7 @@
         if (/PREMIUM/i.test(premiumText)) premiumDetected = true;
 
         // 3️⃣ HEXA má prioritu → vrátime "HEXA"
-        if (hexaDetected) return 'HEXA';
+        if (hexaDetected) return 'HEX';
 
         // 4️⃣ rozmery z tr[title='ceny bez DPH']
         const row = findDimensionInRows();
@@ -73,7 +73,7 @@
         if (pr) result += pr;
 
         // PREMIUM
-        if (premiumDetected) result += '  P'; // dve medzery pred P
+        if (premiumDetected) result += '  PREM'; // dve medzery pred P
 
         return result;
     }
