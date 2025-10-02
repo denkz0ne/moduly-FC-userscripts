@@ -2,7 +2,7 @@
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.1.5
+// @version      2.6
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -19,45 +19,66 @@
         return strong ? strong.textContent.trim() : null;
     }
 
-    // 1️⃣ Detekcia FO (rozmer, priecka, PREMIUM, HEXA)
-    function detectFoText() {
-        const trs = document.querySelectorAll("tr[title='ceny bez DPH']");
-        let text = '';
-        for (const tr of trs) {
-            text = tr.innerText;
-            if (text) break;
-        }
-        if (!text) return '';
-
-        // HEXA / HEXAGÓN detekcia
-        if (/HEXA|HEXAGÓN/i.test(text)) return 'HEXA';
-
-        // ziskanie rozmeru typu 60x40, 90x60
+    function extractDimensionFromText(text) {
         const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
-        let result = match ? match[1] + match[2] : '';
+        return match ? `${match[1]} ${match[2]}` : null;
+    }
 
-        // priecka
+    function findDimensionInRows() {
+        const trs = document.querySelectorAll("tr[title='ceny bez DPH']");
+        for (const tr of trs) {
+            const txt = tr.innerText;
+            const dim = extractDimensionFromText(txt);
+            if (dim) return {dim, text: txt};
+        }
+        return null;
+    }
+
+    function detectPriecka() {
         const rows = document.querySelectorAll("tr.detail-price-tr .detail-price-in-order tr");
         for (const tr of rows) {
-            if (tr.innerText.toLowerCase().includes('priecka')) {
-                result += '+';
-                break;
-            }
+            if (tr.innerText.toLowerCase().includes('priecka')) return '+';
         }
+        return '';
+    }
 
-        // PREMIUM - dve medzery pred P
-        if (/PREMIUM/i.test(text)) {
-            result += '  P';
-        }
+    function detectFoText() {
+        // 1️⃣ hľadáme text zo všetkých riadkov tabuľky
+        const tableRows = document.querySelectorAll("div > table tr");
+        let hexaDetected = false;
+        let premiumDetected = false;
 
-        // ak nie je rozmer, ale je HEXA, vloží sa priamo
-        if (!result && /HEXA|HEXAGÓN/i.test(text)) result = 'HEXA';
+        tableRows.forEach(tr => {
+            const txt = tr.textContent || '';
+            if (/HEXA|HEXAGÓN/i.test(txt)) hexaDetected = true;
+            if (/PREMIUM/i.test(txt)) premiumDetected = true;
+        });
+
+        // 2️⃣ PREMIUM z h1/h2 alebo .product-name
+        const premiumEl = document.querySelector('.product-name') || document.querySelector('h1') || document.querySelector('h2');
+        const premiumText = premiumEl ? premiumEl.textContent : '';
+        if (/PREMIUM/i.test(premiumText)) premiumDetected = true;
+
+        // 3️⃣ HEXA má prioritu → vrátime "HEXA"
+        if (hexaDetected) return 'HEXA';
+
+        // 4️⃣ rozmery z tr[title='ceny bez DPH']
+        const row = findDimensionInRows();
+        if (!row) return '';
+
+        let result = row.dim || '';
+
+        // priecka
+        const pr = detectPriecka();
+        if (pr) result += pr;
+
+        // PREMIUM
+        if (premiumDetected) result += '  P'; // dve medzery pred P
 
         return result;
     }
 
-    // 2️⃣ Vytvorenie badge
-    function createBadge(text) {
+    function showLabel(text) {
         if (!text) return;
         let el = document.querySelector('#shortcut-info-label');
         if (!el) {
@@ -71,39 +92,36 @@
         el.textContent = text;
     }
 
-    // 3️⃣ Uloženie do globalnej premennej pre iný script
-    function updateGlobalFo() {
-        const foText = detectFoText();
-        if (!foText) {
+    function updateSession() {
+        const tm = detectFoText();
+        if (!tm) {
             console.warn('FO rozmer nenájdený.');
+            sessionStorage.removeItem('TM_testoLeft');
             window.TM_testoLeft = '';
             return;
         }
-        createBadge(foText);  // badge sa vytvorí hneď
-        window.TM_testoLeft = foText; // uložíme do global premennej
-        console.log('✅ window.TM_testoLeft =', foText);
+
+        sessionStorage.setItem('TM_testoLeft', tm);
+        window.TM_testoLeft = tm;
+        console.log('✅ TM_testoLeft =', tm);
+        showLabel(tm);
     }
 
-    // L shortcut pre tlač štítku
     function pressLAction() {
         if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
-        const vpNumber = getVpNumber();
-        if (!vpNumber) {
-            console.warn('🚀 Číslo VP (strong.red) sa nenašlo!');
-            return;
+        if (getVpNumber()) {
+            updateSession();
+            const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${getVpNumber()}`;
+            const w = window.open(url, '_blank');
+            if (!w) return console.warn('Popup blokátor :)');
+            w.onload = () => {
+                w.print();
+                setTimeout(() => w.close(), 1200);
+            };
         }
-        updateGlobalFo();
-        const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
-        const w = window.open(url, '_blank');
-        if (!w) return console.warn('🚀 Popup blokátor :)');
-        w.onload = () => {
-            w.print();
-            setTimeout(() => w.close(), 1200);
-        };
     }
 
-    // inicializácia
-    window.addEventListener('load', updateGlobalFo);
+    window.addEventListener('load', updateSession);
     window.addEventListener('keydown', e => {
         if (e.key.toLowerCase() === 'l' && !e.repeat) pressLAction();
     });
