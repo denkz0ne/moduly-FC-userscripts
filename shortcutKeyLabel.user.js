@@ -2,7 +2,7 @@
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.1.3
+// @version      2.1.4
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -14,13 +14,12 @@
 (function () {
     'use strict';
 
-    // Funkcia na ziskanie VP
     function getVpNumber() {
         const strong = document.querySelector('strong.red');
         return strong ? strong.textContent.trim() : null;
     }
 
-    // Funkcia na ziskanie rozmeru FO + spevňovacia priečka + PREMIUM/HEXA
+    // Funkcia na ziskanie rozmeru FO + priečka + PREMIUM/HEXA
     function extractFoText() {
         const trs = document.querySelectorAll("tr[title='ceny bez DPH']");
         let text = '';
@@ -35,9 +34,7 @@
 
         // ziskanie rozmeru typu 60x40, 90x60
         const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
-        if (!match) return '';
-
-        let result = match[1] + match[2];
+        let result = match ? match[1] + match[2] : '';
 
         // priecka
         const rows = document.querySelectorAll("tr.detail-price-tr .detail-price-in-order tr");
@@ -48,15 +45,17 @@
             }
         }
 
-        // PREMIUM
+        // PREMIUM - dve medzery pred P
         if (/PREMIUM/i.test(text)) {
-            result += 'P';
+            result += '  P';
         }
+
+        // ak nie je rozmer, ale je HEXA, vloží sa priamo
+        if (!result && /HEXA|HEXAGÓN/i.test(text)) result = 'HEXA';
 
         return result;
     }
 
-    // Zobrazenie badge s FO
     function showLabel(text) {
         let el = document.querySelector('#shortcut-info-label');
         if (!el) {
@@ -70,7 +69,6 @@
         el.textContent = text;
     }
 
-    // Aktualizácia sessionStorage s FO
     function updateSession() {
         const tm = extractFoText();
         if (!tm) {
@@ -83,7 +81,6 @@
         showLabel(tm);
     }
 
-    // Akcia pri stlačení L
     function pressLAction() {
         if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
         const vpNumber = getVpNumber();
@@ -101,11 +98,9 @@
         };
     }
 
-    // UI badge aj načítanie FO po načítaní stránky
     window.addEventListener('load', updateSession);
     window.addEventListener('keydown', e => {
         if (e.key.toLowerCase() === 'l' && !e.repeat) pressLAction();
     });
 
 })();
-
