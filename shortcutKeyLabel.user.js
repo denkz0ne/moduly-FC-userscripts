@@ -2,7 +2,7 @@
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.1.2
+// @version      2.1.3
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -14,35 +14,49 @@
 (function () {
     'use strict';
 
+    // Funkcia na ziskanie VP
     function getVpNumber() {
         const strong = document.querySelector('strong.red');
         return strong ? strong.textContent.trim() : null;
     }
 
-    function extractDimensionFromText(text) {
-        const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
-        return match ? `${match[1]} ${match[2]}` : null;
-    }
-
-    function findDimensionInRows() {
+    // Funkcia na ziskanie rozmeru FO + spevňovacia priečka + PREMIUM/HEXA
+    function extractFoText() {
         const trs = document.querySelectorAll("tr[title='ceny bez DPH']");
+        let text = '';
         for (const tr of trs) {
-            const txt = tr.innerText;
-            const dim = extractDimensionFromText(txt);
-            if (dim) return dim;
+            text = tr.innerText;
+            if (text) break;
         }
-        return null;
-    }
+        if (!text) return '';
 
-    function detectPriecka() {
+        // HEXA / HEXAGÓN detekcia
+        if (/HEXA|HEXAGÓN/i.test(text)) return 'HEXA';
+
+        // ziskanie rozmeru typu 60x40, 90x60
+        const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
+        if (!match) return '';
+
+        let result = match[1] + match[2];
+
+        // priecka
         const rows = document.querySelectorAll("tr.detail-price-tr .detail-price-in-order tr");
         for (const tr of rows) {
-            const txt = tr.innerText.toLowerCase();
-            if (txt.includes('priecka')) return '+';
+            if (tr.innerText.toLowerCase().includes('priecka')) {
+                result += '+';
+                break;
+            }
         }
-        return '-';
+
+        // PREMIUM
+        if (/PREMIUM/i.test(text)) {
+            result += 'P';
+        }
+
+        return result;
     }
 
+    // Zobrazenie badge s FO
     function showLabel(text) {
         let el = document.querySelector('#shortcut-info-label');
         if (!el) {
@@ -56,38 +70,42 @@
         el.textContent = text;
     }
 
+    // Aktualizácia sessionStorage s FO
     function updateSession() {
-        const dim = findDimensionInRows();
-        if (!dim) {
+        const tm = extractFoText();
+        if (!tm) {
             console.warn('FO rozmer nenájdený.');
             sessionStorage.removeItem('TM_testoLeft');
             return;
         }
-        const pr = detectPriecka();
-        const tm = pr === '+' ? `${dim}+` : dim;
         sessionStorage.setItem('TM_testoLeft', tm);
         console.log('✅ TM_testoLeft =', tm);
         showLabel(tm);
     }
 
+    // Akcia pri stlačení L
     function pressLAction() {
         if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
-        if (getVpNumber()) {
-            updateSession();
-            const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${getVpNumber()}`;
-            const w = window.open(url, '_blank');
-            if (!w) return console.warn('Popup blokátor :)');
-            w.onload = () => {
-                w.print();
-                setTimeout(() => w.close(), 1200);
-            };
+        const vpNumber = getVpNumber();
+        if (!vpNumber) {
+            console.warn('🚀 Číslo VP (strong.red) sa nenašlo!');
+            return;
         }
+        updateSession();
+        const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
+        const w = window.open(url, '_blank');
+        if (!w) return console.warn('🚀 Popup blokátor :)');
+        w.onload = () => {
+            w.print();
+            setTimeout(() => w.close(), 1200);
+        };
     }
 
-    // UI aj načítanie labelu hneď po load
+    // UI badge aj načítanie FO po načítaní stránky
     window.addEventListener('load', updateSession);
     window.addEventListener('keydown', e => {
         if (e.key.toLowerCase() === 'l' && !e.repeat) pressLAction();
     });
 
 })();
+
