@@ -2,7 +2,7 @@
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.6.1
+// @version      2.7
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -43,7 +43,6 @@
     }
 
     function detectFoText() {
-        // 1️⃣ hľadáme text zo všetkých riadkov tabuľky
         const tableRows = document.querySelectorAll("div > table tr");
         let hexaDetected = false;
         let premiumDetected = false;
@@ -54,57 +53,91 @@
             if (/PREMIUM/i.test(txt)) premiumDetected = true;
         });
 
-        // 2️⃣ PREMIUM z h1/h2 alebo .product-name
         const premiumEl = document.querySelector('.product-name') || document.querySelector('h1') || document.querySelector('h2');
         const premiumText = premiumEl ? premiumEl.textContent : '';
         if (/PREMIUM/i.test(premiumText)) premiumDetected = true;
 
-        // 3️⃣ HEXA má prioritu → vrátime "HEXA"
-        if (hexaDetected) return 'HEX';
+        if (hexaDetected) return 'HEXA';
 
-        // 4️⃣ rozmery z tr[title='ceny bez DPH']
         const row = findDimensionInRows();
         if (!row) return '';
 
         let result = row.dim || '';
-
-        // priecka
         const pr = detectPriecka();
         if (pr) result += pr;
-
-        // PREMIUM
-        if (premiumDetected) result += '  PREM'; // dve medzery pred P
+        if (premiumDetected) result += '  P';
 
         return result;
     }
 
-    function showLabel(text) {
-        if (!text) return;
-        let el = document.querySelector('#shortcut-info-label');
-        if (!el) {
-            const h = document.querySelector('h1, h2');
-            if (!h) return;
-            el = document.createElement('span');
-            el.id = 'shortcut-info-label';
-            el.style.cssText = 'background:#fffa65;color:#000;padding:4px 8px;margin-left:12px;border-radius:4px;font-weight:bold;';
-            h.append(el);
+    // 🔹 nová funkcia na zistenie dátumu expedície
+    function detectExpeditionDate() {
+        const el = document.evaluate(
+            "/html/body/div[9]/div/div[2]/div/div/div[2]/div[2]/div[2]/form/strong/strong/div[7]",
+            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
+        ).singleNodeValue;
+
+        if (!el) return '';
+
+        const text = el.textContent.trim();
+        const match = text.match(/(\d{1,2})\.\s*(\d{1,2})\./);
+        if (!match) return '';
+
+        const day = match[1];
+        const month = match[2];
+        return `(${day}. ${month}.)`;
+    }
+
+    function showLabel(leftText, rightText) {
+        if (!leftText && !rightText) return;
+        let elLeft = document.querySelector('#shortcut-info-label');
+        let elRight = document.querySelector('#shortcut-info-date');
+
+        const h = document.querySelector('h1, h2');
+        if (!h) return;
+
+        if (!elLeft) {
+            elLeft = document.createElement('span');
+            elLeft.id = 'shortcut-info-label';
+            elLeft.style.cssText = 'background:#fffa65;color:#000;padding:4px 8px;margin-left:12px;border-radius:4px;font-weight:bold;';
+            h.append(elLeft);
         }
-        el.textContent = text;
+
+        if (!elRight) {
+            elRight = document.createElement('span');
+            elRight.id = 'shortcut-info-date';
+            elRight.style.cssText = 'background:#d0ffb3;color:#000;padding:4px 8px;margin-left:8px;border-radius:4px;font-weight:bold;';
+            h.append(elRight);
+        }
+
+        elLeft.textContent = leftText || '';
+        elRight.textContent = rightText || '';
     }
 
     function updateSession() {
-        const tm = detectFoText();
-        if (!tm) {
+        const tmLeft = detectFoText();
+        const tmRight = detectExpeditionDate();
+
+        if (!tmLeft) {
             console.warn('FO rozmer nenájdený.');
             sessionStorage.removeItem('TM_testoLeft');
             window.TM_testoLeft = '';
-            return;
+        } else {
+            sessionStorage.setItem('TM_testoLeft', tmLeft);
+            window.TM_testoLeft = tmLeft;
         }
 
-        sessionStorage.setItem('TM_testoLeft', tm);
-        window.TM_testoLeft = tm;
-        console.log('✅ TM_testoLeft =', tm);
-        showLabel(tm);
+        if (tmRight) {
+            sessionStorage.setItem('TM_testoRight', tmRight);
+            window.TM_testoRight = tmRight;
+        } else {
+            sessionStorage.removeItem('TM_testoRight');
+            window.TM_testoRight = '';
+        }
+
+        console.log('✅ TM_testoLeft =', tmLeft);
+        console.log('✅ TM_testoRight =', tmRight);
+        showLabel(tmLeft, tmRight);
     }
 
     function pressLAction() {
@@ -127,3 +160,4 @@
     });
 
 })();
+
