@@ -85,7 +85,7 @@
 
         const day = match[1];
         const month = match[2];
-        return `(${day}. ${month}.)`;
+        return `${day}. ${month}.`;
     }
 
     function showLabel(leftText, rightText) {
