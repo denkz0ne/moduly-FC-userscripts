@@ -29,7 +29,7 @@
         for (const tr of trs) {
             const txt = tr.innerText;
             const dim = extractDimensionFromText(txt);
-            if (dim) return {dim, text: txt};
+            if (dim) return { dim, text: txt };
         }
         return null;
     }
@@ -70,7 +70,7 @@
         return result;
     }
 
-    // 🔹 nová funkcia na zistenie dátumu expedície
+    // 🔹 detekcia dátumu expedície
     function detectExpeditionDate() {
         const el = document.evaluate(
             "/html/body/div[9]/div/div[2]/div/div/div[2]/div[2]/div[2]/form/strong/strong/div[7]",
@@ -141,7 +141,7 @@
     }
 
     function pressLAction() {
-        if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
         if (getVpNumber()) {
             updateSession();
             const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${getVpNumber()}`;
@@ -160,4 +160,3 @@
     });
 
 })();
-
