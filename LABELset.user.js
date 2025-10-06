@@ -65,28 +65,28 @@
         wrapper60.style.marginBottom = "2mm";
 
         const testoLeft = document.createElement("div");
-        const testoRight = testoLeft.cloneNode(true);
+        const testoRight = document.createElement("div");
 
-        // Tu prichádza magia: text z globalnych premennych, ak existuju
-        // fallback na prázdny string, ak nie su definovane
+        // Texty z globálnych premenných
         testoLeft.textContent = window.TM_testoLeft || "";
         testoRight.textContent = window.TM_testoRight || "";
 
-        testoLeft.style.color = "#000";
-        testoLeft.style.padding = "0 1mm";
-        testoLeft.style.margin = "0px";
-        testoLeft.style.fontSize = "23pt";
-        testoLeft.style.display = "inline-block";
-        testoLeft.style.fontFamily = "Segoe Script";
-        testoLeft.style.transform = "translateY(-1mm)";
-        testoLeft.style.marginTop = "-3mm";
-        testoLeft.style.fontWeight = "bold";
-        testoLeft.style.transform = "scaleX(0.7)";
-        testoLeft.style.transformOrigin = "left";
+        // Rovnaký štýl pre oba
+        const commonStyle = `
+            color: #000;
+            padding: 0 1mm;
+            margin: 0px;
+            font-size: 23pt;
+            display: inline-block;
+            font-family: 'Segoe Script';
+            transform: translateY(-1mm) scaleX(0.7);
+            margin-top: -3mm;
+            font-weight: bold;
+            transform-origin: left;
+        `;
 
-
-
-        // testoRight má rovnaký štýl, text už nastavený vyššie
+        testoLeft.style.cssText = commonStyle;
+        testoRight.style.cssText = commonStyle;
 
         wrapper60.prepend(testoLeft);
         wrapper60.append(testoRight);
