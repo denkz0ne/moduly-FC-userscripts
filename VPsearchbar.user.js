@@ -14,50 +14,59 @@
 (function () {
     'use strict';
 
-    function createVPInput() {
-        const originalInput = document.querySelector('#search-box');
+    function findSearchInput() {
+        return document.querySelector(
+            'input[type="search"], input[name="search"], input[name="q"], #search-box'
+        );
+    }
+
+    function enhanceSearchBar(originalInput) {
         if (!originalInput) return;
+        if (document.getElementById('vp-quick-access')) return;
 
         const wrapper = originalInput.parentNode;
 
-        // 🔢 input na VP
+        // 🔢 VP input
         const vpInput = document.createElement('input');
         vpInput.type = 'text';
         vpInput.id = 'vp-quick-access';
-        vpInput.placeholder = 'VP číslo...';
+        vpInput.placeholder = 'VP číslo…';
         vpInput.autocomplete = 'off';
         vpInput.spellcheck = false;
         vpInput.style.marginRight = '6px';
-        vpInput.style.padding = originalInput.style.padding || '5px';
-        vpInput.style.border = originalInput.style.border || '1px solid #ccc';
-        vpInput.style.borderRadius = originalInput.style.borderRadius || '4px';
+        vpInput.style.padding = getComputedStyle(originalInput).padding;
+        vpInput.style.border = getComputedStyle(originalInput).border;
+        vpInput.style.borderRadius = getComputedStyle(originalInput).borderRadius;
         vpInput.style.height = originalInput.offsetHeight + 'px';
         vpInput.style.boxSizing = 'border-box';
         vpInput.style.width = '110px';
 
-        // 🏷️ tlačidlo – tlač štítku
-        const labelBtn = document.createElement('button');
-        labelBtn.type = 'button';
-        labelBtn.title = 'Vytlačiť štítok';
-        labelBtn.innerHTML = '🏷️';
-        labelBtn.style.height = originalInput.offsetHeight + 'px';
-        labelBtn.style.marginRight = '10px';
-        labelBtn.style.cursor = 'pointer';
-        labelBtn.style.border = originalInput.style.border || '1px solid #ccc';
-        labelBtn.style.borderRadius = originalInput.style.borderRadius || '4px';
-        labelBtn.style.background = '#fff';
+        // 🏷️ ikonka tlače štítku (rovnaký vizuál ako v tabuľke)
+        const labelLink = document.createElement('a');
+        labelLink.href = '#';
+        labelLink.title = 'Vytačiť Štítok';
+        labelLink.style.marginRight = '10px';
+        labelLink.style.display = 'inline-flex';
+        labelLink.style.alignItems = 'center';
+
+        const img = document.createElement('img');
+        img.src = '/assets/img/adminity/img/icons/04/16/39.png';
+        img.alt = '';
+        img.style.cursor = 'pointer';
+
+        labelLink.appendChild(img);
 
         // vloženie pred pôvodný search
-        wrapper.insertBefore(labelBtn, originalInput);
-        wrapper.insertBefore(vpInput, labelBtn);
+        wrapper.insertBefore(labelLink, originalInput);
+        wrapper.insertBefore(vpInput, labelLink);
 
         // ⏎ Enter → detail VP
         vpInput.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
-                const vpNumber = vpInput.value.trim();
-                if (/^\d+$/.test(vpNumber)) {
+                const vp = vpInput.value.trim();
+                if (/^\d+$/.test(vp)) {
                     window.open(
-                        `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/${vpNumber}`,
+                        `/vyrobne_prikazy/detail/index/${vp}`,
                         '_blank'
                     );
                 } else {
@@ -66,26 +75,45 @@
             }
         });
 
-        // 🏷️ klik → tlač štítku
-        labelBtn.addEventListener('click', () => {
-            const vpNumber = vpInput.value.trim();
-            if (/^\d+$/.test(vpNumber)) {
+        // 🏷️ klik na ikonku → tlač štítku
+        labelLink.addEventListener('click', e => {
+            e.preventDefault();
+
+            const vp = vpInput.value.trim();
+            if (/^\d+$/.test(vp)) {
                 window.open(
-                    `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`,
+                    `/vyrobne_prikazy/detail/printLabel/${vp}`,
                     '_blank'
                 );
             } else {
                 alert('Zadaj platné číslo VP');
             }
         });
+
+        console.log('🏷️ VP search + ikonka tlače štítku pridané');
+    }
+
+    function observeForSearch() {
+        const observer = new MutationObserver(() => {
+            const input = findSearchInput();
+            if (input) {
+                enhanceSearchBar(input);
+                observer.disconnect();
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 
     window.addEventListener('load', () => {
-        createVPInput();
-    });
-})();
-
-    window.addEventListener('load', () => {
-        createVPInput();
+        const input = findSearchInput();
+        if (input) {
+            enhanceSearchBar(input);
+        } else {
+            observeForSearch();
+        }
     });
 })();
