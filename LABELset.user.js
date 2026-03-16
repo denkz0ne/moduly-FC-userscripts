@@ -2,7 +2,7 @@
 // @name         Label Layout
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.2.6
+// @version      1.2.7
 // @description  Úprava VP do čierneho rámčeka a doplnenie rozmeru FO vľavo / obsah textov je globalne nastaviteľný
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
@@ -12,23 +12,21 @@
 
 (function() {
 
-    // Načítaj hodnoty z sessionStorage (fallback na prázdny string)
-    window.TM_testoLeft = sessionStorage.getItem('TM_testoLeft') || "";
-    window.TM_testoRight = sessionStorage.getItem('TM_testoRight') || "";
+    // Načítaj hodnoty z localStorage (fallback na prázdny string)
+    window.TM_testoLeft = localStorage.getItem('TM_testoLeft') || "";
+    window.TM_testoRight = localStorage.getItem('TM_testoRight') || "";
 
-    // Po zavretí alebo reload stránku vymaž hodnoty zo sessionStorage
+    // Po zavretí alebo reload stránku vymaž hodnoty z localStorage
     window.addEventListener('unload', () => {
-        sessionStorage.removeItem('TM_testoLeft');
-        sessionStorage.removeItem('TM_testoRight');
+        localStorage.removeItem('TM_testoLeft');
+        localStorage.removeItem('TM_testoRight');
     });
 
-    // Zväčšíme len text v predajni, NIE celý div
     const predajnaText = document.querySelector("#predajna .rotate");
     if (predajnaText) {
         predajnaText.style.fontSize = "27pt";
     }
 
-    // Nájdi rodiča, kde máš "VP <span>2740706</span>"
     const wrapper = document.querySelector("#data > div");
 
     if (wrapper) {
@@ -67,11 +65,9 @@
         const testoLeft = document.createElement("div");
         const testoRight = document.createElement("div");
 
-        // Texty z globálnych premenných
         testoLeft.textContent = window.TM_testoLeft || "";
         testoRight.textContent = window.TM_testoRight || "";
 
-        // Rovnaký štýl pre oba
         const commonStyle = `
             color: #000;
             padding: 0 1mm;
