@@ -2,7 +2,7 @@
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.7
+// @version      2.7.1
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -70,7 +70,6 @@
         return result;
     }
 
-    // 🔹 detekcia dátumu expedície
     function detectExpeditionDate() {
         const el = document.evaluate(
             "/html/body/div[9]/div/div[2]/div/div/div[2]/div[2]/div[2]/form/strong/strong/div[7]",
@@ -120,18 +119,18 @@
 
         if (!tmLeft) {
             console.warn('FO rozmer nenájdený.');
-            sessionStorage.removeItem('TM_testoLeft');
+            localStorage.removeItem('TM_testoLeft');
             window.TM_testoLeft = '';
         } else {
-            sessionStorage.setItem('TM_testoLeft', tmLeft);
+            localStorage.setItem('TM_testoLeft', tmLeft);
             window.TM_testoLeft = tmLeft;
         }
 
         if (tmRight) {
-            sessionStorage.setItem('TM_testoRight', tmRight);
+            localStorage.setItem('TM_testoRight', tmRight);
             window.TM_testoRight = tmRight;
         } else {
-            sessionStorage.removeItem('TM_testoRight');
+            localStorage.removeItem('TM_testoRight');
             window.TM_testoRight = '';
         }
 
