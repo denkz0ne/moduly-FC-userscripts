@@ -2,7 +2,7 @@
 // @name         Better Label generator (L)
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.7.1
+// @version      2.7.2
 // @description  Stlač L => otvorí, vytlačí a zavrie štitok, pokiaľ nie si v inpute, selecte, textarea.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/shortcutKeyLabel.user.js
@@ -70,21 +70,16 @@
         return result;
     }
 
+    // ✅ OPRAVENÁ DETEKCIA DÁTUMU
     function detectExpeditionDate() {
-        const el = document.evaluate(
-            "/html/body/div[9]/div/div[2]/div/div/div[2]/div[2]/div[2]/form/strong/strong/div[7]",
-            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
-        ).singleNodeValue;
-
+        const el = document.querySelector('#dodacia_lehota_label');
         if (!el) return '';
 
         const text = el.textContent.trim();
         const match = text.match(/(\d{1,2})\.\s*(\d{1,2})\./);
         if (!match) return '';
 
-        const day = match[1];
-        const month = match[2];
-        return `${day}. ${month}.`;
+        return `${match[1]}. ${match[2]}.`;
     }
 
     function showLabel(leftText, rightText) {
