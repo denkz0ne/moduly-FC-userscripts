@@ -2,7 +2,7 @@
 // @name         Label Layout
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.2.7
+// @version      1.2.8
 // @description  Úprava VP do čierneho rámčeka a doplnenie rozmeru FO vľavo / obsah textov je globalne nastaviteľný
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/LABELset.user.js
@@ -105,5 +105,21 @@
         label.style.height = "57mm";
         label.style.border = "0mm solid black";
     }
+const style = document.createElement("style");
+style.innerHTML = `
+@media print {
 
+    @page {
+        margin: 0;
+    }
+
+    #label {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        overflow: hidden !important;
+    }
+
+}
+`;
+document.head.appendChild(style);
 })();
