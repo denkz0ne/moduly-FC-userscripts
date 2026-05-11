@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pokyny Pre - Archív
 // @namespace    http://faxcopy.sk/
-// @version      1.1
+// @version      1.2
 // @description  Archivácia pokynov a poznámok z VP formulára
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
@@ -215,61 +215,66 @@
     // BUTTONS
     // =====================================================
 
-    function customizeButtons() {
+function customizeButtons() {
 
-        const interval = setInterval(() => {
+    const interval = setInterval(() => {
 
-            const submitBtn = document.querySelector(
-                '#frm-pokyn input[type="submit"]'
-            );
+        const submitBtn = document.querySelector(
+            '#frm-pokyn input[type="submit"]'
+        );
 
-            if (!submitBtn) return;
+        if (!submitBtn) return;
 
-            if (document.querySelector('#fc-archive-btn')) {
-
-                clearInterval(interval);
-
-                return;
-            }
-
-            submitBtn.value = 'Potvrdiť a archivovať';
-
-            const archiveBtn = document.createElement('button');
-
-            archiveBtn.id = 'fc-archive-btn';
-
-            archiveBtn.type = 'button';
-
-            archiveBtn.innerText = '📚 Archív';
-
-            archiveBtn.style.marginLeft = '10px';
-            archiveBtn.style.padding = '10px 14px';
-            archiveBtn.style.border = 'none';
-            archiveBtn.style.borderRadius = '8px';
-            archiveBtn.style.cursor = 'pointer';
-            archiveBtn.style.background = '#2d3748';
-            archiveBtn.style.color = 'white';
-            archiveBtn.style.fontWeight = '600';
-            archiveBtn.style.fontSize = '14px';
-            archiveBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-            archiveBtn.style.transition = '0.15s';
-
-            archiveBtn.addEventListener('mouseenter', () => {
-                archiveBtn.style.opacity = '0.9';
-            });
-
-            archiveBtn.addEventListener('mouseleave', () => {
-                archiveBtn.style.opacity = '1';
-            });
-
-            archiveBtn.addEventListener('click', openViewer);
-
-            submitBtn.parentNode.appendChild(archiveBtn);
+        if (document.querySelector('#fc-archive-btn')) {
 
             clearInterval(interval);
 
-        }, 300);
-    }
+            return;
+        }
+
+        submitBtn.value = 'Potvrdiť a archivovať';
+
+        const archiveBtn = document.createElement('span');
+
+        archiveBtn.id = 'fc-archive-btn';
+
+        archiveBtn.innerText = 'Archív';
+
+        archiveBtn.style.marginLeft = '12px';
+        archiveBtn.style.cursor = 'pointer';
+
+        archiveBtn.style.color = '#2b6cb0';
+        archiveBtn.style.fontWeight = '600';
+        archiveBtn.style.fontSize = '13px';
+
+        archiveBtn.style.verticalAlign = 'middle';
+
+        archiveBtn.style.userSelect = 'none';
+
+        archiveBtn.style.transition = '0.15s';
+
+        archiveBtn.addEventListener('mouseenter', () => {
+
+            archiveBtn.style.opacity = '0.75';
+            archiveBtn.style.textDecoration = 'underline';
+
+        });
+
+        archiveBtn.addEventListener('mouseleave', () => {
+
+            archiveBtn.style.opacity = '1';
+            archiveBtn.style.textDecoration = 'none';
+
+        });
+
+        archiveBtn.addEventListener('click', openViewer);
+
+        submitBtn.insertAdjacentElement('afterend', archiveBtn);
+
+        clearInterval(interval);
+
+    }, 300);
+}
 
     // =====================================================
     // VIEWER
