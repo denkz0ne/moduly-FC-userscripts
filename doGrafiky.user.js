@@ -42,9 +42,9 @@
         btn.id = 'doGrafikyBtn';
         btn.innerHTML = 'DO GRAFIKY';
 
-        btn.style.background = '#7b1fa2';
-        btn.style.borderColor = '#6a1b9a';
-        btn.style.marginRight = '5px';
+btn.style.right = '-95px';
+btn.style.background = '#7b1fa2';
+btn.style.borderColor = '#6a1b9a';
 
         btn.addEventListener('click', async (e) => {
 
