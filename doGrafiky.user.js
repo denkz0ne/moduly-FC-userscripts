@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.1
+// @version      1.2
 // @description  Pridá button DO GRAFIKY, označí ZaPoGRAF a zaradí VP do CG_Grafik - Grafika
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafikyuser.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -13,7 +13,7 @@
 (function () {
     'use strict';
 
-    const FLAG_ID = 602; // ZaPoGRAF
+    const FLAG_CHECKBOX_ID = 'f602'; // ZaPoGRAF
     const VF_ID = '301'; // CG_Grafik - Grafika
 
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -29,7 +29,7 @@
             .find(btn => btn.textContent.trim().toLowerCase() === 'do vf');
 
         if (!vfButton) {
-            console.log('[DO GRAFIKY] Nenašiel som DO VF button 😵');
+            console.log('[DO GRAFIKY] DO VF button nenájdený 😵');
             return;
         }
 
@@ -42,9 +42,16 @@
         btn.id = 'doGrafikyBtn';
         btn.innerHTML = 'DO GRAFIKY';
 
-btn.style.right = '-95px';
-btn.style.background = '#7b1fa2';
-btn.style.borderColor = '#6a1b9a';
+        //
+        // pozícia za DO VF
+        //
+        btn.style.right = '-95px';
+
+        //
+        // farba
+        //
+        btn.style.background = '#7b1fa2';
+        btn.style.borderColor = '#6a1b9a';
 
         btn.addEventListener('click', async (e) => {
 
@@ -65,27 +72,65 @@ btn.style.borderColor = '#6a1b9a';
                 console.log('[DO GRAFIKY] štart 🚀');
 
                 //
-                // 1. nastav ZaPoGRAF
+                // 1. otvor OZNACENIA
                 //
-                console.log('[DO GRAFIKY] označujem ZaPoGRAF 🎨');
+                console.log('[DO GRAFIKY] otváram označenia 🎨');
 
-                if (typeof window.set === 'function') {
-                    window.set(FLAG_ID, vpId);
+                if (typeof window.showTags === 'function') {
+                    window.showTags(vpId);
                 } else {
-                    throw new Error('Funkcia set() neexistuje');
+                    throw new Error('Funkcia showTags() neexistuje');
                 }
 
-                await sleep(1200);
+                //
+                // 2. čakaj na checkbox
+                //
+                let checkbox = null;
+
+                for (let i = 0; i < 20; i++) {
+
+                    checkbox = document.querySelector(`#${FLAG_CHECKBOX_ID}`);
+
+                    if (checkbox) {
+                        break;
+                    }
+
+                    await sleep(300);
+                }
+
+                if (!checkbox) {
+                    throw new Error('Checkbox ZaPoGRAF sa nenašiel');
+                }
 
                 //
-                // 2. otvor DO VF dialog
+                // 3. klik checkbox
+                //
+                checkbox.click();
+
+                console.log('[DO GRAFIKY] ZaPoGRAF označený ✅');
+
+                await sleep(800);
+
+                //
+                // 4. zatvor dialog
+                //
+                const closeBtn = document.querySelector('.ui-dialog-titlebar-close');
+
+                if (closeBtn) {
+                    closeBtn.click();
+                }
+
+                await sleep(600);
+
+                //
+                // 5. otvor DO VF
                 //
                 console.log('[DO GRAFIKY] otváram VF dialog 📦');
 
                 vfButton.click();
 
                 //
-                // 3. čakaj na form
+                // 6. čakaj na formulár
                 //
                 let form = null;
 
@@ -101,36 +146,40 @@ btn.style.borderColor = '#6a1b9a';
                 }
 
                 if (!form) {
-                    throw new Error('Nenašiel som VF formulár');
+                    throw new Error('VF formulár sa nenašiel');
                 }
 
-                await sleep(500);
+                await sleep(700);
 
                 //
-                // 4. nastav VF
+                // 7. nastav VF
                 //
                 const select = form.querySelector('#frm-VF');
 
                 if (!select) {
-                    throw new Error('Nenašiel som VF select');
+                    throw new Error('VF select sa nenašiel');
                 }
 
                 [...select.options].forEach(opt => {
                     opt.selected = (opt.value === VF_ID);
                 });
 
-                select.dispatchEvent(new Event('change', { bubbles: true }));
+                select.dispatchEvent(new Event('change', {
+                    bubbles: true
+                }));
 
-                console.log('[DO GRAFIKY] nastavená fronta CG_Grafik ✨');
+                console.log('[DO GRAFIKY] nastavená CG_Grafik ✨');
 
-                await sleep(400);
+                await sleep(500);
 
                 //
-                // 5. submit
+                // 8. submit formulára
                 //
+                console.log('[DO GRAFIKY] odosielam VP 🚚');
+
                 form.submit();
 
-                console.log('[DO GRAFIKY] VP odletel do grafiky 🛸');
+                console.log('[DO GRAFIKY] hotovo 😎');
 
             } catch (err) {
 
@@ -144,7 +193,9 @@ btn.style.borderColor = '#6a1b9a';
             }
         });
 
-        vfButton.parentNode.insertBefore(btn, vfButton);
+        vfButton.parentNode.insertBefore(btn, vfButton.nextSibling);
+
+        console.log('[DO GRAFIKY] button pridaný 🎉');
     }
 
     function init() {
@@ -161,6 +212,7 @@ btn.style.borderColor = '#6a1b9a';
             if (vfButton) {
 
                 clearInterval(interval);
+
                 createButton();
 
                 console.log('[DO GRAFIKY] pripravený 😎');
