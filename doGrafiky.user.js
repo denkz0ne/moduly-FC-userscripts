@@ -4,7 +4,7 @@
 // @author       mato e.
 // @version      1.2
 // @description  Pridá button DO GRAFIKY, označí ZaPoGRAF a zaradí VP do CG_Grafik - Grafika
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafikyuser.js
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @run-at       document-end
