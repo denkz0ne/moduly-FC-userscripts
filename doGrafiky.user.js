@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      2.1
+// @version      2.2
 // @description  DO GRAFIKY → označí ZaPoGRAF a zaradí VP do CG_Grafik - Grafika
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -108,7 +108,7 @@
                         }
                     }
 
-                    await sleep(300);
+                    await sleep(100);
                 }
 
                 if (!checkbox) {
@@ -124,7 +124,7 @@
 
                     console.log('[DO GRAFIKY] ZaPoGRAF označený ✅');
 
-                    await sleep(800);
+                    await sleep(300);
 
                 } else {
 
@@ -156,7 +156,7 @@
                 //
                 // POČKAJ NA ZATVORENIE
                 //
-                await sleep(1200);
+                await sleep(500);
 
                 //
                 // OTVOR DO VF
@@ -165,7 +165,7 @@
 
                 vfButton.click();
 
-                await sleep(1200);
+                await sleep(500);
 
                 //
                 // ČAKAJ NA VF FORMULÁR
@@ -180,7 +180,7 @@
                         break;
                     }
 
-                    await sleep(300);
+                    await sleep(100);
                 }
 
                 if (!form) {
@@ -211,7 +211,7 @@
                 //
                 // POČKAJ NA MULTISELECT
                 //
-                await sleep(1500);
+                await sleep(500);
 
                 //
                 // SUBMIT BUTTON
