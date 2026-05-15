@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.8.0
+// @version      2.9.0
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -37,25 +37,62 @@
         return '';
     }
 
-    function detectFoText() {
+    function collectPageContext() {
         const tableRows = document.querySelectorAll('div > table tr');
-        let hexaDetected = false;
-        let premiumDetected = false;
-
-        tableRows.forEach(tr => {
-            const txt = tr.textContent || '';
-            if (/HEXA|HEXAGÓN/i.test(txt)) hexaDetected = true;
-            if (/PREMIUM/i.test(txt)) premiumDetected = true;
-        });
+        const rowTexts = Array.from(tableRows).map(tr => tr.textContent || '');
 
         const premiumEl = document.querySelector('.product-name') || document.querySelector('h1') || document.querySelector('h2');
-        const premiumText = premiumEl ? premiumEl.textContent : '';
-        if (/PREMIUM/i.test(premiumText)) premiumDetected = true;
+        const productText = premiumEl ? premiumEl.textContent || '' : '';
 
-        if (hexaDetected) return 'HEXA';
+        return { rowTexts, productText };
+    }
+
+    // Material detector #1 (current): HEXA / HEXAGON
+    function detectMaterialHexa(context) {
+        const detected = context.rowTexts.some(txt => /HEXA|HEXAGÓN/i.test(txt));
+        if (!detected) return null;
+
+        return {
+            material: 'HEXA',
+            alias: 'HEXA',
+            priority: 100
+        };
+    }
+
+    function runMaterialDetectors(context) {
+        const detectors = [
+            detectMaterialHexa
+            // detectMaterialFoam,
+            // detectMaterialPvc,
+            // detectMaterialTextile,
+        ];
+
+        return detectors
+            .map(detector => detector(context))
+            .filter(Boolean)
+            .sort((a, b) => b.priority - a.priority);
+    }
+
+    function buildAliasesFromDetections(detections) {
+        if (!detections.length) return [];
+
+        return detections
+            .map(d => d.alias)
+            .filter(Boolean);
+    }
+
+    function detectFoText() {
+        const context = collectPageContext();
+        const detections = runMaterialDetectors(context);
+        const aliases = buildAliasesFromDetections(detections);
+
+        if (aliases.length) return aliases.join(' ');
 
         const row = findDimensionInRows();
         if (!row) return '';
+
+        const premiumDetected = /PREMIUM/i.test(context.productText) ||
+            context.rowTexts.some(txt => /PREMIUM/i.test(txt));
 
         let result = row.dim || '';
         const pr = detectPriecka();
