@@ -2,12 +2,12 @@
 // @name         VP Searchbar
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.2.2
+// @version      1.2.3
 // @description  Pridá input pre číslo VP nalavo od pôvodného vyhľadávania
 // @match        https://moduly.faxcopy.sk/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPsearchbar.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPsearchbar.user.js
-// @grant        none
+// @grant        GM_openInTab
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -175,6 +175,45 @@
         linkVpIdsInQueueLog();
     }
 
+    function isVpListBackgroundLink(link) {
+        const cell = link.closest('td');
+        const row = link.closest('tr');
+        const table = link.closest('table');
+
+        return table && table.id === 'vp_list' &&
+            row && row.parentElement && row.parentElement.tagName === 'TBODY' &&
+            cell && (cell.cellIndex === 1 || cell.cellIndex === 2);
+    }
+
+    function openInBackgroundTab(url) {
+        const absoluteUrl = new URL(url, window.location.href).href;
+
+        if (typeof GM_openInTab === 'function') {
+            GM_openInTab(absoluteUrl, {
+                active: false,
+                insert: true,
+                setParent: true
+            });
+            return;
+        }
+
+        window.open(absoluteUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    function enableVpListBackgroundLinks() {
+        document.addEventListener('click', event => {
+            if (event.defaultPrevented || event.button !== 0) return;
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+            const link = event.target.closest('a[href]');
+            if (!link || !isVpListBackgroundLink(link)) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            openInBackgroundTab(link.href);
+        }, true);
+    }
+
     function observeForSearch() {
         const observer = new MutationObserver(() => {
             const input = findSearchInput();
@@ -199,5 +238,6 @@
         }
 
         observeQueueLog();
+        enableVpListBackgroundLinks();
     });
 })();
