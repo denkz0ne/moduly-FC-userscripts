@@ -1,0 +1,154 @@
+// ==UserScript==
+// @name         labelRegenerator
+// @namespace    https://moduly.faxcopy.sk/
+// @author       mato e.
+// @version      1.3.0
+// @description  Uprava print stitku a klavesa L pre otvorenie, tlac a zatvorenie stitku.
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
+// @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/*
+// @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
+// @grant        none
+// @run-at       document-end
+// ==/UserScript==
+
+(function() {
+
+    window.TM_testoLeft = localStorage.getItem('TM_testoLeft') || '';
+    window.TM_testoRight = localStorage.getItem('TM_testoRight') || '';
+
+    window.addEventListener('unload', () => {
+        localStorage.removeItem('TM_testoLeft');
+        localStorage.removeItem('TM_testoRight');
+    });
+
+    const predajnaText = document.querySelector('#predajna .rotate');
+    if (predajnaText) {
+        predajnaText.style.fontSize = '27pt';
+    }
+
+    const wrapper = document.querySelector('#data > div');
+
+    if (wrapper) {
+        const vpText = wrapper.querySelector('span');
+
+        if (vpText && vpText.previousSibling && vpText.previousSibling.textContent.trim() === 'VP') {
+            const newSpan = document.createElement('span');
+
+            newSpan.innerHTML = 'VP: ' + vpText.textContent.trim();
+
+            newSpan.style.color = '#ffffff';
+            newSpan.style.background = '#000';
+            newSpan.style.padding = '1px 4px';
+            newSpan.style.margin = '2px 0';
+            newSpan.style.borderRadius = '6px';
+            newSpan.style.fontSize = '13pt';
+            newSpan.style.display = 'inline-block';
+            newSpan.style.verticalAlign = 'middle';
+
+            wrapper.innerHTML = wrapper.innerHTML.replace(/VP.*<\/span>/, '');
+            wrapper.prepend(newSpan);
+        }
+    }
+
+    const clear = document.querySelector('#label .clear');
+
+    if (clear) {
+        const wrapper60 = document.createElement('div');
+
+        wrapper60.style.display = 'flex';
+        wrapper60.style.justifyContent = 'space-between';
+        wrapper60.style.alignItems = 'center';
+        wrapper60.style.width = '100%';
+        wrapper60.style.marginBottom = '2mm';
+
+        const testoLeft = document.createElement('div');
+        const testoRight = document.createElement('div');
+
+        testoLeft.textContent = window.TM_testoLeft || '';
+        testoRight.textContent = window.TM_testoRight || '';
+
+        const commonStyle = `
+            color: #000;
+            padding: 0 1mm;
+            margin: 0px;
+            font-size: 23pt;
+            display: inline-block;
+            font-family: 'Segoe Script';
+            transform: translateY(-1mm) scaleX(0.7);
+            margin-top: -3mm;
+            font-weight: bold;
+            transform-origin: left;
+        `;
+
+        testoLeft.style.cssText = commonStyle;
+        testoRight.style.cssText = commonStyle;
+
+        wrapper60.prepend(testoLeft);
+        wrapper60.append(testoRight);
+
+        clear.before(wrapper60);
+    }
+
+    const block = document.querySelector('#data > div');
+    if (block) {
+        block.style.marginBottom = '1mm';
+    }
+
+    const obj = document.querySelector('.obj');
+    if (obj) {
+        obj.style.height = '16mm';
+    }
+
+    const label = document.querySelector('#label');
+    if (label) {
+        label.style.height = '57mm';
+        label.style.border = '0mm solid black';
+    }
+
+    const style = document.createElement('style');
+    style.innerHTML = `
+@media print {
+
+    @page {
+        margin: 0;
+    }
+
+    #label {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        overflow: hidden !important;
+    }
+
+}
+`;
+    document.head.appendChild(style);
+
+    function getVpNumber() {
+        const strong = document.querySelector('strong.red');
+        return strong ? strong.textContent.trim() : null;
+    }
+
+    function pressLAction() {
+        if (!document.activeElement) return;
+        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        const vpNumber = getVpNumber();
+        if (!vpNumber) return;
+
+        const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
+        const w = window.open(url, '_blank');
+        if (!w) return;
+
+        w.onload = () => {
+            w.print();
+            setTimeout(() => w.close(), 1200);
+        };
+    }
+
+    window.addEventListener('keydown', e => {
+        if (e.key.toLowerCase() === 'l' && !e.repeat) {
+            pressLAction();
+        }
+    });
+})();
