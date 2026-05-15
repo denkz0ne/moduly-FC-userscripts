@@ -2,7 +2,7 @@
 // @name         FC Action Panel
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.1
+// @version      1.2
 // @description  Spoločný kontajner pre tlačidlá a nástroje userscriptov na detaile VP
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/FCActionPanel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/FCActionPanel.user.js
@@ -16,6 +16,7 @@
     const PANEL_ID = 'fc-userscripts-action-panel';
     const TOP_ROW_SELECTOR = '#top-row';
     const PANEL_TOP_GAP = 8;
+    const PANEL_Z_INDEX = '900';
 
     function getPanelTop() {
 
@@ -34,6 +35,7 @@
 
         panel.style.top = `${getPanelTop()}px`;
         panel.style.bottom = 'auto';
+        panel.style.zIndex = PANEL_Z_INDEX;
     }
 
     function ensureActionPanel() {
@@ -53,7 +55,7 @@
             right: '20px',
             top: `${getPanelTop()}px`,
             bottom: 'auto',
-            zIndex: '999997',
+            zIndex: PANEL_Z_INDEX,
             width: '118px',
             display: 'flex',
             flexDirection: 'column',
