@@ -2,7 +2,7 @@
 // @name         FC Action Panel
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.0
+// @version      1.1
 // @description  Spoločný kontajner pre tlačidlá a nástroje userscriptov na detaile VP
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/FCActionPanel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/FCActionPanel.user.js
@@ -14,12 +14,34 @@
     'use strict';
 
     const PANEL_ID = 'fc-userscripts-action-panel';
+    const TOP_ROW_SELECTOR = '#top-row';
+    const PANEL_TOP_GAP = 8;
+
+    function getPanelTop() {
+
+        const topRow = document.querySelector(TOP_ROW_SELECTOR);
+
+        if (!topRow) {
+            return 20;
+        }
+
+        const rect = topRow.getBoundingClientRect();
+
+        return Math.max(8, Math.round(rect.bottom + PANEL_TOP_GAP));
+    }
+
+    function positionActionPanel(panel) {
+
+        panel.style.top = `${getPanelTop()}px`;
+        panel.style.bottom = 'auto';
+    }
 
     function ensureActionPanel() {
 
         let panel = document.querySelector(`#${PANEL_ID}`);
 
         if (panel) {
+            positionActionPanel(panel);
             return panel;
         }
 
@@ -29,7 +51,8 @@
         Object.assign(panel.style, {
             position: 'fixed',
             right: '20px',
-            bottom: '20px',
+            top: `${getPanelTop()}px`,
+            bottom: 'auto',
             zIndex: '999997',
             width: '118px',
             display: 'flex',
@@ -107,6 +130,7 @@
     window.FCUserscripts = Object.assign(window.FCUserscripts || {}, {
         ensureActionPanel,
         styleActionButton,
+        positionActionPanel,
         adoptKnownButtons
     });
 
@@ -133,6 +157,14 @@
             childList: true,
             subtree: true
         });
+
+        window.addEventListener('resize', () => {
+            positionActionPanel(ensureActionPanel());
+        });
+
+        window.addEventListener('scroll', () => {
+            positionActionPanel(ensureActionPanel());
+        }, { passive: true });
     });
 
 })();
