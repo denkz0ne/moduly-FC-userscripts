@@ -2,7 +2,7 @@
 // @name         VP Searchbar
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.2.1
+// @version      1.2.2
 // @description  Pridá input pre číslo VP nalavo od pôvodného vyhľadávania
 // @match        https://moduly.faxcopy.sk/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPsearchbar.user.js
@@ -44,7 +44,7 @@
         // 🏷️ ikonka tlače štítku (rovnaký vizuál ako v tabuľke)
         const labelLink = document.createElement('a');
         labelLink.href = '#';
-        labelLink.title = 'Vytačiť Štítok';
+        labelLink.title = 'Vytlačiť Štítok';
         labelLink.style.marginRight = '10px';
         labelLink.style.display = 'inline-flex';
         labelLink.style.alignItems = 'center';
@@ -93,6 +93,88 @@
         console.log('🏷️ VP search + ikonka tlače štítku pridané');
     }
 
+    function injectVpLinkStyles() {
+        if (document.getElementById('vp-detail-link-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'vp-detail-link-styles';
+        style.textContent = `
+            #queue_log a.vp-detail-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                font-weight: 600;
+                text-decoration: none;
+            }
+
+            #queue_log a.vp-detail-link:hover {
+                text-decoration: underline;
+            }
+
+            #queue_log .vp-detail-link-icon {
+                display: inline-block;
+                flex: 0 0 auto;
+                margin-left: 2px;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    function createVpDetailLink(vpId) {
+        const link = document.createElement('a');
+        link.className = 'vp-detail-link';
+        link.href = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/${vpId}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.title = `Otvoriť VP ${vpId}`;
+
+        const number = document.createElement('span');
+        number.textContent = vpId;
+
+        const icon = document.createElement('span');
+        icon.className = 'ui-icon ui-icon-extlink vp-detail-link-icon';
+        icon.setAttribute('aria-hidden', 'true');
+
+        link.appendChild(number);
+        link.appendChild(icon);
+
+        return link;
+    }
+
+    function linkVpIdsInQueueLog() {
+        const cells = document.querySelectorAll('#queue_log tbody td');
+        if (!cells.length) return;
+
+        injectVpLinkStyles();
+
+        cells.forEach(cell => {
+            if (cell.querySelector('a.vp-detail-link')) return;
+
+            const text = cell.textContent;
+            const match = text.match(/^(.*?\bID\s*=\s*)(\d+)(.*)$/);
+            if (!match) return;
+
+            cell.textContent = '';
+            cell.appendChild(document.createTextNode(match[1]));
+            cell.appendChild(createVpDetailLink(match[2]));
+            if (match[3]) {
+                cell.appendChild(document.createTextNode(match[3]));
+            }
+        });
+    }
+
+    function observeQueueLog() {
+        const observer = new MutationObserver(linkVpIdsInQueueLog);
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        linkVpIdsInQueueLog();
+    }
+
     function observeForSearch() {
         const observer = new MutationObserver(() => {
             const input = findSearchInput();
@@ -115,5 +197,7 @@
         } else {
             observeForSearch();
         }
+
+        observeQueueLog();
     });
 })();
