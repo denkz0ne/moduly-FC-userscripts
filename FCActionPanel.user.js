@@ -2,7 +2,7 @@
 // @name         FC Action Panel
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.2
+// @version      1.3
 // @description  Spoločný kontajner pre tlačidlá a nástroje userscriptov na detaile VP
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/FCActionPanel.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/FCActionPanel.user.js
@@ -44,6 +44,7 @@
 
         if (panel) {
             positionActionPanel(panel);
+            panel.style.width = '94px';
             return panel;
         }
 
@@ -56,11 +57,11 @@
             top: `${getPanelTop()}px`,
             bottom: 'auto',
             zIndex: PANEL_Z_INDEX,
-            width: '118px',
+            width: '94px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'stretch',
-            gap: '6px'
+            gap: '5px'
         });
 
         document.body.appendChild(panel);
@@ -82,14 +83,14 @@
             minWidth: '0',
             boxSizing: 'border-box',
             margin: '0',
-            padding: '10px 12px',
+            padding: '8px 10px',
             textAlign: 'center',
-            lineHeight: '16px',
+            lineHeight: '13px',
             fontWeight: '700',
             color: '#fff',
             background,
             border: `1px solid ${borderColor}`,
-            borderRadius: '6px',
+            borderRadius: '5px',
             cursor: 'pointer',
             boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
             textDecoration: 'none'
