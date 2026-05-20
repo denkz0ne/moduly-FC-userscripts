@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.1.2
+// @version      3.2.0
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -38,8 +38,29 @@
 
     function getDefaultMaterialAliasMap() {
         const map = {};
+
         map[normalizeKey('Pauzovací papier 90g')] = 'pauz';
         map[normalizeKey('základný papier biely 80g/m2')] = '80g';
+
+        map[normalizeKey('42foto/web|economy plagat|120g')] = '120';
+        map[normalizeKey('42foto/web|economy plagat|140g')] = '140';
+        map[normalizeKey('42foto/web|plagatovy papier|135g')] = '135';
+        map[normalizeKey('42foto/web|plagatovy papier|200g')] = '200';
+        map[normalizeKey('42foto/web|fotopapier|leskly|200g')] = '200 lesk';
+        map[normalizeKey('42foto/web|fotopapier|leskly|260g')] = '260 lesk';
+        map[normalizeKey('42foto/web|fotopapier|pololeskly|200g')] = '200 sat';
+        map[normalizeKey('42foto/web|fotopapier|pololeskly|240g')] = '240 sat';
+        map[normalizeKey('42foto/web|fotopapier|pololeskly|260g')] = '260 sat';
+        map[normalizeKey('42foto/web|fotopapier|matny|180g')] = '180';
+        map[normalizeKey('42foto/web|fotopapier|matny|230g')] = '230';
+        map[normalizeKey('42foto/web|platno|polytex')] = 'poly';
+        map[normalizeKey('42foto/web|platno|canvas')] = 'canv';
+        map[normalizeKey('42foto/web|billboardovy papier')] = 'bb';
+        map[normalizeKey('42foto/web|medium pre rollup|economy')] = 'rld eco';
+        map[normalizeKey('42foto/web|medium pre rollup|standart')] = 'rld';
+        map[normalizeKey('42foto/web|backlit|lesk')] = 'back lesk';
+        map[normalizeKey('42foto/web|backlit|mat')] = 'back mat';
+
         return map;
     }
 
@@ -180,7 +201,11 @@
             if (!cells.length) continue;
 
             const itemCell = cells[2] || null;
-            const text = (itemCell ? itemCell.textContent : row.textContent) || '';
+            const text = ((itemCell ? itemCell.textContent : row.textContent) || '').toLowerCase();
+
+            if (text.includes('42foto/web')) return '42foto/web';
+            if (text.includes('41tv')) return '41tv';
+
             const codeMatch = text.match(/\b([0-9]{2}[a-z]{2})\b/i);
             if (codeMatch) return codeMatch[1].toLowerCase();
         }
@@ -192,7 +217,7 @@
         if (!valueCell) return [];
 
         const chunks = Array.from(valueCell.querySelectorAll('.whitespace-pre-line'))
-            .map(el => (el.textContent || '').trim())
+            .map(el => (el.textContent || '').replace(/\s+/g, ' ').trim())
             .filter(Boolean);
 
         if (chunks.length) return Array.from(new Set(chunks));
@@ -257,6 +282,119 @@
         }
 
         return '';
+    }
+
+    function getAllParamValues(params) {
+        if (!params) return [];
+
+        return Object.values(params)
+            .flatMap(item => item.values || [])
+            .map(v => String(v || '').trim())
+            .filter(Boolean);
+    }
+
+    function pickWeight(text) {
+        const match = String(text || '').match(/\b(120|135|140|180|200|230|240|260)\s*g\b/i);
+        return match ? `${match[1]}g` : '';
+    }
+
+    function parse42fotoWebDetailsFromZd(params) {
+        const mediaTypeRaw = getParamValueByLabelContains(params, ['typ tlacoveho media']);
+        const mediaType = normalizeKey(mediaTypeRaw);
+        const allValues = getAllParamValues(params).map(normalizeKey);
+
+        let variant = '';
+        let weight = '';
+
+        if (mediaType.includes('economy plagat')) {
+            const gram = getParamValueByLabelContains(params, ['gramaz papiera economy']);
+            weight = pickWeight(gram);
+        } else if (mediaType.includes('plagatovy papier')) {
+            const gram = getParamValueByLabelContains(params, ['gramaz papiera plagatovy']);
+            weight = pickWeight(gram);
+        } else if (mediaType.includes('fotopapier')) {
+            if (allValues.some(v => v.includes('pololesk'))) variant = 'pololeskly';
+            else if (allValues.some(v => v.includes('lesk'))) variant = 'leskly';
+            else if (allValues.some(v => v.includes('matn'))) variant = 'matny';
+
+            const gramCandidate = allValues.find(v => /\b(180|200|230|240|260)\s*g\b/i.test(v)) || '';
+            weight = pickWeight(gramCandidate);
+        } else if (mediaType.includes('platno')) {
+            if (allValues.some(v => v.includes('polytex'))) variant = 'polytex';
+            else if (allValues.some(v => v.includes('canvas'))) variant = 'canvas';
+        } else if (mediaType.includes('billboardovy papier')) {
+            variant = 'default';
+        } else if (mediaType.includes('rollup')) {
+            if (allValues.some(v => v.includes('economy'))) variant = 'economy';
+            else if (allValues.some(v => v.includes('standart') || v.includes('standard'))) variant = 'standart';
+        } else if (mediaType.includes('backlit')) {
+            if (allValues.some(v => v.includes('lesk'))) variant = 'lesk';
+            else if (allValues.some(v => v.includes('mat'))) variant = 'mat';
+        }
+
+        return {
+            mediaTypeRaw,
+            mediaType,
+            variant,
+            weight
+        };
+    }
+
+    function build42fotoWebAlias(details) {
+        const chunks = ['42foto/web'];
+
+        if (details.mediaType.includes('economy plagat')) {
+            chunks.push('economy plagat');
+            if (details.weight) chunks.push(details.weight);
+        } else if (details.mediaType.includes('plagatovy papier')) {
+            chunks.push('plagatovy papier');
+            if (details.weight) chunks.push(details.weight);
+        } else if (details.mediaType.includes('fotopapier')) {
+            chunks.push('fotopapier');
+            if (details.variant) chunks.push(details.variant);
+            if (details.weight) chunks.push(details.weight);
+        } else if (details.mediaType.includes('platno')) {
+            chunks.push('platno');
+            if (details.variant) chunks.push(details.variant);
+        } else if (details.mediaType.includes('billboardovy papier')) {
+            chunks.push('billboardovy papier');
+        } else if (details.mediaType.includes('rollup')) {
+            chunks.push('medium pre rollup');
+            if (details.variant) chunks.push(details.variant);
+        } else if (details.mediaType.includes('backlit')) {
+            chunks.push('backlit');
+            if (details.variant) chunks.push(details.variant);
+        } else {
+            chunks.push(details.mediaTypeRaw || 'unknown');
+        }
+
+        const key = chunks.join('|');
+        return resolveMaterialAlias(key) || details.mediaTypeRaw || '42foto/web';
+    }
+
+    function detectMaterial42fotoWeb() {
+        const productCode = getProductCodeFromPriceRows();
+        if (productCode !== '42foto/web') return null;
+
+        const params = parseZdParams();
+        const details = parse42fotoWebDetailsFromZd(params);
+        const outputAlias = build42fotoWebAlias(details);
+
+        setPerTabState({
+            detector: '42foto/web',
+            productCode,
+            params: details,
+            outputAlias,
+            source: '#zd-form-container #VPZDParams',
+            aliasConfig: loadMaterialAliasConfig()
+        });
+
+        return {
+            material: '42foto/web',
+            alias: outputAlias,
+            priority: 350,
+            details
+        };
     }
 
     function parseFormatAlias(formatText) {
@@ -387,6 +525,7 @@
 
     function runMaterialDetectors(context) {
         const detectors = [
+            detectMaterial42fotoWeb,
             detectMaterial41tv,
             () => detectMaterialHexa(context)
         ];
