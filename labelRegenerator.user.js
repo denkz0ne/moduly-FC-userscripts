@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.3.1
+// @version      1.3.2
 // @description  Uprava print stitku a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -21,7 +21,9 @@
     window.TM_testoLeft = localStorage.getItem('TM_testoLeft') || '';
     window.TM_testoRight = localStorage.getItem('TM_testoRight') || '';
 
+    // Keep values while user is on VP detail page; clear only after print tab unload.
     window.addEventListener('unload', () => {
+        if (!isPrintLabelPage()) return;
         localStorage.removeItem('TM_testoLeft');
         localStorage.removeItem('TM_testoRight');
     });
@@ -156,6 +158,28 @@
         return strong ? strong.textContent.trim() : null;
     }
 
+    function syncLabelValuesFromDetailPage() {
+        if (isPrintLabelPage()) return;
+
+        const leftBadge = document.querySelector('#shortcut-info-label');
+        const rightBadge = document.querySelector('#shortcut-info-date');
+
+        const left = leftBadge ? (leftBadge.textContent || '').trim() : '';
+        const right = rightBadge ? (rightBadge.textContent || '').trim() : '';
+
+        if (left) {
+            localStorage.setItem('TM_testoLeft', left);
+            window.TM_testoLeft = left;
+        }
+
+        if (right) {
+            localStorage.setItem('TM_testoRight', right);
+            window.TM_testoRight = right;
+        }
+
+        console.log('[labelRegenerator] synced from badges', { left, right });
+    }
+
     function triggerPrintWhenReady(printWindow) {
         const deadlineMs = 15000;
         const startedAt = Date.now();
@@ -186,6 +210,9 @@
 
         const vpNumber = getVpNumber();
         if (!vpNumber) return;
+
+        // Ensure print page gets exactly what user currently sees in VP badges.
+        syncLabelValuesFromDetailPage();
 
         const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
         const w = window.open(url, '_blank');
