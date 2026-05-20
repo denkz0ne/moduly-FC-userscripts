@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.9.2
+// @version      3.0.0
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -17,6 +17,39 @@
     let lastLeft = null;
     let lastRight = null;
     let observerStarted = false;
+
+    function getCurrentVpFromUrl() {
+        const match = location.pathname.match(/\/index\/(\d+)/);
+        return match ? match[1] : '';
+    }
+
+    function normalizeKey(text) {
+        if (!text) return '';
+
+        return text
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function setPerTabState(state) {
+        const vp = getCurrentVpFromUrl();
+        const payload = {
+            vp,
+            ...state,
+            updatedAt: new Date().toISOString()
+        };
+
+        window.__materialDetectorState = payload;
+
+        try {
+            sessionStorage.setItem(`materialDetectorState:${vp}`, JSON.stringify(payload));
+        } catch (e) {
+            console.warn('[materialDetector] sessionStorage save failed', e);
+        }
+    }
 
     function extractDimensionFromText(text) {
         const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
@@ -51,9 +84,154 @@
         return { rowTexts, productText };
     }
 
+    function getProductCodeFromPriceRows() {
+        const rows = document.querySelectorAll("tr[title='ceny bez DPH']");
+
+        for (const row of rows) {
+            const cells = row.querySelectorAll('td');
+            if (!cells.length) continue;
+
+            const itemCell = cells[2] || null;
+            const text = (itemCell ? itemCell.textContent : row.textContent) || '';
+            const codeMatch = text.match(/\b([0-9]{2}[a-z]{2})\b/i);
+            if (codeMatch) return codeMatch[1].toLowerCase();
+        }
+
+        return '';
+    }
+
+    function extractValuesFromParamRow(valueCell) {
+        if (!valueCell) return [];
+
+        const chunks = Array.from(valueCell.querySelectorAll('.whitespace-pre-line'))
+            .map(el => (el.textContent || '').trim())
+            .filter(Boolean);
+
+        if (chunks.length) return Array.from(new Set(chunks));
+
+        const fallback = (valueCell.textContent || '').trim();
+        return fallback ? [fallback] : [];
+    }
+
+    function parseZdParams() {
+        const container = document.querySelector('#zd-form-container');
+        if (!container) return null;
+
+        const root = container.querySelector('#VPZDParams') || container;
+        const rows = root.querySelectorAll(':scope > div');
+        if (!rows.length) return null;
+
+        const params = {};
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll(':scope > div');
+            if (cells.length < 2) return;
+
+            const rawLabel = (cells[0].textContent || '').trim();
+            const normLabel = normalizeKey(rawLabel);
+            if (!normLabel) return;
+
+            const values = extractValuesFromParamRow(cells[1]);
+            if (!values.length) return;
+
+            params[normLabel] = {
+                label: rawLabel,
+                values,
+                value: values.join(' | ')
+            };
+        });
+
+        return Object.keys(params).length ? params : null;
+    }
+
+    function getParamValueByLabelContains(params, patterns) {
+        if (!params) return '';
+
+        const entries = Object.entries(params);
+        for (const [key, item] of entries) {
+            if (patterns.some(pattern => key.includes(pattern))) {
+                return item.value || '';
+            }
+        }
+
+        return '';
+    }
+
+    function parseFormatAlias(formatText) {
+        const clean = (formatText || '').trim();
+        if (!clean) return '';
+
+        const iso = clean.match(/\bA\d\b/i);
+        if (iso) return iso[0].toUpperCase();
+
+        const mm = clean.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})\s*mm/i);
+        if (mm) return `${mm[1]}x${mm[2]}mm`;
+
+        const cm = clean.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})\s*cm/i);
+        if (cm) return `${cm[1]}x${cm[2]}cm`;
+
+        return clean;
+    }
+
+    function parse41tvDetailsFromZd(params) {
+        const printType = getParamValueByLabelContains(params, ['druh tlace']);
+        const material = getParamValueByLabelContains(params, ['tlacove medium', 'medium pre']);
+        const formatType = getParamValueByLabelContains(params, ['format vytlacku']);
+        const formatValue = getParamValueByLabelContains(params, ['standardne formaty iso', 'velkost vytlacku', 'format vytlacku']);
+        const quantityText = getParamValueByLabelContains(params, ['pocet rovnakych vytlackov']);
+        const folding = getParamValueByLabelContains(params, ['skladanie']);
+
+        const quantity = (quantityText.match(/\d+/) || [null])[0];
+
+        let colorMode = '';
+        if (/fareb/i.test(printType)) colorMode = 'farebna';
+        else if (/ciern|ciernobiel/i.test(printType)) colorMode = 'cb';
+
+        return {
+            formatType,
+            formatValue,
+            formatAlias: parseFormatAlias(formatValue),
+            quantity: quantity || '',
+            printType,
+            colorMode,
+            material,
+            folding
+        };
+    }
+
+    function detectMaterial41tv() {
+        const productCode = getProductCodeFromPriceRows();
+        if (productCode !== '41tv') return null;
+
+        const params = parseZdParams();
+        const details = parse41tvDetailsFromZd(params);
+
+        setPerTabState({
+            detector: '41tv',
+            productCode,
+            params: details,
+            source: '#zd-form-container'
+        });
+
+        return {
+            material: '41tv',
+            alias: details.material || '41tv',
+            priority: 300,
+            details
+        };
+    }
+
     function detectMaterialHexa(context) {
-        const detected = context.rowTexts.some(txt => /HEXA|HEXAGÓN/i.test(txt));
+        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAGÓN/i.test(txt));
         if (!detected) return null;
+
+        setPerTabState({
+            detector: 'hexa',
+            productCode: 'hexa',
+            params: {
+                material: 'HEXA'
+            }
+        });
 
         return {
             material: 'HEXA',
@@ -64,11 +242,12 @@
 
     function runMaterialDetectors(context) {
         const detectors = [
-            detectMaterialHexa
+            detectMaterial41tv,
+            () => detectMaterialHexa(context)
         ];
 
         return detectors
-            .map(detector => detector(context))
+            .map(detector => detector())
             .filter(Boolean)
             .sort((a, b) => b.priority - a.priority);
     }
@@ -86,6 +265,7 @@
         const detections = runMaterialDetectors(context);
         const aliases = buildAliasesFromDetections(detections);
 
+        // For 41tv we currently output only "material" (alias).
         if (aliases.length) return aliases.join(' ');
 
         const row = findDimensionInRows();
