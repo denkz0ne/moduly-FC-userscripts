@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.9.0
+// @version      2.9.1
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -13,6 +13,10 @@
 
 (function () {
     'use strict';
+
+    let lastLeft = null;
+    let lastRight = null;
+    let observerStarted = false;
 
     function extractDimensionFromText(text) {
         const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
@@ -32,7 +36,7 @@
     function detectPriecka() {
         const rows = document.querySelectorAll("tr.detail-price-tr .detail-price-in-order tr");
         for (const tr of rows) {
-            if (tr.innerText.toLowerCase().includes('priecka')) return '+';
+            if ((tr.innerText || '').toLowerCase().includes('priecka')) return '+';
         }
         return '';
     }
@@ -106,7 +110,7 @@
         const el = document.querySelector('#dodacia_lehota_label');
         if (!el) return '';
 
-        const text = el.textContent.trim();
+        const text = (el.textContent || '').trim();
         const match = text.match(/(\d{1,2})\.\s*(\d{1,2})\./);
         if (!match) return '';
 
@@ -115,11 +119,12 @@
 
     function showLabel(leftText, rightText) {
         if (!leftText && !rightText) return;
-        let elLeft = document.querySelector('#shortcut-info-label');
-        let elRight = document.querySelector('#shortcut-info-date');
 
         const h = document.querySelector('h1, h2');
         if (!h) return;
+
+        let elLeft = document.querySelector('#shortcut-info-label');
+        let elRight = document.querySelector('#shortcut-info-date');
 
         if (!elLeft) {
             elLeft = document.createElement('span');
@@ -139,10 +144,7 @@
         elRight.textContent = rightText || '';
     }
 
-    function updateSession() {
-        const tmLeft = detectFoText();
-        const tmRight = detectExpeditionDate();
-
+    function writeToSession(tmLeft, tmRight) {
         if (!tmLeft) {
             localStorage.removeItem('TM_testoLeft');
             window.TM_testoLeft = '';
@@ -151,16 +153,69 @@
             window.TM_testoLeft = tmLeft;
         }
 
-        if (tmRight) {
-            localStorage.setItem('TM_testoRight', tmRight);
-            window.TM_testoRight = tmRight;
-        } else {
+        if (!tmRight) {
             localStorage.removeItem('TM_testoRight');
             window.TM_testoRight = '';
+        } else {
+            localStorage.setItem('TM_testoRight', tmRight);
+            window.TM_testoRight = tmRight;
         }
-
-        showLabel(tmLeft, tmRight);
     }
 
-    window.addEventListener('load', updateSession);
+    function updateSession() {
+        const tmLeft = detectFoText();
+        const tmRight = detectExpeditionDate();
+
+        // Skip noisy rewrites when nothing changed.
+        if (tmLeft === lastLeft && tmRight === lastRight) return;
+
+        lastLeft = tmLeft;
+        lastRight = tmRight;
+
+        writeToSession(tmLeft, tmRight);
+        showLabel(tmLeft, tmRight);
+
+        console.log('[materialDetector] updated', { tmLeft, tmRight });
+    }
+
+    function bootstrapRetries() {
+        // Immediate run for cases where load already happened before listener registration.
+        updateSession();
+
+        // A short retry window for async-rendered sections.
+        const retryDelays = [150, 400, 900, 1500, 2500, 4000, 6000];
+        retryDelays.forEach(delay => {
+            setTimeout(updateSession, delay);
+        });
+    }
+
+    function startDomObserver() {
+        if (observerStarted) return;
+        observerStarted = true;
+
+        const observer = new MutationObserver(() => {
+            updateSession();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    }
+
+    function init() {
+        bootstrapRetries();
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateSession, { once: true });
+        } else {
+            setTimeout(updateSession, 0);
+        }
+
+        window.addEventListener('load', updateSession);
+        startDomObserver();
+    }
+
+    init();
 })();
