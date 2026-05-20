@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.0.1
+// @version      3.1.0
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -13,6 +13,8 @@
 
 (function () {
     'use strict';
+
+    const MATERIAL_ALIAS_STORAGE_KEY = 'materialDetector.materialAliases.v1';
 
     let lastLeft = null;
     let lastRight = null;
@@ -32,6 +34,92 @@
             .replace(/[\u0300-\u036f]/g, '')
             .replace(/\s+/g, ' ')
             .trim();
+    }
+
+    function getDefaultMaterialAliasMap() {
+        const map = {};
+        map[normalizeKey('Pauzovací papier 90g')] = 'pauz';
+        map[normalizeKey('základný papier biely 80g/m2')] = '80g';
+        return map;
+    }
+
+    function loadMaterialAliasConfig() {
+        const defaults = getDefaultMaterialAliasMap();
+
+        try {
+            const raw = localStorage.getItem(MATERIAL_ALIAS_STORAGE_KEY);
+            if (!raw) return defaults;
+
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return defaults;
+
+            const normalizedCustom = {};
+            Object.entries(parsed).forEach(([key, value]) => {
+                const normKey = normalizeKey(key);
+                const alias = String(value || '').trim();
+                if (!normKey || !alias) return;
+                normalizedCustom[normKey] = alias;
+            });
+
+            return {
+                ...defaults,
+                ...normalizedCustom
+            };
+        } catch (e) {
+            console.warn('[materialDetector] alias config load failed', e);
+            return defaults;
+        }
+    }
+
+    function saveMaterialAliasConfig(nextMap) {
+        try {
+            localStorage.setItem(MATERIAL_ALIAS_STORAGE_KEY, JSON.stringify(nextMap));
+        } catch (e) {
+            console.warn('[materialDetector] alias config save failed', e);
+        }
+    }
+
+    function resolveMaterialAlias(materialText) {
+        const clean = (materialText || '').trim();
+        if (!clean) return '';
+
+        const config = loadMaterialAliasConfig();
+        const normalizedMaterial = normalizeKey(clean);
+
+        if (config[normalizedMaterial]) return config[normalizedMaterial];
+
+        for (const [key, alias] of Object.entries(config)) {
+            if (normalizedMaterial.includes(key)) return alias;
+        }
+
+        return '';
+    }
+
+    function exposeAliasHelpers() {
+        window.__getMaterialAliasConfig = function () {
+            return loadMaterialAliasConfig();
+        };
+
+        window.__setMaterialAlias = function (materialLabel, alias) {
+            const key = normalizeKey(materialLabel);
+            const value = String(alias || '').trim();
+            if (!key || !value) return false;
+
+            const current = loadMaterialAliasConfig();
+            current[key] = value;
+            saveMaterialAliasConfig(current);
+            return true;
+        };
+
+        window.__clearMaterialAlias = function (materialLabel) {
+            const key = normalizeKey(materialLabel);
+            if (!key) return false;
+
+            const current = loadMaterialAliasConfig();
+            delete current[key];
+            saveMaterialAliasConfig(current);
+            return true;
+        };
     }
 
     function setPerTabState(state) {
@@ -117,7 +205,6 @@
     }
 
     function getZdParamRows(root) {
-        // Expected row layout in VPZDParams: each row is a flex wrapper with 3 direct columns.
         const rows = Array.from(root.querySelectorAll(':scope > div.flex'));
 
         return rows.filter(row => {
@@ -191,6 +278,7 @@
     function parse41tvDetailsFromZd(params) {
         const printType = getParamValueByLabelContains(params, ['druh tlace']);
         const material = getParamValueByLabelContains(params, ['tlacove medium', 'medium pre']);
+        const materialAlias = resolveMaterialAlias(material) || material;
         const formatType = getParamValueByLabelContains(params, ['format vytlacku']);
         const formatValue = getParamValueByLabelContains(params, ['standardne formaty iso', 'velkost vytlacku', 'format vytlacku']);
         const quantityText = getParamValueByLabelContains(params, ['pocet rovnakych vytlackov']);
@@ -210,6 +298,7 @@
             printType,
             colorMode,
             material,
+            materialAlias,
             folding
         };
     }
@@ -225,12 +314,13 @@
             detector: '41tv',
             productCode,
             params: details,
-            source: '#zd-form-container #VPZDParams'
+            source: '#zd-form-container #VPZDParams',
+            aliasConfig: loadMaterialAliasConfig()
         });
 
         return {
             material: '41tv',
-            alias: details.material || '41tv',
+            alias: details.materialAlias || details.material || '41tv',
             priority: 300,
             details
         };
@@ -244,13 +334,15 @@
             detector: 'hexa',
             productCode: 'hexa',
             params: {
-                material: 'HEXA'
-            }
+                material: 'HEXA',
+                materialAlias: resolveMaterialAlias('HEXA') || 'HEXA'
+            },
+            aliasConfig: loadMaterialAliasConfig()
         });
 
         return {
             material: 'HEXA',
-            alias: 'HEXA',
+            alias: resolveMaterialAlias('HEXA') || 'HEXA',
             priority: 100
         };
     }
@@ -364,7 +456,12 @@
         writeToSession(tmLeft, tmRight);
         showLabel(tmLeft, tmRight);
 
-        console.log('[materialDetector] updated', { tmLeft, tmRight, visibility: document.visibilityState, state: window.__materialDetectorState || null });
+        console.log('[materialDetector] updated', {
+            tmLeft,
+            tmRight,
+            visibility: document.visibilityState,
+            state: window.__materialDetectorState || null
+        });
     }
 
     function bootstrapRetries() {
@@ -413,6 +510,7 @@
     }
 
     function init() {
+        exposeAliasHelpers();
         bootstrapRetries();
 
         if (document.readyState === 'loading') {
