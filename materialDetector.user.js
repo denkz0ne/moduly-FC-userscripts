@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.1.1
+// @version      3.1.2
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -288,11 +288,12 @@
 
         let colorMode = '';
         let colorCode = '';
+        const normalizedPrintType = normalizeKey(printType);
 
-        if (/fareb/i.test(printType)) {
+        if (normalizedPrintType.includes('fareb')) {
             colorMode = 'farebna';
             colorCode = 'f';
-        } else if (/ciern|ciernobiel/i.test(printType)) {
+        } else if (normalizedPrintType.includes('ciernobiel') || normalizedPrintType.includes('cierna') || normalizedPrintType.includes('ciern')) {
             colorMode = 'cb';
             colorCode = 'cb';
         }
