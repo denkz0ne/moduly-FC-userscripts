@@ -2,13 +2,13 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.9.1
+// @version      2.9.2
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
-// @run-at       document-idle
+// @run-at       document-start
 // ==/UserScript==
 
 (function () {
@@ -51,7 +51,6 @@
         return { rowTexts, productText };
     }
 
-    // Material detector #1 (current): HEXA / HEXAGON
     function detectMaterialHexa(context) {
         const detected = context.rowTexts.some(txt => /HEXA|HEXAGÓN/i.test(txt));
         if (!detected) return null;
@@ -66,9 +65,6 @@
     function runMaterialDetectors(context) {
         const detectors = [
             detectMaterialHexa
-            // detectMaterialFoam,
-            // detectMaterialPvc,
-            // detectMaterialTextile,
         ];
 
         return detectors
@@ -166,7 +162,6 @@
         const tmLeft = detectFoText();
         const tmRight = detectExpeditionDate();
 
-        // Skip noisy rewrites when nothing changed.
         if (tmLeft === lastLeft && tmRight === lastRight) return;
 
         lastLeft = tmLeft;
@@ -175,15 +170,13 @@
         writeToSession(tmLeft, tmRight);
         showLabel(tmLeft, tmRight);
 
-        console.log('[materialDetector] updated', { tmLeft, tmRight });
+        console.log('[materialDetector] updated', { tmLeft, tmRight, visibility: document.visibilityState });
     }
 
     function bootstrapRetries() {
-        // Immediate run for cases where load already happened before listener registration.
         updateSession();
 
-        // A short retry window for async-rendered sections.
-        const retryDelays = [150, 400, 900, 1500, 2500, 4000, 6000];
+        const retryDelays = [100, 250, 500, 1000, 2000, 3500, 5000, 8000, 12000];
         retryDelays.forEach(delay => {
             setTimeout(updateSession, delay);
         });
@@ -191,6 +184,8 @@
 
     function startDomObserver() {
         if (observerStarted) return;
+        if (!document.body) return;
+
         observerStarted = true;
 
         const observer = new MutationObserver(() => {
@@ -204,6 +199,25 @@
         });
     }
 
+    function ensureObserverWhenBodyExists() {
+        if (document.body) {
+            startDomObserver();
+            return;
+        }
+
+        const waitBodyObserver = new MutationObserver(() => {
+            if (!document.body) return;
+            waitBodyObserver.disconnect();
+            startDomObserver();
+            updateSession();
+        });
+
+        waitBodyObserver.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+        });
+    }
+
     function init() {
         bootstrapRetries();
 
@@ -214,7 +228,18 @@
         }
 
         window.addEventListener('load', updateSession);
-        startDomObserver();
+        window.addEventListener('pageshow', updateSession);
+        window.addEventListener('focus', updateSession);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                updateSession();
+            } else {
+                setTimeout(updateSession, 0);
+            }
+        });
+
+        ensureObserverWhenBodyExists();
     }
 
     init();
