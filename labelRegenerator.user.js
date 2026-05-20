@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.3.0
+// @version      1.3.1
 // @description  Uprava print stitku a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -13,6 +13,10 @@
 // ==/UserScript==
 
 (function() {
+
+    function isPrintLabelPage() {
+        return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
+    }
 
     window.TM_testoLeft = localStorage.getItem('TM_testoLeft') || '';
     window.TM_testoRight = localStorage.getItem('TM_testoRight') || '';
@@ -124,9 +128,56 @@
 `;
     document.head.appendChild(style);
 
+    function markPrintReady() {
+        if (!isPrintLabelPage()) return;
+
+        window.__labelRegeneratorReady = false;
+
+        const finalize = () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    window.__labelRegeneratorReady = true;
+                    window.dispatchEvent(new Event('labelRegeneratorReady'));
+                });
+            });
+        };
+
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready
+                .then(() => setTimeout(finalize, 50))
+                .catch(() => setTimeout(finalize, 120));
+        } else {
+            setTimeout(finalize, 120);
+        }
+    }
+
     function getVpNumber() {
         const strong = document.querySelector('strong.red');
         return strong ? strong.textContent.trim() : null;
+    }
+
+    function triggerPrintWhenReady(printWindow) {
+        const deadlineMs = 15000;
+        const startedAt = Date.now();
+
+        const timer = setInterval(() => {
+            const timedOut = Date.now() - startedAt > deadlineMs;
+            const ready = !!printWindow.__labelRegeneratorReady;
+            const closed = printWindow.closed;
+
+            if (closed) {
+                clearInterval(timer);
+                return;
+            }
+
+            if (ready || timedOut) {
+                clearInterval(timer);
+                printWindow.print();
+                setTimeout(() => {
+                    if (!printWindow.closed) printWindow.close();
+                }, 1200);
+            }
+        }, 120);
     }
 
     function pressLAction() {
@@ -140,10 +191,9 @@
         const w = window.open(url, '_blank');
         if (!w) return;
 
-        w.onload = () => {
-            w.print();
-            setTimeout(() => w.close(), 1200);
-        };
+        w.addEventListener('load', () => {
+            triggerPrintWhenReady(w);
+        }, { once: true });
     }
 
     window.addEventListener('keydown', e => {
@@ -151,4 +201,6 @@
             pressLAction();
         }
     });
+
+    markPrintReady();
 })();
