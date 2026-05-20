@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.1.0
+// @version      3.1.1
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -287,8 +287,15 @@
         const quantity = (quantityText.match(/\d+/) || [null])[0];
 
         let colorMode = '';
-        if (/fareb/i.test(printType)) colorMode = 'farebna';
-        else if (/ciern|ciernobiel/i.test(printType)) colorMode = 'cb';
+        let colorCode = '';
+
+        if (/fareb/i.test(printType)) {
+            colorMode = 'farebna';
+            colorCode = 'f';
+        } else if (/ciern|ciernobiel/i.test(printType)) {
+            colorMode = 'cb';
+            colorCode = 'cb';
+        }
 
         return {
             formatType,
@@ -297,10 +304,38 @@
             quantity: quantity || '',
             printType,
             colorMode,
+            colorCode,
             material,
             materialAlias,
             folding
         };
+    }
+
+    function hasFoldingSelected(foldingText) {
+        const clean = (foldingText || '').trim();
+        if (!clean) return false;
+
+        const normalized = normalizeKey(clean);
+        if (!normalized) return false;
+
+        if (normalized === 'nie') return false;
+        if (normalized.includes('bez')) return false;
+
+        return true;
+    }
+
+    function build41tvOutputAlias(details) {
+        const materialPart = (details.materialAlias || details.material || '41tv').trim();
+        const colorPart = (details.colorCode || '').trim();
+
+        let result = materialPart;
+        if (colorPart) result += ` ${colorPart}`;
+
+        if (hasFoldingSelected(details.folding)) {
+            result += ' + skl';
+        }
+
+        return result;
     }
 
     function detectMaterial41tv() {
@@ -309,18 +344,20 @@
 
         const params = parseZdParams();
         const details = parse41tvDetailsFromZd(params);
+        const outputAlias = build41tvOutputAlias(details);
 
         setPerTabState({
             detector: '41tv',
             productCode,
             params: details,
+            outputAlias,
             source: '#zd-form-container #VPZDParams',
             aliasConfig: loadMaterialAliasConfig()
         });
 
         return {
             material: '41tv',
-            alias: details.materialAlias || details.material || '41tv',
+            alias: outputAlias,
             priority: 300,
             details
         };
