@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.2.0
+// @version      3.2.1
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -332,11 +332,16 @@
             else if (allValues.some(v => v.includes('mat'))) variant = 'mat';
         }
 
+        const quantityRaw = getParamValueByLabelContains(params, ['pocet kusov', 'pocet rovnakych vytlackov']);
+        const quantityMatch = String(quantityRaw || '').match(/\d+/);
+        const quantity = quantityMatch ? quantityMatch[0] : '';
+
         return {
             mediaTypeRaw,
             mediaType,
             variant,
-            weight
+            weight,
+            quantity
         };
     }
 
@@ -369,7 +374,13 @@
         }
 
         const key = chunks.join('|');
-        return resolveMaterialAlias(key) || details.mediaTypeRaw || '42foto/web';
+        const baseAlias = resolveMaterialAlias(key) || details.mediaTypeRaw || '42foto/web';
+
+        if (details.quantity) {
+            return `${baseAlias}   ${details.quantity}ks`;
+        }
+
+        return baseAlias;
     }
 
     function detectMaterial42fotoWeb() {
