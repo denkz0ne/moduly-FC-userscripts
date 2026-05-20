@@ -377,7 +377,7 @@
         const baseAlias = resolveMaterialAlias(key) || details.mediaTypeRaw || '42foto/web';
 
         if (details.quantity) {
-            return `${baseAlias}   ${details.quantity}ks`;
+            return `${baseAlias} | ${details.quantity}ks`;
         }
 
         return baseAlias;
