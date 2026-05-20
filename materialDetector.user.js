@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.0.0
+// @version      3.0.1
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -109,16 +109,31 @@
 
         if (chunks.length) return Array.from(new Set(chunks));
 
-        const fallback = (valueCell.textContent || '').trim();
+        const fallback = (valueCell.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
         return fallback ? [fallback] : [];
+    }
+
+    function getZdParamRows(root) {
+        // Expected row layout in VPZDParams: each row is a flex wrapper with 3 direct columns.
+        const rows = Array.from(root.querySelectorAll(':scope > div.flex'));
+
+        return rows.filter(row => {
+            const cols = row.querySelectorAll(':scope > div');
+            return cols.length >= 2;
+        });
     }
 
     function parseZdParams() {
         const container = document.querySelector('#zd-form-container');
         if (!container) return null;
 
-        const root = container.querySelector('#VPZDParams') || container;
-        const rows = root.querySelectorAll(':scope > div');
+        const root = container.querySelector('#VPZDParams');
+        if (!root) return null;
+
+        const rows = getZdParamRows(root);
         if (!rows.length) return null;
 
         const params = {};
@@ -127,7 +142,7 @@
             const cells = row.querySelectorAll(':scope > div');
             if (cells.length < 2) return;
 
-            const rawLabel = (cells[0].textContent || '').trim();
+            const rawLabel = (cells[0].textContent || '').replace(/\s+/g, ' ').trim();
             const normLabel = normalizeKey(rawLabel);
             if (!normLabel) return;
 
@@ -210,7 +225,7 @@
             detector: '41tv',
             productCode,
             params: details,
-            source: '#zd-form-container'
+            source: '#zd-form-container #VPZDParams'
         });
 
         return {
@@ -265,7 +280,6 @@
         const detections = runMaterialDetectors(context);
         const aliases = buildAliasesFromDetections(detections);
 
-        // For 41tv we currently output only "material" (alias).
         if (aliases.length) return aliases.join(' ');
 
         const row = findDimensionInRows();
@@ -350,7 +364,7 @@
         writeToSession(tmLeft, tmRight);
         showLabel(tmLeft, tmRight);
 
-        console.log('[materialDetector] updated', { tmLeft, tmRight, visibility: document.visibilityState });
+        console.log('[materialDetector] updated', { tmLeft, tmRight, visibility: document.visibilityState, state: window.__materialDetectorState || null });
     }
 
     function bootstrapRetries() {
