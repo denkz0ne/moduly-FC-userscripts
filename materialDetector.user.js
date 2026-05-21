@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.2.3
+// @version      3.2.4
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -57,9 +57,9 @@
         map[normalizeKey('42foto/web|fotopapier|pololeskly|260g')] = '260 sat';
         map[normalizeKey('42foto/web|fotopapier|matny|180g')] = '180';
         map[normalizeKey('42foto/web|fotopapier|matny|230g')] = '230';
-        map[normalizeKey('42foto/web|platno|polytex')] = 'poly';
-        map[normalizeKey('42foto/web|platno|canvas')] = 'canv';
-        map[normalizeKey('42foto/web|billboardovy papier')] = 'bb';
+        map[normalizeKey('42foto/web|plátno|štandard 280g')] = 'poly';
+        map[normalizeKey('42foto/web|plátno|premium 380g')] = 'canv';
+        map[normalizeKey('42foto/web|billboardový papier')] = 'bb';
         map[normalizeKey('42foto/web|medium pre rollup|economy')] = 'rld eco';
         map[normalizeKey('42foto/web|medium pre rollup|standart')] = 'rld';
         map[normalizeKey('42foto/web|backlit|lesk')] = 'back lesk';
