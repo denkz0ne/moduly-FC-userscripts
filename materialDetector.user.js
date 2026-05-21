@@ -161,7 +161,7 @@
     }
 
     function extractDimensionFromText(text) {
-        const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
+        const match = text.match(/(\d{2,3})\s*[x\u00d7]\s*(\d{2,3})/i);
         return match ? `${match[1]} ${match[2]}` : null;
     }
 
@@ -332,6 +332,11 @@
             else if (allValues.some(v => v.includes('mat'))) variant = 'mat';
         }
 
+        if (!weight) {
+            const anyGramCandidate = allValues.find(v => /\b(120|135|140|180|200|230|240|260)\s*g\b/i.test(v)) || '';
+            weight = pickWeight(anyGramCandidate);
+        }
+
         const quantityRaw = getParamValueByLabelContains(params, ['pocet kusov', 'pocet rovnakych vytlackov']);
         const quantityMatch = String(quantityRaw || '').match(/\d+/);
         const quantity = quantityMatch ? quantityMatch[0] : '';
@@ -415,10 +420,10 @@
         const iso = clean.match(/\bA\d\b/i);
         if (iso) return iso[0].toUpperCase();
 
-        const mm = clean.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})\s*mm/i);
+        const mm = clean.match(/(\d{2,4})\s*[x\u00d7]\s*(\d{2,4})\s*mm/i);
         if (mm) return `${mm[1]}x${mm[2]}mm`;
 
-        const cm = clean.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})\s*cm/i);
+        const cm = clean.match(/(\d{2,4})\s*[x\u00d7]\s*(\d{2,4})\s*cm/i);
         if (cm) return `${cm[1]}x${cm[2]}cm`;
 
         return clean;
@@ -514,7 +519,7 @@
     }
 
     function detectMaterialHexa(context) {
-        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAGÓN/i.test(txt));
+        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAG\u00d3N/i.test(txt));
         if (!detected) return null;
 
         setPerTabState({
