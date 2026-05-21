@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.2.1
+// @version      3.2.2
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -44,8 +44,8 @@
 
         map[normalizeKey('42foto/web|economy plagat|120g')] = '120';
         map[normalizeKey('42foto/web|economy plagat|140g')] = '140';
-        map[normalizeKey('42foto/web|plagatovy papier|135g')] = '135';
-        map[normalizeKey('42foto/web|plagatovy papier|200g')] = '200';
+        map[normalizeKey('42foto/web|Plagátovy papier|135g')] = '135';
+        map[normalizeKey('42foto/web|Plagátovy papier|200g')] = '200';
         map[normalizeKey('42foto/web|fotopapier|leskly|200g')] = '200 lesk';
         map[normalizeKey('42foto/web|fotopapier|leskly|260g')] = '260 lesk';
         map[normalizeKey('42foto/web|fotopapier|pololeskly|200g')] = '200 sat';
