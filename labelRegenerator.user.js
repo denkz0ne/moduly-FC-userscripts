@@ -89,12 +89,12 @@
 
         const commonStyle = `
             color: #000;
-            padding: 0 1mm;
+            padding: 1mm 1mm;
             margin: 0px;
-            font-size: 23pt;
+            font-size: 24pt;
             display: inline-block;
             font-family: 'Dekko', 'Segoe Script';
-            transform: translateY(-1mm) scaleX(0.7);
+            transform: translateY(-1mm) scaleX(0.9);
             margin-top: -3mm;
             font-weight: bold;
             transform-origin: left;
