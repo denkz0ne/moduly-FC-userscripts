@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.3.2
+// @version      1.3.3
 // @description  Uprava print stitku a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -17,6 +17,19 @@
     function isPrintLabelPage() {
         return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
     }
+
+    function ensureDekkoFont() {
+        if (!document.head) return;
+        if (document.querySelector('link[data-label-regenerator-font="dekko"]')) return;
+
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Dekko&display=swap';
+        link.setAttribute('data-label-regenerator-font', 'dekko');
+        document.head.appendChild(link);
+    }
+
+    ensureDekkoFont();
 
     window.TM_testoLeft = localStorage.getItem('TM_testoLeft') || '';
     window.TM_testoRight = localStorage.getItem('TM_testoRight') || '';
@@ -80,7 +93,7 @@
             margin: 0px;
             font-size: 23pt;
             display: inline-block;
-            font-family: 'Segoe Script';
+            font-family: 'Dekko', 'Segoe Script';
             transform: translateY(-1mm) scaleX(0.7);
             margin-top: -3mm;
             font-weight: bold;
