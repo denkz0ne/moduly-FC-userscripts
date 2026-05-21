@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.2.2
+// @version      3.2.3
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -41,6 +41,10 @@
 
         map[normalizeKey('Pauzovací papier 90g')] = 'pauz';
         map[normalizeKey('základný papier biely 80g/m2')] = '80g';
+        map[normalizeKey('neónový papier zelený 90g/m2')] = '90n_zel';
+        map[normalizeKey('neónový papier oranžový 90g/m2')] = '90n_or';
+        map[normalizeKey('neónový papier ružový 90g/m2')] = '90n_ruz';
+        map[normalizeKey('neónový papier žltý 90g/m2')] = '90n_zlt';
 
         map[normalizeKey('42foto/web|economy plagat|120g')] = '120';
         map[normalizeKey('42foto/web|economy plagat|140g')] = '140';
