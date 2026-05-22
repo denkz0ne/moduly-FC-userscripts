@@ -90,10 +90,10 @@ const commonStyle = `
     color: #000;
     padding: 0;
     margin: 0;
-    font-size: 24pt;
+    font-size: 25pt;
     display: inline-block;
     font-family: 'Dekko', 'Segoe Script';
-    transform: translateY(-1mm) scaleX(0.8);
+    transform: translateY(-4mm) scaleX(0.9);
     transform-origin: left center;
     white-space: nowrap;
 `;
@@ -101,6 +101,7 @@ const commonStyle = `
     testoLeft.style.cssText = commonStyle;
 
     testoRight.style.cssText = commonStyle;
+    testoRight.style.transformOrigin = 'right center';
     testoRight.style.marginLeft = 'auto';
     testoRight.style.textAlign = 'right';
     testoRight.style.width = '63mm';
