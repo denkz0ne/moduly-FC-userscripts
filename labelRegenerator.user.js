@@ -96,7 +96,6 @@ if (clear) {
         transform: translateY(-1mm) scaleX(1);
         margin-top: -3mm;
         transform-origin: left center;
-        font-weight: bold;
     `;
 
     testoLeft.style.cssText = commonStyle;
