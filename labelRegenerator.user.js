@@ -72,42 +72,45 @@
 
     const clear = document.querySelector('#label .clear');
 
-    if (clear) {
-        const wrapper60 = document.createElement('div');
+if (clear) {
+    const wrapper60 = document.createElement('div');
 
-        wrapper60.style.display = 'flex';
-        wrapper60.style.justifyContent = 'space-between';
-        wrapper60.style.alignItems = 'center';
-        wrapper60.style.width = '100%';
-        wrapper60.style.marginBottom = '2mm';
+    wrapper60.style.display = 'flex';
+    wrapper60.style.alignItems = 'center';
+    wrapper60.style.width = '100%';
+    wrapper60.style.marginBottom = '2mm';
 
-        const testoLeft = document.createElement('div');
-        const testoRight = document.createElement('div');
+    const testoLeft = document.createElement('div');
+    const testoRight = document.createElement('div');
 
-        testoLeft.textContent = window.TM_testoLeft || '';
-        testoRight.textContent = window.TM_testoRight || '';
+    testoLeft.textContent = window.TM_testoLeft || '';
+    testoRight.textContent = window.TM_testoRight || '';
 
-        const commonStyle = `
-            color: #000;
-            padding: 1mm 1mm;
-            margin: 0px;
-            font-size: 24pt;
-            display: inline-block;
-            font-family: 'Dekko', 'Segoe Script';
-            transform: translateY(-1mm) scaleX(1);
-            margin-top: -3mm;
-            transform-origin: left;
-        `;
+    const commonStyle = `
+        color: #000;
+        padding: 0;
+        margin: 0;
+        font-size: 24pt;
+        display: inline-block;
+        font-family: 'Dekko', 'Segoe Script';
+        transform: translateY(-1mm) scaleX(1);
+        margin-top: -3mm;
+        transform-origin: left center;
+        font-weight: bold;
+    `;
 
-        testoLeft.style.cssText = commonStyle;
-        testoRight.style.cssText = commonStyle;
+    testoLeft.style.cssText = commonStyle;
 
-        wrapper60.prepend(testoLeft);
-        wrapper60.append(testoRight);
+    testoRight.style.cssText = commonStyle;
+    testoRight.style.marginLeft = 'auto';
+    testoRight.style.textAlign = 'right';
+    testoRight.style.width = '63mm';
 
-        clear.before(wrapper60);
-    }
+    wrapper60.append(testoLeft);
+    wrapper60.append(testoRight);
 
+    clear.before(wrapper60);
+}
     const block = document.querySelector('#data > div');
     if (block) {
         block.style.marginBottom = '1mm';
