@@ -94,9 +94,8 @@
             font-size: 24pt;
             display: inline-block;
             font-family: 'Dekko', 'Segoe Script';
-            transform: translateY(-1mm) scaleX(0.9);
+            transform: translateY(-1mm) scaleX(1);
             margin-top: -3mm;
-            font-weight: bold;
             transform-origin: left;
         `;
 
