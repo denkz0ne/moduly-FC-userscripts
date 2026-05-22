@@ -93,7 +93,7 @@ const commonStyle = `
     font-size: 24pt;
     display: inline-block;
     font-family: 'Dekko', 'Segoe Script';
-    transform: translateY(-1mm) scaleX(1);
+    transform: translateY(-1mm) scaleX(0.8);
     transform-origin: left center;
     white-space: nowrap;
 `;
