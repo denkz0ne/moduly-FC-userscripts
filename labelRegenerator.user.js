@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.3.3
+// @version      1.3.4
 // @description  Uprava print stitku a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -86,17 +86,17 @@ if (clear) {
     testoLeft.textContent = window.TM_testoLeft || '';
     testoRight.textContent = window.TM_testoRight || '';
 
-    const commonStyle = `
-        color: #000;
-        padding: 0;
-        margin: 0;
-        font-size: 24pt;
-        display: inline-block;
-        font-family: 'Dekko', 'Segoe Script';
-        transform: translateY(-1mm) scaleX(1);
-        margin-top: -3mm;
-        transform-origin: left center;
-    `;
+const commonStyle = `
+    color: #000;
+    padding: 0;
+    margin: 0;
+    font-size: 24pt;
+    display: inline-block;
+    font-family: 'Dekko', 'Segoe Script';
+    transform: translateY(-1mm) scaleX(1);
+    transform-origin: left center;
+    white-space: nowrap;
+`;
 
     testoLeft.style.cssText = commonStyle;
 
