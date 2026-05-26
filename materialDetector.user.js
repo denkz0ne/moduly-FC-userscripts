@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.2.7
+// @version      3.2.8
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -348,7 +348,12 @@
 
         const key = chunks.join('|');
         const baseAlias = resolveMaterialAlias(key) || details.mediaTypeRaw || '42foto/web';
-        if (details.quantity) return `${baseAlias} | ${details.quantity}ks`;
+
+        const qty = parseInt(details.quantity, 10);
+        if (!Number.isNaN(qty) && qty >= 2) {
+            return `${baseAlias} | ${qty}ks`;
+        }
+
         return baseAlias;
     }
 
