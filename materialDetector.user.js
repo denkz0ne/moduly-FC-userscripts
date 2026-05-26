@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      3.2.6
+// @version      3.2.7
 // @description  Zistovanie rozmeru/materialu a datumu expedicie pre stitok.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -156,7 +156,7 @@
     }
 
     function extractDimensionFromText(text) {
-        const match = text.match(/(\d{2,3})\s*[x×]\s*(\d{2,3})/i);
+        const match = text.match(/(\d{2,3})\s*[x\u00d7]\s*(\d{2,3})/i);
         return match ? `${match[1]} ${match[2]}` : null;
     }
 
@@ -379,10 +379,10 @@
         const iso = clean.match(/\bA\d\b/i);
         if (iso) return iso[0].toUpperCase();
 
-        const mm = clean.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})\s*mm/i);
+        const mm = clean.match(/(\d{2,4})\s*[x\u00d7]\s*(\d{2,4})\s*mm/i);
         if (mm) return `${mm[1]}x${mm[2]}mm`;
 
-        const cm = clean.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})\s*cm/i);
+        const cm = clean.match(/(\d{2,4})\s*[x\u00d7]\s*(\d{2,4})\s*cm/i);
         if (cm) return `${cm[1]}x${cm[2]}cm`;
 
         return clean;
@@ -436,6 +436,12 @@
         let result = materialPart;
         if (colorPart) result += ` ${colorPart}`;
         if (hasFoldingSelected(details.folding)) result += ' + skl';
+
+        const qty = parseInt(details.quantity, 10);
+        if (!Number.isNaN(qty) && qty >= 2) {
+            result += ` | ${qty}ks`;
+        }
+
         return result;
     }
 
@@ -460,7 +466,7 @@
     }
 
     function detectMaterialHexa(context) {
-        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAGÓN/i.test(txt));
+        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAG\u00d3N/i.test(txt));
         if (!detected) return null;
 
         return {
