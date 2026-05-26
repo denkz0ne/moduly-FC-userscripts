@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pokyny Pre - Archiv
 // @namespace    http://faxcopy.sk/
-// @version      1.3
+// @version      1.4
 // @description  Archivacia pokynov a poznamok z VP formulara + automaticke nastavenie pobocky
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
@@ -96,14 +96,66 @@
             .replaceAll("'", '&#039;');
     }
 
-    function getByXPath(xpath) {
-        return document.evaluate(
-            xpath,
-            document,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-        ).singleNodeValue;
+    function normalizeText(text) {
+        return (text || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function setNativeSelectValue(select, value) {
+        if (!select || select.value === value) {
+            return;
+        }
+
+        select.value = value;
+        select.dispatchEvent(new Event('input', { bubbles: true }));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+
+        if (window.jQuery) {
+            window.jQuery(select).val(value).trigger('change');
+        }
+    }
+
+    function findOptionByText(select, expectedText) {
+        if (!select || !expectedText) {
+            return null;
+        }
+
+        const normalizedExpected = normalizeText(expectedText).toLowerCase();
+
+        return Array.from(select.options).find(option =>
+            normalizeText(option.text).toLowerCase() === normalizedExpected
+        ) || null;
+    }
+
+    function findAssignedBranchText() {
+        const detail = document.querySelector('#vpOrderDetail');
+        const root = detail || document;
+
+        const rows = Array.from(root.querySelectorAll('p'));
+
+        for (const row of rows) {
+            const rowText = normalizeText(row.textContent);
+
+            if (!rowText.includes('Pridelenie:')) {
+                continue;
+            }
+
+            const strong = row.querySelector('strong');
+            const strongText = normalizeText(strong ? strong.textContent : '');
+
+            if (strongText) {
+                return strongText;
+            }
+
+            const match = rowText.match(/Pridelenie:\s*([^\s]+)/);
+            if (match) {
+                return normalizeText(match[1]);
+            }
+        }
+
+        const detailText = normalizeText(root.textContent);
+        const fallbackMatch = detailText.match(/Pridelenie:\s*([^\s]+)/);
+
+        return fallbackMatch ? normalizeText(fallbackMatch[1]) : '';
     }
 
     function initFormWatcher() {
@@ -180,30 +232,44 @@
     }
 
     function initPokynPrePobockuSetter() {
+        let tries = 0;
+
         const interval = setInterval(() => {
-            const secondSelect = getByXPath('/html/body/div[9]/div/div[2]/div/div/div[2]/div[2]/strong/strong/form/div[2]/div/select');
-            const firstSelect = getByXPath('/html/body/div[9]/div/div[2]/div/div/div[2]/div[2]/strong/strong/form/div[4]/div/select');
-            const textElem = getByXPath('/html/body/div[9]/div/div[2]/div/div/div[1]/div[2]/div[2]/p[5]/strong');
+            tries++;
 
-            if (!secondSelect && !firstSelect) return;
+            const typSelect = document.querySelector('#frm-pokyn_typ');
+            const branchSelect = document.querySelector('#frm-pokyn_pobocka');
+            const assignedBranchText = findAssignedBranchText();
 
-            if (secondSelect && secondSelect.options.length > 1) {
-                secondSelect.value = secondSelect.options[1].value;
-                secondSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-
-            if (firstSelect && textElem) {
-                const text = (textElem.textContent || '').trim();
-                const option = Array.from(firstSelect.options).find(o => o.text.trim() === text);
-
-                if (option) {
-                    firstSelect.value = option.value;
-                    firstSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            if (!typSelect || !branchSelect || !assignedBranchText) {
+                if (tries > 80) {
+                    clearInterval(interval);
+                    console.warn('[ARCHIV] nepodarilo sa najst formular alebo Pridelenie');
                 }
+
+                return;
             }
 
+            const pokynPreOption = Array.from(typSelect.options).find(option =>
+                normalizeText(option.text).toLowerCase().startsWith('pokyn pre')
+            );
+
+            if (pokynPreOption) {
+                setNativeSelectValue(typSelect, pokynPreOption.value);
+            }
+
+            const branchOption = findOptionByText(branchSelect, assignedBranchText);
+
+            if (!branchOption) {
+                clearInterval(interval);
+                console.warn(`[ARCHIV] pobocka ${assignedBranchText} nie je v selecte Pokyn pre`);
+                return;
+            }
+
+            setNativeSelectValue(branchSelect, branchOption.value);
             clearInterval(interval);
-        }, 500);
+            console.log(`[ARCHIV] Pokyn pre nastaveny na ${assignedBranchText}`);
+        }, 300);
     }
 
     async function openViewer() {
