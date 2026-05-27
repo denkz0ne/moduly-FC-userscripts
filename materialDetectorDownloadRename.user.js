@@ -2,7 +2,7 @@
 // @name         materialDetector Download Rename
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.0.0
+// @version      1.1.0
 // @description  Premenuje stiahnute podklady podla materialDetector stavu.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetectorDownloadRename.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetectorDownloadRename.user.js
@@ -62,13 +62,48 @@
         return getStateFromSession(vp);
     }
 
+    function parseSizeAliasFromText(text) {
+        const raw = String(text || '').trim();
+        if (!raw) return '';
+
+        const iso = raw.match(/\bA\s*([0-9]{1,2})\b/i);
+        if (iso) return ('A' + iso[1]).toUpperCase();
+
+        const normalized = raw
+            .replace(/×/g, 'x')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const mm = normalized.match(/(\d{2,4}(?:[.,]\d+)?)\s*x\s*(\d{2,4}(?:[.,]\d+)?)\s*mm\b/i);
+        if (mm) {
+            const w = Number(mm[1].replace(',', '.')) / 10;
+            const h = Number(mm[2].replace(',', '.')) / 10;
+            if (Number.isFinite(w) && Number.isFinite(h)) {
+                const sw = String(Math.round(w * 10) / 10).replace('.', ',');
+                const sh = String(Math.round(h * 10) / 10).replace('.', ',');
+                return sw + 'x' + sh + '_cm';
+            }
+        }
+
+        const cm = normalized.match(/(\d{1,4}(?:[.,]\d+)?)\s*x\s*(\d{1,4}(?:[.,]\d+)?)\s*cm\b/i);
+        if (cm) {
+            const sw = cm[1].replace('.', ',');
+            const sh = cm[2].replace('.', ',');
+            return sw + 'x' + sh + '_cm';
+        }
+
+        return '';
+    }
+
     function parseLeftFallback() {
         const left = String(window.TM_testoLeft || localStorage.getItem('TM_testoLeft') || '').trim();
-        if (!left) return { material: '', params: [], qty: '' };
+        if (!left) return { material: '', params: [], sizeAlias: '', qty: '' };
 
         const mainPart = left.split('|')[0].trim();
         const qtyMatch = left.match(/(\d+)\s*ks/i);
         const qty = qtyMatch ? qtyMatch[1] : '';
+
+        const sizeAlias = parseSizeAliasFromText(mainPart);
 
         const norm = normalizeKey(mainPart);
         const params = [];
@@ -80,7 +115,7 @@
         material = material.replace(/\bcb\b/gi, '').replace(/\bf\b/gi, '').replace(/\+\s*skl/gi, '');
         material = sanitizeToken(material);
 
-        return { material, params, qty };
+        return { material, params, sizeAlias, qty };
     }
 
     function getNameParts() {
@@ -89,6 +124,7 @@
 
         let material = '';
         let params = [];
+        let sizeAlias = '';
         let qty = '';
 
         if (state && state.params) {
@@ -105,20 +141,23 @@
             if (p.variant) params.push(sanitizeToken(p.variant));
             if (p.weight) params.push(sanitizeToken(p.weight));
 
+            sizeAlias = sanitizeToken(p.sizeAlias || state.sizeAlias || '');
             qty = String(p.quantity || '').match(/\d+/)?.[0] || '';
         }
 
         const fallback = parseLeftFallback();
         if (!material) material = fallback.material;
         if (!params.length) params = fallback.params;
+        if (!sizeAlias) sizeAlias = fallback.sizeAlias;
         if (!qty) qty = fallback.qty;
 
         const materialPart = sanitizeSnakeToken(material || 'material');
         const paramsPart = sanitizeSnakeToken(params.filter(Boolean).join('_') || 'bez_parametrov');
+        const sizePart = sanitizeSnakeToken(sizeAlias || 'bez_rozmeru');
         const qtyPart = sanitizeSnakeToken((qty ? qty + 'ks' : '1ks'));
         const vpPart = sanitizeSnakeToken(vp || 'bezVP');
 
-        return { materialPart, paramsPart, qtyPart, vpPart };
+        return { materialPart, paramsPart, sizePart, qtyPart, vpPart };
     }
 
     function extractFilenameFromHref(href) {
@@ -140,7 +179,7 @@
         const parts = getNameParts();
         const original = extractFilenameFromHref(originalHref);
 
-        const prefix = [parts.materialPart, parts.paramsPart, parts.qtyPart, parts.vpPart].join('_');
+        const prefix = [parts.materialPart, parts.paramsPart, parts.sizePart, parts.qtyPart, parts.vpPart].join('_');
         const originalBase = sanitizeToken(original.base || 'subor');
         const ext = sanitizeToken(original.ext || '');
 
