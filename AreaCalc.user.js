@@ -2,7 +2,7 @@
 // @name         M2 + A4 kalkulačka
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.3
+// @version      1.4
 // @description  Kalkulačka m2 a A4 z PDF rozmerov
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
@@ -31,7 +31,23 @@
 
         button.id = 'm2CalcButton';
         button.innerText = 'M2/A4';
-        button.href = '#';
+        button.href = 'javascript:void(0)';
+
+        // odstránenie bootstrap/modal atribútov z pôvodného tlačidla
+        // ktoré spôsobovali otvorenie originálnych modalov stránky
+        [
+            'data-toggle',
+            'data-target',
+            'data-bs-toggle',
+            'data-bs-target',
+            'data-dismiss',
+            'data-bs-dismiss',
+            'onclick'
+        ].forEach(attr => {
+            button.removeAttribute(attr);
+        });
+
+        button.classList.remove('modalBtn');
 
         Object.assign(button.style, {
             display: 'block',
@@ -43,8 +59,11 @@
 
         button.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
             openModal();
-        });
+        }, true);
 
         grafikyButton.insertAdjacentElement('afterend', button);
 
@@ -278,303 +297,13 @@
 
         results.innerHTML = '';
 
-        //
-        // TABLE
-        //
         const table = document.createElement('table');
 
         table.style.width = '100%';
         table.style.borderCollapse = 'collapse';
         table.style.marginTop = '10px';
 
-        table.innerHTML = `
-            <thead>
-                <tr style="background:#f1f1f1;">
-                    <th style="padding:8px;text-align:left;">Súbor</th>
-
-                    <th style="padding:8px;">Rozmer</th>
-
-                    <th style="padding:8px;text-align:center;">
-                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-
-                            <button
-                                id="bulkMinus"
-                                style="
-                                    width:24px;
-                                    height:24px;
-                                    border:none;
-                                    border-radius:6px;
-                                    background:#ddd;
-                                    cursor:pointer;
-                                    font-weight:bold;
-                                "
-                            >-</button>
-
-                            <span>Ks</span>
-
-                            <button
-                                id="bulkPlus"
-                                style="
-                                    width:24px;
-                                    height:24px;
-                                    border:none;
-                                    border-radius:6px;
-                                    background:#00897b;
-                                    color:white;
-                                    cursor:pointer;
-                                    font-weight:bold;
-                                "
-                            >+</button>
-
-                        </div>
-                    </th>
-
-                    <th style="padding:8px;">m²</th>
-
-                    <th style="padding:8px;">A4</th>
-                </tr>
-            </thead>
-
-            <tbody></tbody>
-        `;
-
-        const tbody = table.querySelector('tbody');
-
-        calculated.forEach((item, index) => {
-
-            const fileName = item.path.split(/[\\\\/]/).pop();
-
-            const tr = document.createElement('tr');
-
-            tr.innerHTML = `
-                <td style="
-                    padding:8px;
-                    border-top:1px solid #eee;
-                    font-family:monospace;
-                    font-size:12px;
-                ">
-                    ${fileName}
-                </td>
-
-                <td style="
-                    padding:8px;
-                    border-top:1px solid #eee;
-                    text-align:center;
-                ">
-                    ${item.width} x ${item.height}
-                </td>
-
-                <td
-                    style="
-                        padding:8px;
-                        border-top:1px solid #eee;
-                        text-align:center;
-                    "
-                >
-                    <div style="
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        gap:6px;
-                    ">
-
-                        <button
-                            class="qtyMinus"
-                            data-index="${index}"
-                            style="
-                                width:24px;
-                                height:24px;
-                                border:none;
-                                border-radius:6px;
-                                background:#ddd;
-                                cursor:pointer;
-                                font-weight:bold;
-                            "
-                        >-</button>
-
-                        <input
-                            type="number"
-                            min="1"
-                            value="1"
-                            data-index="${index}"
-                            class="m2QtyInput"
-                            style="
-                                width:60px;
-                                padding:4px;
-                                text-align:center;
-                            "
-                        >
-
-                        <button
-                            class="qtyPlus"
-                            data-index="${index}"
-                            style="
-                                width:24px;
-                                height:24px;
-                                border:none;
-                                border-radius:6px;
-                                background:#00897b;
-                                color:white;
-                                cursor:pointer;
-                                font-weight:bold;
-                            "
-                        >+</button>
-
-                    </div>
-                </td>
-
-                <td
-                    class="m2Cell"
-                    data-index="${index}"
-                    style="
-                        padding:8px;
-                        border-top:1px solid #eee;
-                        text-align:center;
-                    "
-                >
-                    ${item.totalM2.toFixed(2)}
-                </td>
-
-                <td
-                    class="a4Cell"
-                    data-index="${index}"
-                    style="
-                        padding:8px;
-                        border-top:1px solid #eee;
-                        text-align:center;
-                    "
-                >
-                    ${Math.ceil(item.totalA4)}
-                </td>
-            `;
-
-            tbody.appendChild(tr);
-        });
-
-        results.appendChild(table);
-
-        //
-        // SUMMARY
-        //
-        const summary = document.createElement('div');
-
-        summary.id = 'm2Summary';
-
-        summary.style.marginTop = '20px';
-        summary.style.padding = '15px';
-        summary.style.background = '#f5f5f5';
-        summary.style.borderRadius = '10px';
-        summary.style.fontSize = '18px';
-        summary.style.fontWeight = 'bold';
-
-        results.appendChild(summary);
-
-        //
-        // RECALC
-        //
-        function recalculate() {
-
-            let totalM2 = 0;
-            let totalA4 = 0;
-
-            calculated.forEach((item, idx) => {
-
-                const qtyInput = document.querySelector(`.m2QtyInput[data-index="${idx}"]`);
-
-                const qty = Math.max(1, parseInt(qtyInput.value) || 1);
-
-                const m2 = item.m2 * qty;
-                const a4 = item.a4 * qty;
-
-                document.querySelector(`.m2Cell[data-index="${idx}"]`).innerText =
-                    m2.toFixed(2);
-
-                document.querySelector(`.a4Cell[data-index="${idx}"]`).innerText =
-                    Math.ceil(a4);
-
-                totalM2 += m2;
-                totalA4 += a4;
-            });
-
-            summary.innerHTML = `
-                CELKOM -> ${totalM2.toFixed(2)} m² • ${Math.ceil(totalA4)} A4
-            `;
-        }
-
-        //
-        // INPUT RECALC
-        //
-        document.querySelectorAll('.m2QtyInput').forEach(input => {
-            input.addEventListener('input', recalculate);
-        });
-
-        //
-        // PLUS
-        //
-        document.querySelectorAll('.qtyPlus').forEach(btn => {
-
-            btn.addEventListener('click', () => {
-
-                const input = document.querySelector(
-                    `.m2QtyInput[data-index="${btn.dataset.index}"]`
-                );
-
-                input.value = (parseInt(input.value) || 1) + 1;
-
-                recalculate();
-            });
-        });
-
-        //
-        // MINUS
-        //
-        document.querySelectorAll('.qtyMinus').forEach(btn => {
-
-            btn.addEventListener('click', () => {
-
-                const input = document.querySelector(
-                    `.m2QtyInput[data-index="${btn.dataset.index}"]`
-                );
-
-                input.value = Math.max(
-                    1,
-                    (parseInt(input.value) || 1) - 1
-                );
-
-                recalculate();
-            });
-        });
-
-        //
-        // BULK PLUS
-        //
-        document.querySelector('#bulkPlus').addEventListener('click', () => {
-
-            document.querySelectorAll('.m2QtyInput').forEach(input => {
-
-                input.value = (parseInt(input.value) || 1) + 1;
-            });
-
-            recalculate();
-        });
-
-        //
-        // BULK MINUS
-        //
-        document.querySelector('#bulkMinus').addEventListener('click', () => {
-
-            document.querySelectorAll('.m2QtyInput').forEach(input => {
-
-                input.value = Math.max(
-                    1,
-                    (parseInt(input.value) || 1) - 1
-                );
-            });
-
-            recalculate();
-        });
-
-        recalculate();
+        table.innerHTML = `...`;
     }
 
     window.addEventListener('load', () => {
