@@ -2,7 +2,7 @@
 // @name         M2 + A4 kalkulačka
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.7
+// @version      1.8
 // @description  Kalkulačka m2, A4 a univerzálny parser rozmerov
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
@@ -29,14 +29,16 @@
     // HELPERS
     //
     function normalizeNumber(v) {
-        return parseFloat(String(v).replace(',', '.'));
+        return parseFloat(
+            String(v)
+                .replace(',', '.')
+                .trim()
+        );
     }
 
     function unitToMm(value, unit) {
 
-        if (!unit || unit === 'cm') {
-            return value * 10;
-        }
+        unit = (unit || 'cm').toLowerCase();
 
         if (unit === 'mm') {
             return value;
@@ -49,21 +51,35 @@
         return value * 10;
     }
 
+    //
+    // QTY
+    //
+    // berie POSLEDNY qty token v riadku
+    //
     function extractQty(line) {
 
-        const qtyMatch = line.match(
-            /(\d+(?:[\.,]\d+)?)\s*(x|ks|kus|pcs)/i
-        );
+        const matches = [
+            ...line.matchAll(
+                /(\d+(?:[\.,]\d+)?)\s*(x|ks|kus|pcs)\b/gi
+            )
+        ];
 
-        if (!qtyMatch) {
+        if (!matches.length) {
             return 1;
         }
 
-        return Math.max(1, parseInt(qtyMatch[1]));
+        const last = matches[matches.length - 1];
+
+        return Math.max(
+            1,
+            parseInt(
+                String(last[1]).replace(',', '.')
+            ) || 1
+        );
     }
 
     //
-    // PDF EXPORT PARSER
+    // PDF EXPORT
     //
     function parsePdfExport(line) {
 
@@ -89,7 +105,7 @@
     }
 
     //
-    // FREEFORM PARSER
+    // FREEFORM
     //
     function parseFreeform(line) {
 
@@ -113,7 +129,7 @@
             }
 
             return {
-                path: format,
+                path: clean,
                 width: size[0],
                 height: size[1],
                 qty: extractQty(clean)
@@ -123,8 +139,11 @@
         //
         // DIMENSIONS
         //
+        // kazdy riadok = jeden zaznam
+        // parser berie LEN prvy rozmer
+        //
         const dimMatch = clean.match(
-            /(\d+(?:\.\d+)?)\s*(mm|cm|m)?\s*x\s*(\d+(?:\.\d+)?)\s*(mm|cm|m)?/i
+            /^\s*(\d+(?:[\.,]\d+)?)\s*(mm|cm|m)?\s*x\s*(\d+(?:[\.,]\d+)?)\s*(mm|cm|m)?/i
         );
 
         if (!dimMatch) {
@@ -157,12 +176,14 @@
     //
     function calc(item) {
 
-        const m2 = (item.width * item.height) / 1000000;
+        const m2 = (
+            item.width *
+            item.height
+        ) / 1000000;
+
         const a4 = m2 / A4_AREA;
 
         return {
-            m2,
-            a4,
             totalM2: m2 * item.qty,
             totalA4: a4 * item.qty
         };
@@ -204,14 +225,20 @@
             borderRadius: '12px',
             zIndex: '999999',
             padding: '20px',
-            boxShadow: '0 10px 40px rgba(0,0,0,.35)',
             display: 'none',
-            fontFamily: 'Arial,sans-serif'
+            boxShadow: '0 10px 40px rgba(0,0,0,.35)'
         });
 
         modal.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-                <h2 style="margin:0;">M2 + A4 kalkulačka</h2>
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-bottom:15px;
+            ">
+                <h2 style="margin:0;">
+                    M2 + A4 kalkulačka
+                </h2>
 
                 <button
                     id="m2CalcClose"
@@ -230,25 +257,28 @@
             <textarea
                 id="m2CalcInput"
                 placeholder="
-10x15 1x
+10x15 100x
+60x40 2x
 100x500mm 12ks
 A4 66x
-10x12 mm 6ks
 2 x 3m 8 ks
                 "
                 style="
                     width:100%;
-                    height:220px;
+                    height:240px;
                     padding:10px;
                     font-family:monospace;
-                    font-size:13px;
                     border:1px solid #ccc;
                     border-radius:8px;
                     box-sizing:border-box;
                 "
             ></textarea>
 
-            <div style="margin-top:15px;display:flex;gap:10px;">
+            <div style="
+                margin-top:15px;
+                display:flex;
+                gap:10px;
+            ">
                 <button
                     id="m2CalcRun"
                     style="
@@ -354,16 +384,29 @@ A4 66x
 
         table.style.width = '100%';
         table.style.borderCollapse = 'collapse';
-        table.style.marginTop = '10px';
 
         table.innerHTML = `
             <thead>
                 <tr style="background:#f1f1f1;">
-                    <th style="padding:8px;text-align:left;">Vstup</th>
-                    <th style="padding:8px;">Rozmer</th>
-                    <th style="padding:8px;">Ks</th>
-                    <th style="padding:8px;">m²</th>
-                    <th style="padding:8px;">A4</th>
+                    <th style="padding:8px;text-align:left;">
+                        Vstup
+                    </th>
+
+                    <th style="padding:8px;">
+                        Rozmer
+                    </th>
+
+                    <th style="padding:8px;">
+                        Ks
+                    </th>
+
+                    <th style="padding:8px;">
+                        m²
+                    </th>
+
+                    <th style="padding:8px;">
+                        A4
+                    </th>
                 </tr>
             </thead>
 
@@ -534,20 +577,8 @@ A4 66x
             'data-target',
             'data-bs-toggle',
             'data-bs-target',
-            'data-dismiss',
-            'data-bs-dismiss',
             'onclick'
         ].forEach(attr => button.removeAttribute(attr));
-
-        button.className = '';
-
-        Object.assign(button.style, {
-            display: 'block',
-            marginTop: '6px',
-            background: '#00897b',
-            borderColor: '#00695c',
-            color: '#fff'
-        });
 
         button.addEventListener('click', (e) => {
 
