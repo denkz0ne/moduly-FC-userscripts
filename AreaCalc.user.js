@@ -2,7 +2,7 @@
 // @name         M2 + A4 kalkulačka
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.6
+// @version      1.7
 // @description  Kalkulačka m2, A4 a univerzálny parser rozmerov
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
@@ -11,6 +11,7 @@
 // ==/UserScript==
 
 (function () {
+
     'use strict';
 
     const A4_AREA = 0.06237;
@@ -371,15 +372,9 @@ A4 66x
 
         const tbody = table.querySelector('tbody');
 
-        let totalM2 = 0;
-        let totalA4 = 0;
-
-        items.forEach((item) => {
+        items.forEach((item, index) => {
 
             const values = calc(item);
-
-            totalM2 += values.totalM2;
-            totalA4 += values.totalA4;
 
             const row = document.createElement('tr');
 
@@ -408,22 +403,41 @@ A4 66x
                     border-top:1px solid #eee;
                     text-align:center;
                 ">
-                    ${item.qty}
+                    <input
+                        class="m2QtyInput"
+                        data-index="${index}"
+                        type="number"
+                        min="1"
+                        value="${item.qty}"
+                        style="
+                            width:70px;
+                            padding:4px;
+                            text-align:center;
+                        "
+                    >
                 </td>
 
-                <td style="
-                    padding:8px;
-                    border-top:1px solid #eee;
-                    text-align:center;
-                ">
+                <td
+                    class="m2Cell"
+                    data-index="${index}"
+                    style="
+                        padding:8px;
+                        border-top:1px solid #eee;
+                        text-align:center;
+                    "
+                >
                     ${values.totalM2.toFixed(2)}
                 </td>
 
-                <td style="
-                    padding:8px;
-                    border-top:1px solid #eee;
-                    text-align:center;
-                ">
+                <td
+                    class="a4Cell"
+                    data-index="${index}"
+                    style="
+                        padding:8px;
+                        border-top:1px solid #eee;
+                        text-align:center;
+                    "
+                >
                     ${Math.ceil(values.totalA4)}
                 </td>
             `;
@@ -444,14 +458,53 @@ A4 66x
             fontWeight: 'bold'
         });
 
-        summary.innerHTML = `
-            CELKOM →
-            ${totalM2.toFixed(2)} m²
-            •
-            ${Math.ceil(totalA4)} A4
-        `;
+        function recalc() {
+
+            let totalM2 = 0;
+            let totalA4 = 0;
+
+            items.forEach((item, index) => {
+
+                const input = container.querySelector(
+                    `.m2QtyInput[data-index="${index}"]`
+                );
+
+                item.qty = Math.max(
+                    1,
+                    parseInt(input.value) || 1
+                );
+
+                const values = calc(item);
+
+                container.querySelector(
+                    `.m2Cell[data-index="${index}"]`
+                ).innerText = values.totalM2.toFixed(2);
+
+                container.querySelector(
+                    `.a4Cell[data-index="${index}"]`
+                ).innerText = Math.ceil(values.totalA4);
+
+                totalM2 += values.totalM2;
+                totalA4 += values.totalA4;
+            });
+
+            summary.innerHTML = `
+                CELKOM →
+                ${totalM2.toFixed(2)} m²
+                •
+                ${Math.ceil(totalA4)} A4
+            `;
+        }
+
+        table.querySelectorAll('.m2QtyInput')
+            .forEach(input => {
+
+                input.addEventListener('input', recalc);
+            });
 
         container.appendChild(summary);
+
+        recalc();
     }
 
     //
