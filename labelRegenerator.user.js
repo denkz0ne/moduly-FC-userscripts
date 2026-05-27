@@ -89,12 +89,12 @@ const commonStyle = `
     color: #000;
     padding: 0;
     margin: 0;
-    font-size: 25pt;
+    font-size: 24pt;
     display: inline-block;
     font-family: 'Roboto Condensed', Arial, sans-serif;
-    font-weight: 400;
-    letter-spacing: -0.3mm;
-    transform: translateY(calc(-5mm)) scaleX(0.82);
+    font-weight: 300;
+    letter-spacing: -0.2mm;
+    transform: translateY(calc(-3mm)) scaleX(0.8);
     transform-origin: left center;
     white-space: nowrap;
 `;
