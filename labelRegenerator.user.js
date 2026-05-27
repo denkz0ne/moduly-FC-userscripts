@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.3.4
+// @version      1.3.5
 // @description  Uprava print stitku a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -18,18 +18,18 @@
         return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
     }
 
-    function ensureDekkoFont() {
+    function ensureRobotoCondensedFont() {
         if (!document.head) return;
-        if (document.querySelector('link[data-label-regenerator-font="dekko"]')) return;
+        if (document.querySelector('link[data-label-regenerator-font="roboto-condensed"]')) return;
 
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'https://fonts.googleapis.com/css2?family=Dekko&display=swap';
-        link.setAttribute('data-label-regenerator-font', 'dekko');
+        link.href = 'https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap';
+        link.setAttribute('data-label-regenerator-font', 'roboto-condensed');
         document.head.appendChild(link);
     }
 
-    ensureDekkoFont();
+    ensureRobotoCondensedFont();
 
     window.TM_testoLeft = localStorage.getItem('TM_testoLeft') || '';
     window.TM_testoRight = localStorage.getItem('TM_testoRight') || '';
@@ -92,8 +92,10 @@ const commonStyle = `
     margin: 0;
     font-size: 25pt;
     display: inline-block;
-    font-family: 'Dekko', 'Segoe Script';
-    transform: translateY(-4mm) scaleX(0.9);
+    font-family: 'Roboto Condensed', Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.3mm;
+    transform: translateY(-4mm) scaleX(0.82);
     transform-origin: left center;
     white-space: nowrap;
 `;
