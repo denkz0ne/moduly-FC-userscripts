@@ -2,7 +2,7 @@
 // @name         materialDetector Download Rename
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.1.0
+// @version      1.2.0
 // @description  Premenuje stiahnute podklady podla materialDetector stavu.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetectorDownloadRename.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetectorDownloadRename.user.js
@@ -13,16 +13,6 @@
 
 (function () {
     'use strict';
-
-    function normalizeKey(text) {
-        if (!text) return '';
-        return String(text)
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
 
     function sanitizeToken(value) {
         return String(value || '')
@@ -95,69 +85,46 @@
         return '';
     }
 
-    function parseLeftFallback() {
+    function getAliasFromLeftText() {
         const left = String(window.TM_testoLeft || localStorage.getItem('TM_testoLeft') || '').trim();
-        if (!left) return { material: '', params: [], sizeAlias: '', qty: '' };
+        if (!left) return '';
 
-        const mainPart = left.split('|')[0].trim();
+        return left
+            .split('|')[0]
+            .trim();
+    }
+
+    function getQtyFromLeftText() {
+        const left = String(window.TM_testoLeft || localStorage.getItem('TM_testoLeft') || '').trim();
+        if (!left) return '';
         const qtyMatch = left.match(/(\d+)\s*ks/i);
-        const qty = qtyMatch ? qtyMatch[1] : '';
-
-        const sizeAlias = parseSizeAliasFromText(mainPart);
-
-        const norm = normalizeKey(mainPart);
-        const params = [];
-        if (/\bcb\b/i.test(norm)) params.push('cb');
-        if (/\bf\b/i.test(norm)) params.push('f');
-        if (norm.includes('+ skl') || norm.includes('sklad')) params.push('skl');
-
-        let material = mainPart;
-        material = material.replace(/\bcb\b/gi, '').replace(/\bf\b/gi, '').replace(/\+\s*skl/gi, '');
-        material = sanitizeToken(material);
-
-        return { material, params, sizeAlias, qty };
+        return qtyMatch ? qtyMatch[1] : '';
     }
 
     function getNameParts() {
         const vp = getCurrentVpFromUrl();
         const state = getMaterialDetectorState();
 
-        let material = '';
-        let params = [];
+        let alias = '';
         let sizeAlias = '';
         let qty = '';
 
-        if (state && state.params) {
-            const p = state.params;
-
-            material = sanitizeToken(p.materialAlias || p.material || state.outputAlias || '');
-            material = material.split('|')[0].trim();
-
-            if (p.colorCode) params.push(sanitizeToken(p.colorCode));
-            if (p.folding) {
-                const fold = normalizeKey(p.folding);
-                if (fold && fold !== 'nie' && !fold.includes('bez')) params.push('skl');
-            }
-            if (p.variant) params.push(sanitizeToken(p.variant));
-            if (p.weight) params.push(sanitizeToken(p.weight));
-
-            sizeAlias = sanitizeToken(p.sizeAlias || state.sizeAlias || '');
-            qty = String(p.quantity || '').match(/\d+/)?.[0] || '';
+        if (state) {
+            alias = String(state.outputAlias || '').split('|')[0].trim();
+            sizeAlias = String((state.params && state.params.sizeAlias) || state.sizeAlias || '').trim();
+            qty = String((state.params && state.params.quantity) || '').match(/\d+/)?.[0] || '';
         }
 
-        const fallback = parseLeftFallback();
-        if (!material) material = fallback.material;
-        if (!params.length) params = fallback.params;
-        if (!sizeAlias) sizeAlias = fallback.sizeAlias;
-        if (!qty) qty = fallback.qty;
+        if (!alias) alias = getAliasFromLeftText();
+        if (!sizeAlias) sizeAlias = parseSizeAliasFromText(alias);
+        if (!qty) qty = getQtyFromLeftText();
 
-        const materialPart = sanitizeSnakeToken(material || 'material');
-        const paramsPart = sanitizeSnakeToken(params.filter(Boolean).join('_') || 'bez_parametrov');
+        const aliasPart = sanitizeSnakeToken(alias || 'material');
         const sizePart = sanitizeSnakeToken(sizeAlias || 'bez_rozmeru');
         const qtyPart = sanitizeSnakeToken((qty ? qty + 'ks' : '1ks'));
         const vpPart = sanitizeSnakeToken(vp || 'bezVP');
 
-        return { materialPart, paramsPart, sizePart, qtyPart, vpPart };
+        return { aliasPart, sizePart, qtyPart, vpPart };
     }
 
     function extractFilenameFromHref(href) {
@@ -179,7 +146,7 @@
         const parts = getNameParts();
         const original = extractFilenameFromHref(originalHref);
 
-        const prefix = [parts.materialPart, parts.paramsPart, parts.sizePart, parts.qtyPart, parts.vpPart].join('_');
+        const prefix = [parts.aliasPart, parts.sizePart, parts.qtyPart, parts.vpPart].join('_');
         const originalBase = sanitizeToken(original.base || 'subor');
         const ext = sanitizeToken(original.ext || '');
 
