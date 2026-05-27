@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      4.1.1
+// @version      4.1.2
 // @description  Material detekcia + univerzalna velkost + premenovanie stahovanych suborov.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -18,6 +18,7 @@
 
     const MATERIAL_ALIAS_STORAGE_KEY = 'materialDetector.materialAliases.v1';
     const STATE_TTL_MS = 30000;
+    const LAST_SIZE_ALIAS_STORAGE_PREFIX = 'materialDetector.lastSizeAlias:';
 
     let lastLeft = null;
     let lastRight = null;
@@ -199,6 +200,24 @@
             sessionStorage.setItem('materialDetectorState:' + vp, JSON.stringify(payload));
         } catch (e) {
             console.warn('[materialDetector] sessionStorage save failed', e);
+        }
+    }
+
+    function getLastSizeAliasForVp(vp) {
+        if (!vp) return '';
+        try {
+            return String(localStorage.getItem(LAST_SIZE_ALIAS_STORAGE_PREFIX + vp) || '').trim();
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function setLastSizeAliasForVp(vp, sizeAlias) {
+        if (!vp || !sizeAlias) return;
+        try {
+            localStorage.setItem(LAST_SIZE_ALIAS_STORAGE_PREFIX + vp, String(sizeAlias).trim());
+        } catch (e) {
+            // ignore storage errors
         }
     }
 
@@ -783,13 +802,15 @@
 
     function applySizeAliasToState() {
         const vp = getCurrentVpFromUrl();
-        if (!vp) return;
+        if (!vp) return '';
 
         const sizeAlias = detectUniversalSizeAlias();
-        if (!sizeAlias) return;
+        if (!sizeAlias) return '';
 
         const baseState = getMaterialDetectorState() || { vp };
         const nextParams = Object.assign({}, baseState.params || {}, { sizeAlias });
+        setLastSizeAliasForVp(vp, sizeAlias);
+
         const nextState = Object.assign({}, baseState, {
             vp,
             params: nextParams,
@@ -804,6 +825,23 @@
         } catch (e) {
             console.warn('[materialDetector] size session save failed', e);
         }
+
+        return sizeAlias;
+    }
+
+    function ensureSizeAliasForRename() {
+        const vp = getCurrentVpFromUrl();
+        const live = applySizeAliasToState();
+        if (live) return live;
+
+        const state = getMaterialDetectorState();
+        const fromState = String((state && ((state.params && state.params.sizeAlias) || state.sizeAlias)) || '').trim();
+        if (fromState) {
+            setLastSizeAliasForVp(vp, fromState);
+            return fromState;
+        }
+
+        return getLastSizeAliasForVp(vp);
     }
 
     function startSizeObserver() {
@@ -880,12 +918,13 @@
         const state = getMaterialDetectorState();
 
         let alias = '';
-        let sizeAlias = '';
+        let sizeAlias = ensureSizeAliasForRename() || '';
         let qty = '';
 
         if (state) {
             alias = String(state.outputAlias || '').split('|')[0].trim();
-            sizeAlias = String((state.params && state.params.sizeAlias) || state.sizeAlias || '').trim();
+            const stateSizeAlias = String((state.params && state.params.sizeAlias) || state.sizeAlias || '').trim();
+            if (stateSizeAlias) sizeAlias = stateSizeAlias;
             qty = String((state.params && state.params.quantity) || '').match(/\d+/)?.[0] || '';
         }
 
