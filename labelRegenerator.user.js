@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.3.5
+// @version      1.3.6
 // @description  Uprava print stitku a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -34,7 +34,6 @@
     window.TM_testoLeft = localStorage.getItem('TM_testoLeft') || '';
     window.TM_testoRight = localStorage.getItem('TM_testoRight') || '';
 
-    // Keep values while user is on VP detail page; clear only after print tab unload.
     window.addEventListener('unload', () => {
         if (!isPrintLabelPage()) return;
         localStorage.removeItem('TM_testoLeft');
@@ -93,9 +92,9 @@ const commonStyle = `
     font-size: 25pt;
     display: inline-block;
     font-family: 'Roboto Condensed', Arial, sans-serif;
-    font-weight: 700;
+    font-weight: 400;
     letter-spacing: -0.3mm;
-    transform: translateY(-4mm) scaleX(0.82);
+    transform: translateY(calc(-4mm + 1px)) scaleX(0.82);
     transform-origin: left center;
     white-space: nowrap;
 `;
@@ -228,7 +227,6 @@ const commonStyle = `
         const vpNumber = getVpNumber();
         if (!vpNumber) return;
 
-        // Ensure print page gets exactly what user currently sees in VP badges.
         syncLabelValuesFromDetailPage();
 
         const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
