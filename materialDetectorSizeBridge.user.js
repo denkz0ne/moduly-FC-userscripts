@@ -2,7 +2,7 @@
 // @name         materialDetector Size Bridge
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.0.0
+// @version      1.1.0
 // @description  Univerzalna detekcia velkosti vytlacku (A, mm, cm) pre materialDetector state.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetectorSizeBridge.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetectorSizeBridge.user.js
@@ -48,17 +48,6 @@
                 return { label, values };
             })
             .filter(Boolean);
-    }
-
-    function findParamValue(rows, labelPartList) {
-        for (const row of rows) {
-            const key = normalizeKey(row.label);
-            if (!key) continue;
-            if (labelPartList.some(p => key.includes(p))) {
-                return row.values.join(' | ');
-            }
-        }
-        return '';
     }
 
     function toCleanNumber(value) {
@@ -114,17 +103,57 @@
         return '';
     }
 
+    function isLikelySizeLabel(label) {
+        const key = normalizeKey(label);
+        if (!key) return false;
+
+        if (key.includes('format')) return true;
+        if (key.includes('velkost')) return true;
+        if (key.includes('rozmer')) return true;
+        if (key.includes('sirka') || key.includes('vyska')) return true;
+        if (key.includes('dlzka') || key.includes('sirka x vyska')) return true;
+
+        return false;
+    }
+
+    function isBlockedLabel(label) {
+        const key = normalizeKey(label);
+        if (!key) return false;
+
+        return [
+            'pocet kusov',
+            'pocet rovnakych vytlackov',
+            'gramaz',
+            'material',
+            'tlacove medium',
+            'subory',
+            'upozornenie'
+        ].some(b => key.includes(b));
+    }
+
     function detectUniversalSizeAlias() {
         const rows = getZdRows();
         if (!rows.length) return '';
 
-        const candidates = [
-            findParamValue(rows, ['standardne formaty vytlackov']),
-            findParamValue(rows, ['velkost vytlacku']),
-            findParamValue(rows, ['format vytlacku']),
-            rows.flatMap(r => r.values).join(' | ')
-        ].filter(Boolean);
+        const prioritized = [];
+        const secondary = [];
 
+        rows.forEach(row => {
+            if (!row.values || !row.values.length) return;
+            if (isBlockedLabel(row.label)) return;
+
+            const joined = row.values.join(' | ');
+            const hasSizePattern = /\bA\s*\d{1,2}\b/i.test(joined)
+                || /(\d{1,4}(?:[.,]\d+)?)\s*[x×]\s*(\d{1,4}(?:[.,]\d+)?)/i.test(joined);
+
+            if (isLikelySizeLabel(row.label)) {
+                prioritized.push(joined);
+            } else if (hasSizePattern) {
+                secondary.push(joined);
+            }
+        });
+
+        const candidates = prioritized.concat(secondary);
         for (const candidate of candidates) {
             const alias = parseSizeAlias(candidate);
             if (alias) return alias;
