@@ -94,7 +94,7 @@ const commonStyle = `
     font-family: 'Roboto Condensed', Arial, sans-serif;
     font-weight: 400;
     letter-spacing: -0.3mm;
-    transform: translateY(calc(-4mm + 1px)) scaleX(0.82);
+    transform: translateY(calc(-5mm)) scaleX(0.82);
     transform-origin: left center;
     white-space: nowrap;
 `;
