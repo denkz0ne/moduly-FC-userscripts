@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      4.1.0
+// @version      4.1.1
 // @description  Material detekcia + univerzalna velkost + premenovanie stahovanych suborov.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -920,6 +920,11 @@
         return false;
     }
 
+    function shouldRenameForCurrentOrder() {
+        const productCode = getProductCodeFromPriceRows();
+        return productCode === '41tv' || productCode === '42foto/web';
+    }
+
     function startDownload(url, fileName) {
         if (typeof GM_download === 'function') {
             GM_download({
@@ -944,6 +949,7 @@
             const link = event.target.closest('a[href]');
             if (!link) return;
             if (!isDownloadCandidate(link)) return;
+            if (!shouldRenameForCurrentOrder()) return;
 
             event.preventDefault();
             event.stopPropagation();
