@@ -17,6 +17,7 @@
     // ==================== Core ====================
 
     const MATERIAL_ALIAS_STORAGE_KEY = 'materialDetector.materialAliases.v1';
+    const STATE_TTL_MS = 30000;
 
     let lastLeft = null;
     let lastRight = null;
@@ -41,7 +42,7 @@
 
     function sanitizeToken(value) {
         return String(value || '')
-            .replace(/[\\/:*?"<>|]+/g, ' ')
+            .replace(/[\\/:*?\"<>|]+/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
     }
@@ -165,7 +166,17 @@
         try {
             const raw = sessionStorage.getItem('materialDetectorState:' + vp);
             if (!raw) return null;
-            return JSON.parse(raw);
+
+            const parsed = JSON.parse(raw);
+            if (!parsed) return null;
+
+            const updatedTs = new Date(parsed.updatedAt || 0).getTime();
+            const ageMs = Date.now() - updatedTs;
+            if (!Number.isFinite(updatedTs) || !Number.isFinite(ageMs) || ageMs > STATE_TTL_MS) {
+                return null;
+            }
+
+            return parsed;
         } catch (e) {
             return null;
         }
@@ -192,7 +203,7 @@
     }
 
     function extractDimensionFromText(text) {
-        const match = String(text || '').match(/(\d{2,3})\s*[x\u00d7]\s*(\d{2,3})/i);
+        const match = String(text || '').match(/(\d{2,3})\s*[x\×]\s*(\d{2,3})/i);
         return match ? `${match[1]} ${match[2]}` : null;
     }
 
@@ -482,7 +493,7 @@
     }
 
     function detectMaterialHexa(context) {
-        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAG\u00d3N/i.test(txt));
+        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAGÓN/i.test(txt));
         if (!detected) return null;
 
         return {
@@ -579,10 +590,10 @@
         }
     }
 
-    function updateSession() {
+    function updateSession(force = false) {
         const tmLeft = detectFoText();
         const tmRight = detectExpeditionDate();
-        if (tmLeft === lastLeft && tmRight === lastRight) return;
+        if (!force && tmLeft === lastLeft && tmRight === lastRight) return;
 
         lastLeft = tmLeft;
         lastRight = tmRight;
@@ -594,8 +605,17 @@
             tmLeft,
             tmRight,
             visibility: document.visibilityState,
+            forced: force,
             state: window.__materialDetectorState || null
         });
+    }
+
+    function forceRefreshSessionBurst() {
+        lastLeft = null;
+        lastRight = null;
+
+        updateSession(true);
+        [80, 250, 700, 1500].forEach(delay => setTimeout(() => updateSession(true), delay));
     }
 
     function bootstrapRetries() {
@@ -976,13 +996,16 @@
             setTimeout(updateSession, 0);
         }
 
-        window.addEventListener('load', updateSession);
-        window.addEventListener('pageshow', updateSession);
-        window.addEventListener('focus', updateSession);
+        window.addEventListener('load', forceRefreshSessionBurst);
+        window.addEventListener('pageshow', forceRefreshSessionBurst);
+        window.addEventListener('focus', forceRefreshSessionBurst);
 
         document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible') updateSession();
-            else setTimeout(updateSession, 0);
+            if (document.visibilityState === 'visible') {
+                forceRefreshSessionBurst();
+            } else {
+                setTimeout(updateSession, 0);
+            }
         });
 
         ensureObserverWhenBodyExists();
