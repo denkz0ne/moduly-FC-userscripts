@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      4.1.2
+// @version      4.1.3
 // @description  Material detekcia + univerzalna velkost + premenovanie stahovanych suborov.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -512,7 +512,7 @@
     }
 
     function detectMaterialHexa(context) {
-        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAGÓN/i.test(txt));
+        const detected = context.rowTexts.some(txt => /HEXA|HEXAGON|HEXAGON/i.test(txt));
         if (!detected) return null;
 
         return {
@@ -705,6 +705,38 @@
         return a + 'x' + b + '_cm';
     }
 
+    function parseDimensionScalar(text) {
+        const raw = String(text || '').replace(',', '.').toLowerCase().trim();
+        const match = raw.match(/(\d+(?:\.\d+)?)\s*(mm|cm)\b/);
+        if (!match) return null;
+        return {
+            value: Number(match[1]),
+            unit: match[2]
+        };
+    }
+
+    function parseSizeAliasFromSeparateValues(values) {
+        if (!Array.isArray(values) || values.length < 2) return '';
+
+        const parsed = values
+            .map(parseDimensionScalar)
+            .filter(Boolean);
+
+        if (parsed.length < 2) return '';
+
+        const [w, h] = parsed;
+        if (w.unit === 'cm' && h.unit === 'cm') return normalizeCmOutput(w.value, h.value);
+        if (w.unit === 'mm' && h.unit === 'mm') return normalizeCmOutput(w.value / 10, h.value / 10);
+
+        return '';
+    }
+
+    function stripSizeUnitSuffix(sizeAlias) {
+        const raw = String(sizeAlias || '').trim();
+        if (!raw) return '';
+        return raw.replace(/_?cm$/i, '');
+    }
+
     function parseSizeAlias(text) {
         const raw = String(text || '').trim();
         if (!raw) return '';
@@ -779,6 +811,14 @@
         rows.forEach(row => {
             if (!row.values || !row.values.length) return;
             if (isBlockedLabel(row.label)) return;
+
+            if (isLikelySizeLabel(row.label)) {
+                const pairAlias = parseSizeAliasFromSeparateValues(row.values);
+                if (pairAlias) {
+                    prioritized.push(pairAlias);
+                    return;
+                }
+            }
 
             const joined = row.values.join(' | ');
             const hasSizePattern = /\bA\s*\d{1,2}\b/i.test(joined)
@@ -933,7 +973,7 @@
         if (!qty) qty = getQtyFromLeftText();
 
         const aliasPart = sanitizeSnakeToken(alias || 'material');
-        const sizePart = sanitizeSnakeToken(sizeAlias || 'bez_rozmeru');
+        const sizePart = sanitizeSnakeToken(stripSizeUnitSuffix(sizeAlias) || 'bez_rozmeru');
         const qtyPart = sanitizeSnakeToken(qty ? qty + 'ks' : '1ks');
         const vpPart = sanitizeSnakeToken(vp || 'bezVP');
 
