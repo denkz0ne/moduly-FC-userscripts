@@ -67,6 +67,7 @@
 
         map[normalizeKey('42foto/web|economy plagat|120g')] = '120';
         map[normalizeKey('42foto/web|economy plagat|140g')] = '140';
+        map[normalizeKey('42foto/web|economy plagat|180g')] = '180';
         map[normalizeKey('42foto/web|Plagátový papier|135g')] = '135';
         map[normalizeKey('42foto/web|Plagátový papier|200g')] = '200';
         map[normalizeKey('42foto/web|fotopapier|leskly|200g')] = '200 lesk';
