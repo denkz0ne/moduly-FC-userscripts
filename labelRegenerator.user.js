@@ -20,7 +20,7 @@
     const SOURCE_LABEL_WIDTH_MM = 86;
     const SOURCE_LABEL_HEIGHT_MM = 50;
     const SAFE_MARGIN_MM = 1;
-    const OVERLAY_BORDER = '1px solid rgba(255, 80, 80, 0.95)';
+    const OVERLAY_BORDER = '0 solid transparent';
     const TOP_ZONES = [
         { key: 'TM_top', id: 'lr-zone-top' },
         { key: 'TM_bottom', id: 'lr-zone-bottom' }
@@ -133,7 +133,7 @@
                 bottom: 4.0mm;
                 width: 18mm;
                 height: 5.6mm;
-                font-size: 4.8mm;
+                font-size: 5mm;
             }
 
             #lr-zone-testoright > span,
