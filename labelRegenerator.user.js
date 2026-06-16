@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.5
+// @version      1.6.0
 // @description  Uprava print stitku, overlay zony a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -20,7 +20,6 @@
     const SOURCE_LABEL_WIDTH_MM = 86;
     const SOURCE_LABEL_HEIGHT_MM = 50;
     const SAFE_MARGIN_MM = 1;
-    const OVERLAY_BORDER = '0 solid transparent';
     const TOP_ZONES = [
         { key: 'TM_top', id: 'lr-zone-top' },
         { key: 'TM_bottom', id: 'lr-zone-bottom' }
@@ -30,10 +29,9 @@
         return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
     }
 
-    function ensureRobotoCondensedFont() {
+    function ensureFont() {
         if (!document.head) return;
         if (document.querySelector('link[data-label-regenerator-font="roboto-condensed"]')) return;
-
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = 'https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap';
@@ -41,10 +39,9 @@
         document.head.appendChild(link);
     }
 
-    function injectBaseStyles() {
+    function injectStyles() {
         if (!document.head) return;
         if (document.getElementById('label-regenerator-styles')) return;
-
         const style = document.createElement('style');
         style.id = 'label-regenerator-styles';
         style.textContent = `
@@ -52,7 +49,6 @@
                 --lr-label-width: ${LABEL_WIDTH_MM}mm;
                 --lr-label-height: ${LABEL_HEIGHT_MM}mm;
                 --lr-safe-margin: ${SAFE_MARGIN_MM}mm;
-                --lr-overlay-border: ${OVERLAY_BORDER};
             }
 
             #label {
@@ -77,23 +73,10 @@
                 overflow: hidden;
             }
 
-            #label-regenerator-base {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: ${SOURCE_LABEL_WIDTH_MM}mm;
-                height: ${SOURCE_LABEL_HEIGHT_MM}mm;
-                transform-origin: top left;
-                pointer-events: none;
-                box-sizing: border-box;
-                overflow: hidden;
-            }
-
             #label-regenerator-overlay .lr-zone {
                 position: absolute;
                 box-sizing: border-box;
                 overflow: hidden;
-                border: var(--lr-overlay-border);
                 background: transparent;
                 color: #111;
                 font-family: 'Roboto Condensed', Arial, sans-serif;
@@ -156,6 +139,16 @@
 
             #lr-zone-top {
                 top: 0.4mm;
+                border: 1px solid #000;
+                background: #000;
+                color: #fff;
+                border-radius: 6px;
+                padding: 0 0.5mm;
+            }
+
+            #lr-zone-top > span {
+                color: #fff;
+                text-align: center;
             }
 
             #lr-zone-bottom {
@@ -178,13 +171,7 @@
                     max-height: ${LABEL_HEIGHT_MM}mm !important;
                 }
 
-                #label {
-                    page-break-inside: avoid !important;
-                    break-inside: avoid !important;
-                    overflow: hidden !important;
-                }
-
-                #label-regenerator-base,
+                #label,
                 #label-regenerator-overlay {
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
@@ -195,153 +182,100 @@
         document.head.appendChild(style);
     }
 
-    function getStoredZoneValue(key) {
+    function getStoredValue(key) {
         return localStorage.getItem(key) || '';
     }
 
-    function setStoredZoneValue(key, value) {
+    function setStoredValue(key, value) {
         const normalized = value == null ? '' : String(value);
-        if (normalized) {
-            localStorage.setItem(key, normalized);
-        } else {
-            localStorage.removeItem(key);
-        }
+        if (normalized) localStorage.setItem(key, normalized);
+        else localStorage.removeItem(key);
         return normalized;
     }
 
-    function buildZone(id, zoneName) {
+    function buildZone(id) {
         const zone = document.createElement('div');
         zone.id = id;
         zone.className = 'lr-zone';
-        zone.dataset.zone = zoneName;
         zone.dataset.empty = 'true';
-
-        const text = document.createElement('span');
-        text.className = 'lr-zone-text';
-        zone.appendChild(text);
+        const span = document.createElement('span');
+        span.className = 'lr-zone-text';
+        zone.appendChild(span);
         return zone;
     }
 
-    function ensureBaseLayer() {
+    function ensureOverlay() {
         const label = document.querySelector('#label');
         if (!label) return null;
-
-        let base = document.getElementById('label-regenerator-base');
-        if (base) return base;
-
-        base = document.createElement('div');
-        base.id = 'label-regenerator-base';
-
-        const nodes = Array.from(label.childNodes);
-        nodes.forEach((node) => base.appendChild(node));
-
-        label.appendChild(base);
-        return base;
-    }
-
-    function syncBaseScale() {
-        const base = document.getElementById('label-regenerator-base');
-        if (!base) return;
-
-        const scale = Math.min(
-            LABEL_WIDTH_MM / SOURCE_LABEL_WIDTH_MM,
-            LABEL_HEIGHT_MM / SOURCE_LABEL_HEIGHT_MM
-        );
-
-        base.style.transform = `scale(${scale})`;
-    }
-
-    function ensureOverlayLayer() {
-        const label = document.querySelector('#label');
-        if (!label) return null;
-
         let overlay = document.getElementById('label-regenerator-overlay');
         if (overlay) return overlay;
-
         overlay = document.createElement('div');
         overlay.id = 'label-regenerator-overlay';
-
-        overlay.appendChild(buildZone('lr-zone-testoleft', 'testoleft'));
-        overlay.appendChild(buildZone('lr-zone-testoright', 'testoright'));
-        overlay.appendChild(buildZone('lr-zone-top', 'TM_top'));
-        overlay.appendChild(buildZone('lr-zone-bottom', 'TM_bottom'));
-
+        overlay.appendChild(buildZone('lr-zone-testoleft'));
+        overlay.appendChild(buildZone('lr-zone-testoright'));
+        overlay.appendChild(buildZone('lr-zone-top'));
+        overlay.appendChild(buildZone('lr-zone-bottom'));
         label.appendChild(overlay);
         return overlay;
     }
 
-    function fitZoneText(zone) {
+    function fitZone(zone) {
         const text = zone.querySelector('.lr-zone-text');
         if (!text) return;
-
-        const origin = getComputedStyle(text).transformOrigin;
-        text.style.transformOrigin = origin;
         text.style.transform = 'translateY(-50%) scale(1)';
-        const horizontalPadding = 4;
-        const availableWidth = zone.clientWidth - horizontalPadding;
-        if (availableWidth <= 0) return;
-
-        const measuredWidth = text.scrollWidth;
-        if (measuredWidth > availableWidth) {
-            const scale = Math.max(0.55, availableWidth / measuredWidth);
+        const available = zone.clientWidth - 4;
+        if (available <= 0) return;
+        const measured = text.scrollWidth;
+        if (measured > available) {
+            const scale = Math.max(0.55, available / measured);
             text.style.transform = `translateY(-50%) scale(${scale})`;
         }
     }
 
-    function setZoneTextById(zoneId, value) {
+    function setZoneText(zoneId, value) {
         const zone = document.getElementById(zoneId);
         if (!zone) return;
-
         const text = zone.querySelector('.lr-zone-text');
         if (!text) return;
-
         const normalized = value == null ? '' : String(value).trim();
         zone.dataset.empty = normalized ? 'false' : 'true';
         text.textContent = normalized;
-        fitZoneText(zone);
+        fitZone(zone);
     }
 
-    function refreshOverlayZones() {
-        setZoneTextById('lr-zone-testoleft', window.TM_testoLeft || '');
-        setZoneTextById('lr-zone-testoright', window.TM_testoRight || '');
+    function refreshZones() {
+        setZoneText('lr-zone-testoleft', window.TM_testoLeft || getStoredValue('TM_testoLeft'));
+        setZoneText('lr-zone-testoright', window.TM_testoRight || getStoredValue('TM_testoRight'));
         TOP_ZONES.forEach((zone) => {
-            setZoneTextById(zone.id, window[zone.key] || getStoredZoneValue(zone.key));
+            setZoneText(zone.id, window[zone.key] || getStoredValue(zone.key));
         });
     }
 
-    function exposeOverlayApi() {
+    function exposeApi() {
         window.labelRegeneratorSetZone = (zoneName, value) => {
             const key = String(zoneName || '').trim();
-            const allowedKeys = ['TM_testoLeft', 'TM_testoRight', ...TOP_ZONES.map((zone) => zone.key)];
-            if (!allowedKeys.includes(key)) return;
-
+            const allowed = ['TM_testoLeft', 'TM_testoRight', ...TOP_ZONES.map((zone) => zone.key)];
+            if (!allowed.includes(key)) return;
             const normalized = value == null ? '' : String(value);
             if (key === 'TM_testoLeft') {
                 window.TM_testoLeft = normalized;
-                setStoredZoneValue('TM_testoLeft', normalized);
             } else if (key === 'TM_testoRight') {
                 window.TM_testoRight = normalized;
-                setStoredZoneValue('TM_testoRight', normalized);
             } else {
                 window[key] = normalized;
-                setStoredZoneValue(key, normalized);
             }
-
-            refreshOverlayZones();
+            setStoredValue(key, normalized);
+            refreshZones();
         };
-
-        window.labelRegeneratorRefresh = refreshOverlayZones;
+        window.labelRegeneratorRefresh = refreshZones;
     }
 
-    function applyLabelCanvas() {
-        const predajnaText = document.querySelector('#predajna .rotate');
-        if (predajnaText) {
-            predajnaText.style.fontSize = '27pt';
-        }
+    function applyLayout() {
+        const predajna = document.querySelector('#predajna .rotate');
+        if (predajna) predajna.style.fontSize = '27pt';
 
         const label = document.querySelector('#label');
         if (!label) return;
-
         label.style.position = 'relative';
         label.style.width = `${LABEL_WIDTH_MM}mm`;
         label.style.height = `${LABEL_HEIGHT_MM}mm`;
@@ -349,59 +283,26 @@
         label.style.border = '0';
 
         const obj = document.querySelector('.obj');
-        if (obj) {
-            obj.style.height = '16mm';
-        }
+        if (obj) obj.style.height = '16mm';
 
         const block = document.querySelector('#data > div');
-        if (block) {
-            block.style.marginBottom = '1mm';
-        }
-
-        const wrapper = document.querySelector('#data > div');
-        if (wrapper) {
-            const vpText = wrapper.querySelector('span');
-
-            if (vpText && vpText.previousSibling && vpText.previousSibling.textContent.trim() === 'VP') {
-                const newSpan = document.createElement('span');
-                newSpan.innerHTML = 'VP: ' + vpText.textContent.trim();
-                newSpan.style.color = '#ffffff';
-                newSpan.style.background = '#000';
-                newSpan.style.padding = '1px 4px';
-                newSpan.style.margin = '2px 0';
-                newSpan.style.borderRadius = '6px';
-                newSpan.style.fontSize = '13pt';
-                newSpan.style.display = 'inline-block';
-                newSpan.style.verticalAlign = 'middle';
-
-                wrapper.innerHTML = wrapper.innerHTML.replace(/VP.*<\/span>/, '');
-                wrapper.prepend(newSpan);
-            }
-        }
-
-        ensureBaseLayer();
-        syncBaseScale();
+        if (block) block.style.marginBottom = '1mm';
     }
 
-    function markPrintReady() {
+    function markReady() {
         if (!isPrintLabelPage()) return;
-
         window.__labelRegeneratorReady = false;
-
         const finalize = () => {
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    refreshOverlayZones();
+                    refreshZones();
                     window.__labelRegeneratorReady = true;
                     window.dispatchEvent(new Event('labelRegeneratorReady'));
                 });
             });
         };
-
         if (document.fonts && document.fonts.ready) {
-            document.fonts.ready
-                .then(() => setTimeout(finalize, 50))
-                .catch(() => setTimeout(finalize, 120));
+            document.fonts.ready.then(() => setTimeout(finalize, 50)).catch(() => setTimeout(finalize, 120));
         } else {
             setTimeout(finalize, 120);
         }
@@ -412,35 +313,29 @@
         return strong ? strong.textContent.trim() : null;
     }
 
-    function syncLabelValuesFromDetailPage() {
+    function syncFromDetailPage() {
         if (isPrintLabelPage()) return;
-
-        const leftBadge = document.querySelector('#shortcut-info-label');
-        const rightBadge = document.querySelector('#shortcut-info-date');
-
-        const left = leftBadge ? (leftBadge.textContent || '').trim() : getStoredZoneValue('TM_testoLeft');
-        const right = rightBadge ? (rightBadge.textContent || '').trim() : getStoredZoneValue('TM_testoRight');
-
-        window.TM_testoLeft = left;
-        window.TM_testoRight = right;
-        setStoredZoneValue('TM_testoLeft', left);
-        setStoredZoneValue('TM_testoRight', right);
+        const left = document.querySelector('#shortcut-info-label');
+        const right = document.querySelector('#shortcut-info-date');
+        const top = document.querySelector('#shortcut-info-top');
+        window.TM_testoLeft = left ? (left.textContent || '').trim() : getStoredValue('TM_testoLeft');
+        window.TM_testoRight = right ? (right.textContent || '').trim() : getStoredValue('TM_testoRight');
+        window.TM_top = top ? (top.textContent || '').trim() : getStoredValue('TM_top');
+        setStoredValue('TM_testoLeft', window.TM_testoLeft);
+        setStoredValue('TM_testoRight', window.TM_testoRight);
+        setStoredValue('TM_top', window.TM_top);
     }
 
     function triggerPrintWhenReady(printWindow) {
         const deadlineMs = 15000;
         const startedAt = Date.now();
-
         const timer = setInterval(() => {
             const timedOut = Date.now() - startedAt > deadlineMs;
             const ready = !!printWindow.__labelRegeneratorReady;
-            const closed = printWindow.closed;
-
-            if (closed) {
+            if (printWindow.closed) {
                 clearInterval(timer);
                 return;
             }
-
             if (ready || timedOut) {
                 clearInterval(timer);
                 printWindow.print();
@@ -454,29 +349,21 @@
     function pressLAction() {
         if (!document.activeElement) return;
         if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-
         const vpNumber = getVpNumber();
         if (!vpNumber) return;
-
-        syncLabelValuesFromDetailPage();
-
+        syncFromDetailPage();
         const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
         const w = window.open(url, '_blank');
         if (!w) return;
-
-        w.addEventListener('load', () => {
-            triggerPrintWhenReady(w);
-        }, { once: true });
+        w.addEventListener('load', () => triggerPrintWhenReady(w), { once: true });
     }
 
-    ensureRobotoCondensedFont();
-    injectBaseStyles();
+    ensureFont();
+    injectStyles();
 
-    window.TM_testoLeft = getStoredZoneValue('TM_testoLeft') || '';
-    window.TM_testoRight = getStoredZoneValue('TM_testoRight') || '';
-    TOP_ZONES.forEach((zone) => {
-        window[zone.key] = getStoredZoneValue(zone.key) || '';
-    });
+    window.TM_testoLeft = getStoredValue('TM_testoLeft') || '';
+    window.TM_testoRight = getStoredValue('TM_testoRight') || '';
+    window.TM_top = getStoredValue('TM_top') || '';
 
     window.addEventListener('unload', () => {
         if (!isPrintLabelPage()) return;
@@ -484,19 +371,15 @@
         localStorage.removeItem('TM_testoRight');
     });
 
-    exposeOverlayApi();
-    applyLabelCanvas();
-    ensureBaseLayer();
-    ensureOverlayLayer();
-    syncBaseScale();
-    refreshOverlayZones();
+    exposeApi();
+    applyLayout();
+    ensureOverlay();
+    refreshZones();
 
-    window.addEventListener('resize', refreshOverlayZones);
+    window.addEventListener('resize', refreshZones);
     window.addEventListener('keydown', (e) => {
-        if (e.key.toLowerCase() === 'l' && !e.repeat) {
-            pressLAction();
-        }
+        if (e.key.toLowerCase() === 'l' && !e.repeat) pressLAction();
     });
 
-    markPrintReady();
+    markReady();
 })();
