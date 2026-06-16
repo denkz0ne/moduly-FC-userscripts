@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      4.3.1
+// @version      4.4.0
 // @description  Material detekcia + univerzalna velkost + premenovanie stahovanych suborov.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -25,24 +25,18 @@
     let lastTop = '';
     let observerStarted = false;
     let renameBound = false;
-    let sizeObserverStarted = false;
 
     function vpId() {
         const match = location.pathname.match(/\/index\/(\d+)/);
         return match ? match[1] : '';
     }
 
-    function normalize(text) {
-        return String(text || '')
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
     function clean(text) {
         return String(text || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function normalize(text) {
+        return clean(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
 
     function getDetailInfo() {
@@ -50,18 +44,17 @@
     }
 
     function getAllText() {
-        return clean((getDetailInfo().innerText || '') + ' ' + (document.body ? document.body.innerText || '' : ''));
+        const detail = getDetailInfo();
+        const bodyText = document.body ? document.body.innerText || '' : '';
+        return clean((detail.innerText || '') + ' ' + bodyText);
     }
 
     function setState(partial) {
-        const key = STATE_KEY + vpId();
         const next = Object.assign({ vp: vpId(), updatedAt: new Date().toISOString() }, partial || {});
         window.__materialDetectorState = next;
         try {
-            sessionStorage.setItem(key, JSON.stringify(next));
-        } catch (e) {
-            // ignore
-        }
+            sessionStorage.setItem(STATE_KEY + vpId(), JSON.stringify(next));
+        } catch (e) {}
         return next;
     }
 
@@ -91,9 +84,7 @@
     function setLastSizeAlias(value) {
         try {
             localStorage.setItem(LAST_SIZE_ALIAS_KEY + vpId(), String(value || '').trim());
-        } catch (e) {
-            // ignore
-        }
+        } catch (e) {}
     }
 
     function getSelectedOptionText(name) {
@@ -104,8 +95,7 @@
     }
 
     function hasCanvas() {
-        const text = getSelectedOptionText('FO_CANVAS');
-        return /canvas/i.test(text);
+        return /canvas/i.test(getSelectedOptionText('FO_CANVAS'));
     }
 
     function hasGiftPack() {
@@ -124,21 +114,13 @@
         if (!raw) return null;
         if (raw.length === 4) return { left: raw.slice(0, 2), right: raw.slice(2), size: `${raw.slice(0, 2)} ${raw.slice(2)}` };
         if (raw.length === 6) return { left: raw.slice(0, 3), right: raw.slice(3), size: `${raw.slice(0, 3)} ${raw.slice(3)}` };
-        if (raw.length % 2 === 0) {
-            const mid = raw.length / 2;
-            return { left: raw.slice(0, mid), right: raw.slice(mid), size: `${raw.slice(0, mid)} ${raw.slice(mid)}` };
-        }
         return null;
     }
 
     function parsePhotoobrazCode(code) {
         const lower = String(code || '').toLowerCase();
-        if (lower === '48xk') {
-            return { kind: 'hexa', label: 'HEXA', sizeAlias: 'HEXA' };
-        }
-        if (/^48x[146]$/.test(lower)) {
-            return { kind: 'hexa-premium', label: 'HEXA P', sizeAlias: 'HEXA P' };
-        }
+        if (lower === '48xk') return { kind: 'hexa', label: 'HEXA', sizeAlias: 'HEXA' };
+        if (/^48x[146]$/.test(lower)) return { kind: 'hexa-premium', label: 'HEXA P', sizeAlias: 'HEXA P' };
         if (/^48fh\d{4,6}$/.test(lower)) {
             const split = splitDigits(lower.replace(/^48fh/, ''));
             if (!split) return null;
@@ -149,25 +131,19 @@
         const premium = !!regular[1];
         const split = splitDigits(regular[2]);
         if (!split) return null;
-        return {
-            kind: premium ? 'premium' : 'regular',
-            label: `${split.size}${premium ? ' P' : ''}`,
-            sizeAlias: `${split.left}x${split.right}_cm`
-        };
+        return { kind: premium ? 'premium' : 'regular', label: `${split.size}${premium ? ' P' : ''}`, sizeAlias: `${split.left}x${split.right}_cm` };
     }
 
     function detectUniversalSizeAlias() {
-        const rows = Array.from(getDetailInfo().querySelectorAll('input[disabled], input:not([type="hidden"]), select[disabled]'));
-        for (const el of rows) {
+        const nodes = Array.from(getDetailInfo().querySelectorAll('input[disabled], input:not([type="hidden"]), select[disabled]'));
+        for (const el of nodes) {
             const val = clean(el.value || el.textContent || '');
             const match = val.match(/(\d{1,4}(?:[.,]\d+)?)\s*[x×]\s*(\d{1,4}(?:[.,]\d+)?)(?:\s*cm|\s*mm)?/i);
             if (match) {
                 const left = String(match[1]).replace(',', '.');
                 const right = String(match[2]).replace(',', '.');
                 const unit = /mm/i.test(val) ? 'mm' : 'cm';
-                if (unit === 'mm') {
-                    return `${Number(left) / 10}x${Number(right) / 10}_cm`;
-                }
+                if (unit === 'mm') return `${Number(left) / 10}x${Number(right) / 10}_cm`;
                 return `${left}x${right}_cm`;
             }
         }
@@ -179,50 +155,67 @@
         const parsed = parsePhotoobrazCode(code);
         if (!parsed) return null;
 
-        let left = parsed.label;
-        if (hasCanvas()) left += ' C';
+        const left = parsed.kind.indexOf('hexa') === 0 ? parsed.label : `${parsed.label}${hasCanvas() ? ' C' : ''}`;
         const top = hasGiftPack() ? 'DBAL' : '';
-
         const state = setState({
             detector: 'photoobraz',
             productCode: code,
-            outputAlias: code,
+            outputAlias: left,
             sizeAlias: parsed.sizeAlias,
             topBadge: top,
-            params: { code: code, kind: parsed.kind, canvas: hasCanvas(), giftPack: hasGiftPack(), sizeAlias: parsed.sizeAlias }
+            params: { code, kind: parsed.kind, canvas: hasCanvas(), giftPack: hasGiftPack(), sizeAlias: parsed.sizeAlias }
         });
+        return { tmLeft: left, tmTop: top, state };
+    }
 
-        return {
-            tmLeft: left,
-            tmTop: top,
-            state
-        };
+    function detect41tv() {
+        const text = normalize(getAllText());
+        if (!/\b41\s*tv\b/.test(text) && !/\b41tv\b/.test(text)) return null;
+        const dims = detectUniversalSizeAlias();
+        if (!dims) return null;
+        const left = `${dims.replace(/_cm$/i, '').replace('x', ' ')} TV`;
+        const top = hasGiftPack() ? 'DBAL' : '';
+        const state = setState({
+            detector: '41tv',
+            productCode: '41tv',
+            outputAlias: left,
+            sizeAlias: dims,
+            topBadge: top,
+            params: { sizeAlias: dims, giftPack: hasGiftPack() }
+        });
+        return { tmLeft: left, tmTop: top, state };
+    }
+
+    function detect42fotoWeb() {
+        const text = normalize(getAllText());
+        if (!/(?:\b42\s*foto\b|\b48\s*foto\b|\bfoto\s*web\b|\bfoto\/web\b)/.test(text)) return null;
+        const dims = detectUniversalSizeAlias();
+        if (!dims) return null;
+        const left = `${dims.replace(/_cm$/i, '').replace('x', ' ')} FOTO WEB`;
+        const top = hasGiftPack() ? 'DBAL' : '';
+        const state = setState({
+            detector: '42fotoWeb',
+            productCode: '42foto/web',
+            outputAlias: left,
+            sizeAlias: dims,
+            topBadge: top,
+            params: { sizeAlias: dims, giftPack: hasGiftPack() }
+        });
+        return { tmLeft: left, tmTop: top, state };
     }
 
     function detectFallback() {
         const sizeAlias = detectUniversalSizeAlias();
         if (!sizeAlias) return null;
-
-        const alias = sizeAlias.replace(/_cm$/i, '').replace('x', ' ');
+        const left = hasCanvas() ? `${sizeAlias.replace(/_cm$/i, '').replace('x', ' ')} C` : sizeAlias.replace(/_cm$/i, '').replace('x', ' ');
         const top = hasGiftPack() ? 'DBAL' : '';
-        return {
-            tmLeft: hasCanvas() ? alias + ' C' : alias,
-            tmTop: top,
-            state: setState({
-                detector: 'fallback',
-                productCode: 'fallback',
-                outputAlias: alias,
-                sizeAlias,
-                topBadge: top,
-                params: { sizeAlias, canvas: hasCanvas(), giftPack: hasGiftPack() }
-            })
-        };
+        const state = setState({ detector: 'fallback', productCode: 'fallback', outputAlias: left, sizeAlias, topBadge: top, params: { sizeAlias, canvas: hasCanvas(), giftPack: hasGiftPack() } });
+        return { tmLeft: left, tmTop: top, state };
     }
 
     function detectRightText() {
         const label = document.querySelector('#dodacia_lehota_label');
-        if (!label) return '';
-        const raw = clean(label.textContent || '');
+        const raw = clean(label ? label.textContent || '' : '');
         const match = raw.match(/(\d{1,2})\.(\d{1,2})\./);
         if (match) {
             const day = String(match[1]).padStart(2, '0');
@@ -233,7 +226,7 @@
     }
 
     function detectCurrentLabel() {
-        return detectPhotoobraz() || detectFallback();
+        return detectPhotoobraz() || detect41tv() || detect42fotoWeb() || detectFallback();
     }
 
     function showLabel(leftText, rightText, topText) {
@@ -274,14 +267,11 @@
         window.TM_testoLeft = leftText || '';
         window.TM_testoRight = rightText || '';
         window.TM_top = topText || '';
-
         try {
             if (leftText) localStorage.setItem(TM_LEFT_KEY, leftText); else localStorage.removeItem(TM_LEFT_KEY);
             if (rightText) localStorage.setItem(TM_RIGHT_KEY, rightText); else localStorage.removeItem(TM_RIGHT_KEY);
             if (topText) localStorage.setItem(TM_TOP_KEY, topText); else localStorage.removeItem(TM_TOP_KEY);
-        } catch (e) {
-            // ignore
-        }
+        } catch (e) {}
     }
 
     function updateSession(force) {
@@ -289,17 +279,13 @@
         const leftText = detected ? detected.tmLeft : '';
         const rightText = detectRightText();
         const topText = detected ? detected.tmTop : '';
-
         if (!force && leftText === lastLeft && rightText === lastRight && topText === lastTop) return;
-
         lastLeft = leftText;
         lastRight = rightText;
         lastTop = topText;
-
         if (detected && detected.state) setState(detected.state);
         writeToSession(leftText, rightText, topText);
         showLabel(leftText, rightText, topText);
-
         console.log('[materialDetector] updated', { leftText, rightText, topText, forced: !!force, state: window.__materialDetectorState || null });
     }
 
@@ -350,12 +336,7 @@
         if (!sizeAlias && state && state.sizeAlias) sizeAlias = String(state.sizeAlias).trim();
         if (!sizeAlias && alias) sizeAlias = alias;
         const vp = vpId();
-        return {
-            alias: clean(alias || 'material').replace(/\s+/g, '_'),
-            size: clean(sizeAlias || 'bez_rozmeru').replace(/_cm$/i, '').replace(/\s+/g, '_'),
-            vp: clean(vp || 'bezVP'),
-            qty: '1ks'
-        };
+        return { alias: clean(alias || 'material').replace(/\s+/g, '_'), size: clean(sizeAlias || 'bez_rozmeru').replace(/_cm$/i, '').replace(/\s+/g, '_'), vp: clean(vp || 'bezVP'), qty: '1ks' };
     }
 
     function extractFilenameFromHref(href) {
@@ -392,14 +373,7 @@
 
     function startDownload(url, fileName) {
         if (typeof GM_download === 'function') {
-            GM_download({
-                url,
-                name: fileName,
-                saveAs: false,
-                onerror: function () {
-                    window.open(url, '_blank', 'noopener');
-                }
-            });
+            GM_download({ url, name: fileName, saveAs: false, onerror: function () { window.open(url, '_blank', 'noopener'); } });
             return;
         }
         window.open(url, '_blank', 'noopener');
@@ -415,8 +389,7 @@
             if (!shouldRenameForCurrentOrder()) return;
             event.preventDefault();
             event.stopPropagation();
-            const name = buildNewFileName(link.href);
-            startDownload(link.href, name);
+            startDownload(link.href, buildNewFileName(link.href));
         }, true);
     }
 
@@ -434,9 +407,7 @@
         window.addEventListener('load', burstRefresh);
         window.addEventListener('pageshow', burstRefresh);
         window.addEventListener('focus', burstRefresh);
-        document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible') burstRefresh();
-        });
+        document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') burstRefresh(); });
 
         bootstrapRetries();
         ensureObserver();
