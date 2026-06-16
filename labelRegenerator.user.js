@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.4.1
+// @version      1.4.2
 // @description  Uprava print stitku, overlay zony a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -17,6 +17,8 @@
 
     const LABEL_WIDTH_MM = 62;
     const LABEL_HEIGHT_MM = 45;
+    const SOURCE_LABEL_WIDTH_MM = 86;
+    const SOURCE_LABEL_HEIGHT_MM = 50;
     const SAFE_MARGIN_MM = 1;
     const OVERLAY_BORDER = '1px solid rgba(255, 80, 80, 0.95)';
     const TOP_ZONES = [
@@ -71,6 +73,17 @@
                 position: absolute;
                 inset: 0;
                 z-index: 2147483647;
+                pointer-events: none;
+                box-sizing: border-box;
+            }
+
+            #label-regenerator-base {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: ${SOURCE_LABEL_WIDTH_MM}mm;
+                height: ${SOURCE_LABEL_HEIGHT_MM}mm;
+                transform-origin: top left;
                 pointer-events: none;
                 box-sizing: border-box;
             }
@@ -190,6 +203,35 @@
         text.className = 'lr-zone-text';
         zone.appendChild(text);
         return zone;
+    }
+
+    function ensureBaseLayer() {
+        const label = document.querySelector('#label');
+        if (!label) return null;
+
+        let base = document.getElementById('label-regenerator-base');
+        if (base) return base;
+
+        base = document.createElement('div');
+        base.id = 'label-regenerator-base';
+
+        const nodes = Array.from(label.childNodes);
+        nodes.forEach((node) => base.appendChild(node));
+
+        label.appendChild(base);
+        return base;
+    }
+
+    function syncBaseScale() {
+        const base = document.getElementById('label-regenerator-base');
+        if (!base) return;
+
+        const scale = Math.min(
+            LABEL_WIDTH_MM / SOURCE_LABEL_WIDTH_MM,
+            LABEL_HEIGHT_MM / SOURCE_LABEL_HEIGHT_MM
+        );
+
+        base.style.transform = `scale(${scale})`;
     }
 
     function ensureOverlayLayer() {
@@ -422,7 +464,9 @@
 
     exposeOverlayApi();
     applyLabelCanvas();
+    ensureBaseLayer();
     ensureOverlayLayer();
+    syncBaseScale();
     refreshOverlayZones();
 
     window.addEventListener('resize', refreshOverlayZones);
