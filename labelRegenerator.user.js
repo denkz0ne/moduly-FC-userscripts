@@ -117,7 +117,7 @@
                 bottom: 4.0mm;
                 width: 41mm;
                 height: 5.6mm;
-                font-size: 4.8mm;
+                font-size: 5.2mm;
             }
 
             #lr-zone-testoleft > span {
@@ -133,7 +133,7 @@
                 bottom: 4.0mm;
                 width: 18mm;
                 height: 5.6mm;
-                font-size: 4.5mm;
+                font-size: 4.8mm;
             }
 
             #lr-zone-testoright > span,
