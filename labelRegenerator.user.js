@@ -2,10 +2,10 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.4.6
+// @version      1.4.7
 // @description  Uprava print stitku, overlay zony a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
+// @downloadURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/*
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
@@ -74,6 +74,7 @@
                 z-index: 2147483647;
                 pointer-events: none;
                 box-sizing: border-box;
+                overflow: hidden;
             }
 
             #label-regenerator-base {
@@ -85,6 +86,7 @@
                 transform-origin: top left;
                 pointer-events: none;
                 box-sizing: border-box;
+                overflow: hidden;
             }
 
             #label-regenerator-overlay .lr-zone {
@@ -116,22 +118,22 @@
 
             #lr-zone-testoleft {
                 left: var(--lr-safe-margin);
-                bottom: 3.0mm;
+                bottom: 4.0mm;
                 width: 41mm;
                 height: 5.6mm;
-                justify-content: flex-end;
-                text-align: right;
-                font-size: 5.0mm;
+                justify-content: flex-start;
+                text-align: left;
+                font-size: 4.8mm;
             }
 
             #lr-zone-testoright {
                 right: var(--lr-safe-margin);
-                bottom: 3.0mm;
+                bottom: 4.0mm;
                 width: 18mm;
                 height: 5.6mm;
                 justify-content: flex-end;
                 text-align: right;
-                font-size: 4.6mm;
+                font-size: 4.5mm;
             }
 
             #lr-zone-top,
@@ -145,11 +147,11 @@
             }
 
             #lr-zone-top {
-                top: 0.8mm;
+                top: 0.4mm;
             }
 
             #lr-zone-bottom {
-                top: 7.4mm;
+                top: 6.8mm;
             }
 
             @media print {
@@ -165,11 +167,20 @@
                     width: ${LABEL_WIDTH_MM}mm !important;
                     height: ${LABEL_HEIGHT_MM}mm !important;
                     overflow: hidden !important;
+                    max-height: ${LABEL_HEIGHT_MM}mm !important;
                 }
 
                 #label {
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
+                    overflow: hidden !important;
+                }
+
+                #label-regenerator-base,
+                #label-regenerator-overlay {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    overflow: hidden !important;
                 }
             }
         `;
