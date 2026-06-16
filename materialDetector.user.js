@@ -10,7 +10,6 @@
 // @grant        GM_download
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_api.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_fotoobrazy.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_hexa.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_41tv.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_42fotoweb.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_common_size.js
