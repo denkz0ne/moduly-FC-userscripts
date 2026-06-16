@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      4.3.0
+// @version      4.5.1
 // @description  Material detekcia + univerzalna velkost + premenovanie stahovanych suborov.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -25,7 +25,6 @@
     let lastTop = '';
     let observerStarted = false;
     let renameBound = false;
-    let sizeObserverStarted = false;
 
     function vpId() {
         const match = location.pathname.match(/\/index\/(\d+)/);
@@ -50,7 +49,9 @@
     }
 
     function getAllText() {
-        return clean((getDetailInfo().innerText || '') + ' ' + (document.body ? document.body.innerText || '' : ''));
+        const detail = getDetailInfo();
+        const bodyText = document.body ? (document.body.innerText || '') : '';
+        return clean((detail.innerText || '') + ' ' + bodyText);
     }
 
     function setState(partial) {
@@ -124,10 +125,6 @@
         if (!raw) return null;
         if (raw.length === 4) return { left: raw.slice(0, 2), right: raw.slice(2), size: `${raw.slice(0, 2)} ${raw.slice(2)}` };
         if (raw.length === 6) return { left: raw.slice(0, 3), right: raw.slice(3), size: `${raw.slice(0, 3)} ${raw.slice(3)}` };
-        if (raw.length % 2 === 0) {
-            const mid = raw.length / 2;
-            return { left: raw.slice(0, mid), right: raw.slice(mid), size: `${raw.slice(0, mid)} ${raw.slice(mid)}` };
-        }
         return null;
     }
 
@@ -156,9 +153,77 @@
         };
     }
 
+    function detectPhotoobraz() {
+        const code = getInternalCode();
+        const parsed = parsePhotoobrazCode(code);
+        if (!parsed) return null;
+
+        const left = parsed.kind.indexOf('hexa') === 0
+            ? parsed.label
+            : `${parsed.label}${hasCanvas() ? ' C' : ''}`;
+        const top = hasGiftPack() ? 'DBAL' : '';
+
+        const state = setState({
+            detector: 'photoobraz',
+            productCode: code,
+            outputAlias: left || code,
+            sizeAlias: parsed.sizeAlias,
+            topBadge: top,
+            params: {
+                code: code,
+                kind: parsed.kind,
+                canvas: hasCanvas(),
+                giftPack: hasGiftPack(),
+                sizeAlias: parsed.sizeAlias
+            }
+        });
+
+        return {
+            tmLeft: left,
+            tmTop: top,
+            state
+        };
+    }
+
+    function detect42fotoWeb() {
+        const text = normalize(getAllText());
+        if (!/\b42\s*foto\b/.test(text) && !/\b42foto\b/.test(text) && !/\bfoto\s*web\b/.test(text)) return null;
+        const code = getInternalCode() || '42foto';
+        const size = detectUniversalSizeAlias();
+        const left = size ? size.replace(/_cm$/i, '').replace('x', ' ') : '42 FOTO';
+        const top = hasGiftPack() ? 'DBAL' : '';
+        const state = setState({
+            detector: '42fotoWeb',
+            productCode: code,
+            outputAlias: left,
+            sizeAlias: size || '',
+            topBadge: top,
+            params: { code: code, sizeAlias: size || '', giftPack: hasGiftPack() }
+        });
+        return { tmLeft: left, tmTop: top, state };
+    }
+
+    function detect41tv() {
+        const text = normalize(getAllText());
+        if (!/\b41\s*tv\b/.test(text) && !/\b41tv\b/.test(text)) return null;
+        const code = getInternalCode() || '41tv';
+        const size = detectUniversalSizeAlias();
+        const left = size ? size.replace(/_cm$/i, '').replace('x', ' ') : '41 TV';
+        const top = hasGiftPack() ? 'DBAL' : '';
+        const state = setState({
+            detector: '41tv',
+            productCode: code,
+            outputAlias: left,
+            sizeAlias: size || '',
+            topBadge: top,
+            params: { code: code, sizeAlias: size || '', giftPack: hasGiftPack() }
+        });
+        return { tmLeft: left, tmTop: top, state };
+    }
+
     function detectUniversalSizeAlias() {
-        const rows = Array.from(getDetailInfo().querySelectorAll('input[disabled], input:not([type="hidden"]), select[disabled]'));
-        for (const el of rows) {
+        const nodes = Array.from(getDetailInfo().querySelectorAll('input[disabled], input:not([type="hidden"]), select[disabled], input[type="text"], input[type="number"]'));
+        for (const el of nodes) {
             const val = clean(el.value || el.textContent || '');
             const match = val.match(/(\d{1,4}(?:[.,]\d+)?)\s*[x×]\s*(\d{1,4}(?:[.,]\d+)?)(?:\s*cm|\s*mm)?/i);
             if (match) {
@@ -174,44 +239,20 @@
         return '';
     }
 
-    function detectPhotoobraz() {
-        const code = getInternalCode();
-        const parsed = parsePhotoobrazCode(code);
-        if (!parsed) return null;
-
-        let left = parsed.label;
-        if (hasCanvas()) left += ' C';
-        const top = hasGiftPack() ? 'DBAL' : '';
-
-        const state = setState({
-            detector: 'photoobraz',
-            productCode: code,
-            outputAlias: code,
-            sizeAlias: parsed.sizeAlias,
-            topBadge: top,
-            params: { code: code, kind: parsed.kind, canvas: hasCanvas(), giftPack: hasGiftPack(), sizeAlias: parsed.sizeAlias }
-        });
-
-        return {
-            tmLeft: left,
-            tmTop: top,
-            state
-        };
-    }
-
     function detectFallback() {
         const sizeAlias = detectUniversalSizeAlias();
         if (!sizeAlias) return null;
 
         const alias = sizeAlias.replace(/_cm$/i, '').replace('x', ' ');
         const top = hasGiftPack() ? 'DBAL' : '';
+        const left = hasCanvas() ? alias + ' C' : alias;
         return {
-            tmLeft: hasCanvas() ? alias + ' C' : alias,
+            tmLeft: left,
             tmTop: top,
             state: setState({
                 detector: 'fallback',
                 productCode: 'fallback',
-                outputAlias: alias,
+                outputAlias: left,
                 sizeAlias,
                 topBadge: top,
                 params: { sizeAlias, canvas: hasCanvas(), giftPack: hasGiftPack() }
@@ -220,13 +261,25 @@
     }
 
     function detectRightText() {
+        const sources = [];
         const label = document.querySelector('#dodacia_lehota_label');
-        if (!label) return '';
-        return clean(label.textContent || '');
+        if (label) {
+            sources.push(label.textContent, label.value, label.innerText);
+        }
+        sources.push(document.body ? document.body.innerText : '');
+        for (const source of sources) {
+            const text = clean(source || '');
+            if (!text) continue;
+            const short = text.match(/\b(\d{1,2}\.\d{1,2}\.)\b/);
+            if (short) return short[1];
+            const dateOnly = text.match(/\b(\d{1,2}\.\d{1,2}\.\d{4})\b/);
+            if (dateOnly) return dateOnly[1].replace(/\d{4}$/, '');
+        }
+        return '';
     }
 
     function detectCurrentLabel() {
-        return detectPhotoobraz() || detectFallback();
+        return detectPhotoobraz() || detect42fotoWeb() || detect41tv() || detectFallback();
     }
 
     function showLabel(leftText, rightText, topText) {
