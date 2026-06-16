@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.4.2
+// @version      1.4.3
 // @description  Uprava print stitku, overlay zony a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -22,9 +22,8 @@
     const SAFE_MARGIN_MM = 1;
     const OVERLAY_BORDER = '1px solid rgba(255, 80, 80, 0.95)';
     const TOP_ZONES = [
-        { key: 'TM_topOne', id: 'lr-zone-topone' },
-        { key: 'TM_topTwo', id: 'lr-zone-toptwo' },
-        { key: 'TM_topThree', id: 'lr-zone-topthree' }
+        { key: 'TM_top', id: 'lr-zone-top' },
+        { key: 'TM_bottom', id: 'lr-zone-bottom' }
     ];
 
     function isPrintLabelPage() {
@@ -116,7 +115,7 @@
 
             #lr-zone-testoleft {
                 left: var(--lr-safe-margin);
-                bottom: var(--lr-safe-margin);
+                bottom: 0.6mm;
                 width: 41mm;
                 height: 6.6mm;
                 justify-content: center;
@@ -125,33 +124,28 @@
 
             #lr-zone-testoright {
                 right: var(--lr-safe-margin);
-                bottom: var(--lr-safe-margin);
+                bottom: 0.6mm;
                 width: 18mm;
                 height: 6.6mm;
                 justify-content: center;
                 font-size: 5.6mm;
             }
 
-            #lr-zone-topone,
-            #lr-zone-toptwo,
-            #lr-zone-topthree {
+            #lr-zone-top,
+            #lr-zone-bottom {
                 right: var(--lr-safe-margin);
                 width: 20.5mm;
-                height: 4.8mm;
+                height: 7.2mm;
                 justify-content: center;
                 font-size: 5.2mm;
             }
 
-            #lr-zone-topone {
+            #lr-zone-top {
                 top: 2.2mm;
             }
 
-            #lr-zone-toptwo {
-                top: 7.5mm;
-            }
-
-            #lr-zone-topthree {
-                top: 12.8mm;
+            #lr-zone-bottom {
+                top: 10.0mm;
             }
 
             @media print {
@@ -246,9 +240,8 @@
 
         overlay.appendChild(buildZone('lr-zone-testoleft', 'testoleft'));
         overlay.appendChild(buildZone('lr-zone-testoright', 'testoright'));
-        overlay.appendChild(buildZone('lr-zone-topone', 'TM_topOne'));
-        overlay.appendChild(buildZone('lr-zone-toptwo', 'TM_topTwo'));
-        overlay.appendChild(buildZone('lr-zone-topthree', 'TM_topThree'));
+        overlay.appendChild(buildZone('lr-zone-top', 'TM_top'));
+        overlay.appendChild(buildZone('lr-zone-bottom', 'TM_bottom'));
 
         label.appendChild(overlay);
         return overlay;
