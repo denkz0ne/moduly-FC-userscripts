@@ -2,10 +2,10 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.4.8
+// @version      1.4.9
 // @description  Uprava print stitku, overlay zony a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
-// @downloadURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/*
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
@@ -100,21 +100,16 @@
                 font-weight: 400;
                 line-height: 1;
                 white-space: nowrap;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                padding: 0.8mm 1.2mm;
+                padding: 0;
             }
 
             #label-regenerator-overlay .lr-zone > span {
+                position: absolute;
+                top: 50%;
                 display: block;
-                width: 100%;
-                max-width: 100%;
                 overflow: hidden;
                 text-overflow: clip;
-                text-align: inherit;
-                transform-origin: left center;
+                transform: translateY(-50%) scale(1);
             }
 
             #lr-zone-testoleft {
@@ -122,12 +117,14 @@
                 bottom: 4.0mm;
                 width: 41mm;
                 height: 5.6mm;
-                justify-content: flex-start;
-                text-align: left;
                 font-size: 4.8mm;
             }
 
             #lr-zone-testoleft > span {
+                left: 1.2mm;
+                right: 1.2mm;
+                width: auto;
+                text-align: left;
                 transform-origin: left center;
             }
 
@@ -136,14 +133,16 @@
                 bottom: 4.0mm;
                 width: 18mm;
                 height: 5.6mm;
-                justify-content: flex-end;
-                text-align: right;
                 font-size: 4.5mm;
             }
 
             #lr-zone-testoright > span,
             #lr-zone-top > span,
             #lr-zone-bottom > span {
+                left: 1.2mm;
+                right: 1.2mm;
+                width: auto;
+                text-align: right;
                 transform-origin: right center;
             }
 
@@ -152,8 +151,6 @@
                 right: var(--lr-safe-margin);
                 width: 20.5mm;
                 height: 6.2mm;
-                justify-content: flex-end;
-                text-align: right;
                 font-size: 4.7mm;
             }
 
@@ -277,14 +274,17 @@
         const text = zone.querySelector('.lr-zone-text');
         if (!text) return;
 
-        text.style.transform = 'scale(1)';
-        const availableWidth = zone.clientWidth - 4;
+        const origin = getComputedStyle(text).transformOrigin;
+        text.style.transformOrigin = origin;
+        text.style.transform = 'translateY(-50%) scale(1)';
+        const horizontalPadding = 4;
+        const availableWidth = zone.clientWidth - horizontalPadding;
         if (availableWidth <= 0) return;
 
         const measuredWidth = text.scrollWidth;
         if (measuredWidth > availableWidth) {
             const scale = Math.max(0.55, availableWidth / measuredWidth);
-            text.style.transform = `scale(${scale})`;
+            text.style.transform = `translateY(-50%) scale(${scale})`;
         }
     }
 
@@ -378,6 +378,9 @@
                 wrapper.prepend(newSpan);
             }
         }
+
+        ensureBaseLayer();
+        syncBaseScale();
     }
 
     function markPrintReady() {
