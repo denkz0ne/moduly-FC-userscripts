@@ -12,6 +12,24 @@ This branch uses `@require` URLs pointing to:
 
 Disable the production `materialDetector` in Tampermonkey before testing this branch.
 
+## Adding a detector
+
+Yes: for a new product family you should only need a new detector file plus one `@require` line.
+
+1. Copy `detectors/detector_template.js` to `detectors/detector_<internal_code>.js`.
+2. Change `DETECTOR_ID` to a stable detector name, for example `84tv` or `48r_fotoobrazy`.
+3. Implement `match(internalCode, context)` so it returns `true` only for the internal codes handled by that detector.
+4. Implement `detect(context)` and build all aliases, badges, and returned texts inside that detector.
+5. Add the new file to the userscript header in `materialDetector.user.js`:
+
+```js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_<internal_code>.js
+```
+
+No change in `labelRegenerator.user.js` should be needed. It reads only the final `TM_testoLeft`, `TM_testoRight`, `TM_top`, and `TM_bottom` values written by the core.
+
+A core/API change is needed only when the new detector needs a shared helper that should be reusable by multiple detectors.
+
 ## Detector contract
 
 A detector registers itself through `window.MaterialDetectorAPI.registerDetector()`:
@@ -46,8 +64,19 @@ api.registerDetector({
 });
 ```
 
+Required behavior:
+
+- `match()` chooses by the currently opened internal code.
+- `detect()` owns all product-specific scraping rules and aliases.
+- `left` becomes `TM_testoLeft`.
+- `top` becomes `TM_top`.
+- `bottom` becomes `TM_bottom`.
+- `rename.alias`, `rename.sizeAlias`, and `rename.quantity` are used by the download rename hook.
+- `state` is for inspection/reuse; keep `outputAlias`, `sizeAlias`, `topBadge`, `bottomBadge`, and `params` useful when possible.
+
 ## Current modules
 
+- `detector_template.js`: safe copy-and-edit starting point for new detectors
 - `detector_fotoobrazy.js`: fotoobrazy and HEXA fotoobrazy
   - `48rXXYY`, `48rXXXYYY`
   - `48rpXXYY`, `48rpXXXYYY`
