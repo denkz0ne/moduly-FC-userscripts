@@ -2,7 +2,7 @@
 // @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      1.4.7
+// @version      1.4.8
 // @description  Uprava print stitku, overlay zony a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @downloadURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
@@ -113,7 +113,8 @@
                 max-width: 100%;
                 overflow: hidden;
                 text-overflow: clip;
-                transform-origin: center center;
+                text-align: inherit;
+                transform-origin: left center;
             }
 
             #lr-zone-testoleft {
@@ -126,6 +127,10 @@
                 font-size: 4.8mm;
             }
 
+            #lr-zone-testoleft > span {
+                transform-origin: left center;
+            }
+
             #lr-zone-testoright {
                 right: var(--lr-safe-margin);
                 bottom: 4.0mm;
@@ -134,6 +139,12 @@
                 justify-content: flex-end;
                 text-align: right;
                 font-size: 4.5mm;
+            }
+
+            #lr-zone-testoright > span,
+            #lr-zone-top > span,
+            #lr-zone-bottom > span {
+                transform-origin: right center;
             }
 
             #lr-zone-top,
