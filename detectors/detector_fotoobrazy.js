@@ -16,6 +16,12 @@
 
     function parseCode(code) {
         const lower = String(code || '').toLowerCase();
+        if (lower === '48xk') {
+            return { kind: 'hexa', code: lower, displayAlias: 'HEXA', sizeAlias: '' };
+        }
+        if (/^48x[146]$/.test(lower)) {
+            return { kind: 'hexa-premium', code: lower, displayAlias: 'HEXA P', sizeAlias: '' };
+        }
         if (/^48fh\d{4,6}$/.test(lower)) {
             const split = splitDigits(lower.replace(/^48fh/, ''));
             if (!split) return null;
@@ -37,12 +43,12 @@
     api.registerDetector({
         id: 'fotoobrazy',
         match(internalCode) {
-            return /^48(?:r|rp|fh)/i.test(String(internalCode || ''));
+            return /^48(?:r|rp|fh|x)/i.test(String(internalCode || ''));
         },
         detect(context) {
             const parsed = parseCode(context.internalCode);
             if (!parsed) return null;
-            const canvas = api.hasCanvasSelected(context.detailInfo);
+            const canvas = !parsed.kind.includes('hexa') && api.hasCanvasSelected(context.detailInfo);
             const giftPack = api.hasGiftPack(context.detailInfo);
             const left = `${parsed.displayAlias}${canvas ? ' C' : ''}`.trim();
             return {
@@ -52,7 +58,7 @@
                 bottom: '',
                 rename: {
                     alias: parsed.code,
-                    sizeAlias: parsed.sizeAlias,
+                    sizeAlias: parsed.sizeAlias || left,
                     quantity: '1ks'
                 },
                 state: {
