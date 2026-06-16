@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      4.3.0
+// @version      4.3.1
 // @description  Material detekcia + univerzalna velkost + premenovanie stahovanych suborov.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -222,7 +222,14 @@
     function detectRightText() {
         const label = document.querySelector('#dodacia_lehota_label');
         if (!label) return '';
-        return clean(label.textContent || '');
+        const raw = clean(label.textContent || '');
+        const match = raw.match(/(\d{1,2})\.(\d{1,2})\./);
+        if (match) {
+            const day = String(match[1]).padStart(2, '0');
+            const month = String(match[2]).padStart(2, '0');
+            return `${day}. ${month}.`;
+        }
+        return raw;
     }
 
     function detectCurrentLabel() {
