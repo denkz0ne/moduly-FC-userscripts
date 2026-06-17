@@ -47,6 +47,8 @@ api.registerDetector({
             top: 'optional TM_top',
             bottom: 'optional TM_bottom',
             rename: {
+                enabled: false,
+                pattern: '{alias}_{size}_{quantity}_{vp} {original}.{ext}',
                 alias: 'download alias',
                 sizeAlias: '30x20_cm',
                 quantity: '1ks'
@@ -71,8 +73,14 @@ Required behavior:
 - `left` becomes `TM_testoLeft`.
 - `top` becomes `TM_top`.
 - `bottom` becomes `TM_bottom`.
-- `rename.alias`, `rename.sizeAlias`, and `rename.quantity` are used by the download rename hook.
+- Download renaming is opt-in only: set `rename.enabled: true` in the detector that should rename files.
+- `rename.pattern` controls downloaded filename shape. Supported tokens are `{alias}`, `{size}`, `{quantity}`, `{vp}`, `{detector}`, `{code}`, `{original}`, and `{ext}`.
 - `state` is for inspection/reuse; keep `outputAlias`, `sizeAlias`, `topBadge`, `bottomBadge`, and `params` useful when possible.
+
+Current rename-enabled detectors:
+
+- `detector_41tv.js`
+- `detector_42fotoweb.js`
 
 ## Current modules
 
