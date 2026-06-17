@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.1.0-core
+// @version      5.1.1-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
@@ -426,8 +426,8 @@
                 url,
                 name: fileName,
                 saveAs: false,
-                onerror: function () {
-                    window.open(url, '_blank', 'noopener');
+                onerror: function (error) {
+                    console.warn('[materialDetector] renamed download cancelled or failed', error);
                 }
             });
             return;
