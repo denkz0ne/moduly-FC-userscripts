@@ -59,8 +59,11 @@
                 top,
                 bottom,
 
-                // Download rename metadata used by the core download hook.
+                // Download rename is opt-in. Leave enabled false/missing unless
+                // this product family should rename downloaded files.
                 rename: {
+                    enabled: false,
+                    pattern: '{alias}_{size}_{quantity}_{vp} {original}.{ext}',
                     alias: outputAlias,
                     sizeAlias,
                     quantity
