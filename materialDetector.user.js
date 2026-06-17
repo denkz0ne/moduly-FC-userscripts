@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.0.3-core
+// @version      5.1.0-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
@@ -13,6 +13,7 @@
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_41tv.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_42fotoweb.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_common_size.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/control_panel.js
 // @run-at       document-start
 // ==/UserScript==
 
@@ -48,6 +49,86 @@
         return STATE_KEY_PREFIX + vp;
     }
 
+    function hasTemplate(template) {
+        return api.normalizeTemplateBlocks(template).length > 0;
+    }
+
+    function ensureQuantitySuffix(value) {
+        const raw = api.clean(value || '');
+        if (!raw) return '1ks';
+        return /ks$/i.test(raw) ? raw : raw + 'ks';
+    }
+
+    function getResultParams(result) {
+        return Object.assign({}, result.debug || {}, (result.state && result.state.params) || {});
+    }
+
+    function buildTemplateTokens(result, context, extra = {}) {
+        const state = result.state || {};
+        const rename = result.rename || {};
+        const params = getResultParams(result);
+        const sizeAlias = rename.sizeAlias || state.sizeAlias || params.sizeAlias || '';
+        const quantity = ensureQuantitySuffix(rename.quantity || params.quantity || '1ks');
+        const alias = rename.alias || state.outputAlias || result.left || params.alias || '';
+        return Object.assign({}, params, {
+            alias,
+            left: result.left || '',
+            top: result.top || '',
+            bottom: result.bottom || '',
+            size: stripSizeUnitSuffix(sizeAlias),
+            sizeAlias,
+            quantity,
+            quantityRaw: params.quantity || '',
+            vp: getCurrentVp(),
+            detector: result.detector || state.detector || '',
+            code: state.productCode || context.internalCode || params.code || '',
+            productCode: state.productCode || context.internalCode || '',
+            internalCode: context.internalCode || '',
+            outputAlias: state.outputAlias || alias
+        }, extra || {});
+    }
+
+    function applyPanelSettings(result, context) {
+        const detectorId = result.detector || '';
+        const settings = api.getDetectorSettings(detectorId);
+        const hadCustomSettings = Object.keys(settings).length > 0;
+        let tokens = buildTemplateTokens(result, context);
+
+        if (hasTemplate(settings.leftTemplate)) {
+            result.left = api.renderTemplate(settings.leftTemplate, tokens) || result.left || '';
+        }
+        if (hasTemplate(settings.topTemplate)) {
+            result.top = api.renderTemplate(settings.topTemplate, tokens);
+        }
+        if (hasTemplate(settings.bottomTemplate)) {
+            result.bottom = api.renderTemplate(settings.bottomTemplate, tokens);
+        }
+
+        if (typeof settings.renameEnabled === 'boolean' || hasTemplate(settings.renameTemplate)) {
+            result.rename = Object.assign({
+                alias: result.left || detectorId || 'material',
+                sizeAlias: tokens.sizeAlias || '',
+                quantity: tokens.quantity || '1ks'
+            }, result.rename || {});
+            if (typeof settings.renameEnabled === 'boolean') {
+                result.rename.enabled = settings.renameEnabled;
+            }
+            if (hasTemplate(settings.renameTemplate)) {
+                result.rename.pattern = settings.renameTemplate;
+            }
+        }
+
+        result.state = Object.assign({}, result.state || {});
+        result.state.outputAlias = result.state.outputAlias || result.left || '';
+        result.state.panelSettingsApplied = hadCustomSettings;
+        result.state.params = Object.assign({}, getResultParams(result), result.state.params || {});
+        tokens = buildTemplateTokens(result, context);
+        result.tokens = tokens;
+        result.state.tokens = tokens;
+        window.__materialDetectorTokens = tokens;
+        return result;
+    }
+
     function setPerTabState(result, context) {
         const vp = getCurrentVp();
         const payload = Object.assign({
@@ -59,6 +140,7 @@
             topBadge: result.top || '',
             bottomBadge: result.bottom || '',
             params: result.debug || {},
+            tokens: result.tokens || {},
             updatedAt: new Date().toISOString()
         }, result.state || {});
 
@@ -132,7 +214,7 @@
             const result = detector.detect(context, api);
             if (!result) return null;
             result.detector = result.detector || detector.id;
-            return result;
+            return applyPanelSettings(result, context);
         } catch (e) {
             console.error('[materialDetector] detector failed', detector.id, e);
             return null;
@@ -217,6 +299,7 @@
             state: detected.state || null,
             forced: force
         });
+        window.dispatchEvent(new CustomEvent('materialDetector:updated', { detail: detected }));
     }
 
     function forceRefreshSessionBurst() {
@@ -280,23 +363,29 @@
         const alias = rename.alias || state.outputAlias || window.TM_testoLeft || 'material';
         const sizeAlias = rename.sizeAlias || state.sizeAlias || localStorage.getItem(LAST_SIZE_ALIAS_STORAGE_PREFIX + vp) || 'bez_rozmeru';
         const quantity = rename.quantity || '1ks';
-        return {
-            alias: api.sanitizeSnakeToken(String(alias).split('|')[0].trim() || 'material'),
-            size: api.sanitizeSnakeToken(stripSizeUnitSuffix(sizeAlias) || 'bez_rozmeru'),
-            quantity: api.sanitizeSnakeToken(quantity || '1ks'),
-            vp: api.sanitizeSnakeToken(vp || 'bezVP'),
-            detector: api.sanitizeSnakeToken(state.detector || ''),
-            code: api.sanitizeSnakeToken(state.productCode || ''),
-            original: api.sanitizeToken(original.base || 'subor'),
-            ext: api.sanitizeToken(original.ext || '')
-        };
+        const rawTokens = Object.assign({}, state.tokens || {}, {
+            alias,
+            size: stripSizeUnitSuffix(sizeAlias),
+            sizeAlias,
+            quantity,
+            vp: vp || 'bezVP',
+            detector: state.detector || '',
+            code: state.productCode || '',
+            original: original.base || 'subor',
+            ext: original.ext || ''
+        });
+        const tokens = {};
+        Object.entries(rawTokens).forEach(([key, value]) => {
+            tokens[key] = key === 'original' || key === 'ext'
+                ? api.sanitizeToken(value)
+                : api.sanitizeSnakeToken(value);
+        });
+        return tokens;
     }
 
     function applyRenamePattern(pattern, tokens) {
-        const selectedPattern = pattern || DEFAULT_RENAME_PATTERN;
-        let fileName = selectedPattern.replace(/\{([a-zA-Z0-9_]+)\}/g, function (_, key) {
-            return tokens[key] || '';
-        });
+        const selectedPattern = hasTemplate(pattern) ? pattern : DEFAULT_RENAME_PATTERN;
+        let fileName = api.renderTemplate(selectedPattern, tokens);
         fileName = fileName
             .replace(/_+/g, '_')
             .replace(/\s+/g, ' ')
@@ -363,6 +452,11 @@
         }, true);
     }
 
+    function initControlPanel() {
+        if (!window.MaterialDetectorControlPanel || typeof window.MaterialDetectorControlPanel.init !== 'function') return;
+        window.MaterialDetectorControlPanel.init({ onChange: forceRefreshSessionBurst });
+    }
+
     function init() {
         api.exposeAliasHelpers();
         Object.values(ZONE_KEYS).forEach(key => { window[key] = localStorage.getItem(key) || ''; });
@@ -376,12 +470,14 @@
         window.addEventListener('load', forceRefreshSessionBurst);
         window.addEventListener('pageshow', forceRefreshSessionBurst);
         window.addEventListener('focus', forceRefreshSessionBurst);
+        window.addEventListener('materialDetector:configChanged', forceRefreshSessionBurst);
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'visible') forceRefreshSessionBurst();
             else setTimeout(updateSession, 0);
         });
         ensureObserverWhenBodyExists();
         initDownloadRename();
+        initControlPanel();
     }
 
     init();
