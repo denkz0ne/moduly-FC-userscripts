@@ -56,7 +56,7 @@
         return { mediaTypeRaw, mediaType, variant, weight, quantity };
     }
 
-    function buildAlias(details) {
+    function buildAliasInfo(details) {
         const chunks = ['42foto/web'];
         let directAlias = '';
 
@@ -86,22 +86,38 @@
             chunks.push(details.mediaTypeRaw || 'unknown');
         }
 
-        const key = chunks.join('|');
-        const baseAlias = directAlias || api.resolveMaterialAlias(key) || details.mediaTypeRaw || '42foto/web';
+        const aliasKey = chunks.join('|');
+        const baseAlias = directAlias || api.resolveMaterialAlias(aliasKey) || details.mediaTypeRaw || '42foto/web';
         const qty = parseInt(details.quantity, 10);
-        if (!Number.isNaN(qty) && qty >= 2) return `${baseAlias} | ${qty}ks`;
-        return baseAlias;
+        const alias = !Number.isNaN(qty) && qty >= 2 ? `${baseAlias} | ${qty}ks` : baseAlias;
+        return { alias, aliasKey, baseAlias };
     }
 
     api.registerDetector({
         id: '42foto/web',
+        displayName: '42foto/web',
+        tokens: ['alias', 'size', 'quantity', 'vp', 'mediaType', 'mediaTypeRaw', 'weight', 'variant', 'aliasKey', 'original', 'ext'],
+        defaultRenameTemplate: [
+            { type: 'token', value: 'alias' },
+            { type: 'text', value: '_' },
+            { type: 'token', value: 'size' },
+            { type: 'text', value: '_' },
+            { type: 'token', value: 'quantity' },
+            { type: 'text', value: '_' },
+            { type: 'token', value: 'vp' },
+            { type: 'text', value: ' ' },
+            { type: 'token', value: 'original' },
+            { type: 'text', value: '.' },
+            { type: 'token', value: 'ext' }
+        ],
         match(internalCode) {
             return String(internalCode || '').toLowerCase() === '42foto/web';
         },
         detect() {
             const params = api.parseZdParams();
             const details = parseDetails(params);
-            const left = buildAlias(details);
+            const aliasInfo = buildAliasInfo(details);
+            const left = aliasInfo.alias;
             const sizeAlias = api.detectUniversalSizeAlias();
             return {
                 detector: '42foto/web',
@@ -121,9 +137,9 @@
                     outputAlias: left,
                     sizeAlias,
                     topBadge: '',
-                    params: Object.assign({}, details, { sizeAlias })
+                    params: Object.assign({}, details, aliasInfo, { sizeAlias })
                 },
-                debug: details
+                debug: Object.assign({}, details, aliasInfo)
             };
         }
     });
