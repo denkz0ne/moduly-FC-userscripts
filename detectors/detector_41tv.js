@@ -51,6 +51,8 @@
                 top: '',
                 bottom: '',
                 rename: {
+                    enabled: true,
+                    pattern: '{alias}_{size}_{quantity}_{vp} {original}.{ext}',
                     alias: left.split('|')[0].trim(),
                     sizeAlias,
                     quantity: details.quantity ? `${details.quantity}ks` : '1ks'
