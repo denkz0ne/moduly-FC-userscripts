@@ -42,6 +42,8 @@
 
     api.registerDetector({
         id: 'fotoobrazy',
+        displayName: 'Fotoobrazy',
+        tokens: ['alias', 'size', 'quantity', 'vp', 'code', 'kind', 'canvas', 'giftPack', 'displayAlias', 'original', 'ext'],
         match(internalCode) {
             return /^48(?:r|rp|fh|x)/i.test(String(internalCode || ''));
         },
@@ -67,9 +69,9 @@
                     outputAlias: parsed.code,
                     sizeAlias: parsed.sizeAlias,
                     topBadge: giftPack ? 'DBAL' : '',
-                    params: { code: parsed.code, kind: parsed.kind, canvas, giftPack, sizeAlias: parsed.sizeAlias }
+                    params: { code: parsed.code, kind: parsed.kind, canvas, giftPack, sizeAlias: parsed.sizeAlias, displayAlias: parsed.displayAlias }
                 },
-                debug: { code: parsed.code, parsed }
+                debug: { code: parsed.code, parsed, kind: parsed.kind, canvas, giftPack, displayAlias: parsed.displayAlias }
             };
         }
     });
