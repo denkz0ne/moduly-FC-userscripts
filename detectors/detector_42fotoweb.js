@@ -9,6 +9,11 @@
         return match ? `${match[1]}g` : '';
     }
 
+    function weightAlias(weight) {
+        const match = String(weight || '').match(/^(\d+)g$/i);
+        return match ? match[1] : '';
+    }
+
     function parseDetails(params) {
         const mediaTypeRaw = api.getParamValueByLabelContains(params, ['typ tlacoveho media']);
         const mediaType = api.normalizeKey(mediaTypeRaw);
@@ -17,7 +22,7 @@
         let weight = '';
 
         if (mediaType.includes('economy plagat')) {
-            const gram = api.getParamValueByLabelContains(params, ['gramaz papiera']);
+            const gram = api.getParamValueByLabelContains(params, ['gramaz papiera economy poster', 'gramaz papiera']);
             weight = pickWeight(gram) || pickWeight(allValues.join(' '));
         } else if (mediaType.includes('plagatovy papier')) {
             const gram = api.getParamValueByLabelContains(params, ['gramaz papiera']);
@@ -53,9 +58,12 @@
 
     function buildAlias(details) {
         const chunks = ['42foto/web'];
+        let directAlias = '';
+
         if (details.mediaType.includes('economy plagat')) {
             chunks.push('economy plagat');
             if (details.weight) chunks.push(details.weight);
+            directAlias = weightAlias(details.weight);
         } else if (details.mediaType.includes('plagatovy papier')) {
             chunks.push('plagatovy papier');
             if (details.weight) chunks.push(details.weight);
@@ -79,7 +87,7 @@
         }
 
         const key = chunks.join('|');
-        const baseAlias = api.resolveMaterialAlias(key) || details.mediaTypeRaw || '42foto/web';
+        const baseAlias = directAlias || api.resolveMaterialAlias(key) || details.mediaTypeRaw || '42foto/web';
         const qty = parseInt(details.quantity, 10);
         if (!Number.isNaN(qty) && qty >= 2) return `${baseAlias} | ${qty}ks`;
         return baseAlias;
