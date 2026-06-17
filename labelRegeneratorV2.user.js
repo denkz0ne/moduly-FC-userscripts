@@ -299,6 +299,7 @@
         if (panelElements && panelElements.modeSelect) {
             panelElements.modeSelect.value = currentMode;
         }
+        updateConfiguratorPosition();
     }
 
     function loadLayoutConfig() {
@@ -587,7 +588,7 @@
                 position: fixed;
                 top: 14px;
                 right: auto;
-                left: calc(${LABEL_WIDTH_MM}mm + 70px);
+                left: 14px;
                 width: var(--lr-panel-width);
                 max-height: calc(100vh - 28px);
                 overflow: auto;
@@ -1214,6 +1215,44 @@
         panelElements.panel.classList.toggle('is-open', panelOpen);
         document.documentElement.classList.toggle('lr-panel-open', panelOpen);
         panelElements.toggle.textContent = panelOpen ? 'Close CFG' : 'CFG';
+        updateConfiguratorPosition();
+    }
+
+    function updateConfiguratorPosition() {
+        if (!panelElements) return;
+
+        const label = document.querySelector('#label');
+        if (!label) return;
+
+        const spacing = 18;
+        const margin = 14;
+        const rect = label.getBoundingClientRect();
+        const panelWidth = panelElements.panel.offsetWidth || 360;
+        const panelHeight = panelElements.panel.offsetHeight || 0;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        let left = rect.right + spacing;
+        if (left + panelWidth + margin > viewportWidth) {
+            left = Math.max(margin, rect.left - panelWidth - spacing);
+        }
+        if (left < margin) {
+            left = margin;
+        }
+
+        let top = Math.max(margin, rect.top);
+        if (panelHeight > 0 && top + panelHeight + margin > viewportHeight) {
+            top = Math.max(margin, viewportHeight - panelHeight - margin);
+        }
+
+        panelElements.panel.style.left = `${left}px`;
+        panelElements.panel.style.top = `${top}px`;
+
+        const toggleLeft = Math.max(margin, left + panelWidth - 86);
+        const toggleTop = Math.max(margin, top - 44);
+        panelElements.toggle.style.left = `${toggleLeft}px`;
+        panelElements.toggle.style.right = 'auto';
+        panelElements.toggle.style.top = `${toggleTop}px`;
     }
 
     function handleConfigInput(event) {
@@ -1248,6 +1287,7 @@
         setStoredSelectedBlock(blockKey);
         refreshPanelSelectionState();
         renderOverlayZones();
+        updateConfiguratorPosition();
     }
 
     function ensureConfigPanel() {
@@ -1392,6 +1432,7 @@
         applyPanelOpenState();
         setStoredMode(currentMode);
         refreshPanelSelectionState();
+        requestAnimationFrame(updateConfiguratorPosition);
     }
 
     function exposeOverlayApi() {
@@ -1539,6 +1580,7 @@
         bindBlockSelection();
         renderOverlayZones();
         updateEditorInputValues();
+        updateConfiguratorPosition();
         markPrintReady();
     }
 
@@ -1575,7 +1617,10 @@
     }
 
     function bindEvents() {
-        window.addEventListener('resize', renderOverlayZones);
+        window.addEventListener('resize', () => {
+            renderOverlayZones();
+            updateConfiguratorPosition();
+        });
         window.addEventListener('keydown', (event) => {
             if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'e') {
                 event.preventDefault();
