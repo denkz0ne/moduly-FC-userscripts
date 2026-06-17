@@ -12,6 +12,36 @@ This branch uses `@require` URLs pointing to:
 
 Disable the production `materialDetector` in Tampermonkey before testing this branch.
 
+## Control panel
+
+`detectors/control_panel.js` adds the `MD CFG` button into the shared `#fc-userscripts-action-panel` from `FCActionPanel.user.js`.
+
+The panel stores settings in:
+
+`materialDetector.panelConfig.v1`
+
+Stored settings survive userscript updates because they live in `localStorage`.
+
+The panel supports:
+
+- per-detector `TM_testoLeft`, `TM_top`, and `TM_bottom` templates
+- per-detector rename on/off
+- per-detector rename filename templates
+- token and text blocks with drag/drop or up/down movement
+- manual alias add/remove through the existing `materialDetector.materialAliases.v1` map
+
+Template tokens currently supported by the core include:
+
+`{alias}`, `{size}`, `{sizeAlias}`, `{quantity}`, `{vp}`, `{detector}`, `{code}`, `{productCode}`, `{internalCode}`, `{outputAlias}`, `{original}`, `{ext}`
+
+Detectors can expose additional tokens through `tokens`, for example:
+
+- `42foto/web`: `{mediaType}`, `{mediaTypeRaw}`, `{weight}`, `{variant}`, `{aliasKey}`
+- `41tv`: `{material}`, `{materialAlias}`, `{colorCode}`, `{folding}`, `{printType}`
+- `fotoobrazy`: `{kind}`, `{canvas}`, `{giftPack}`, `{displayAlias}`
+
+If no panel setting exists, the detector output is used unchanged.
+
 ## Adding a detector
 
 Yes: for a new product family you should only need a new detector file plus one `@require` line.
@@ -20,7 +50,8 @@ Yes: for a new product family you should only need a new detector file plus one 
 2. Change `DETECTOR_ID` to a stable detector name, for example `84tv` or `48r_fotoobrazy`.
 3. Implement `match(internalCode, context)` so it returns `true` only for the internal codes handled by that detector.
 4. Implement `detect(context)` and build all aliases, badges, and returned texts inside that detector.
-5. Add the new file to the userscript header in `materialDetector.user.js`:
+5. Add optional panel metadata: `displayName`, `tokens`, and `defaultRenameTemplate`.
+6. Add the new file to the userscript header in `materialDetector.user.js`:
 
 ```js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_<internal_code>.js
@@ -37,6 +68,8 @@ A detector registers itself through `window.MaterialDetectorAPI.registerDetector
 ```js
 api.registerDetector({
     id: 'example',
+    displayName: 'Example detector',
+    tokens: ['alias', 'size', 'quantity'],
     match(internalCode, context, api) {
         return internalCode === 'example';
     },
@@ -70,12 +103,12 @@ Required behavior:
 
 - `match()` chooses by the currently opened internal code.
 - `detect()` owns all product-specific scraping rules and aliases.
-- `left` becomes `TM_testoLeft`.
-- `top` becomes `TM_top`.
-- `bottom` becomes `TM_bottom`.
-- Download renaming is opt-in only: set `rename.enabled: true` in the detector that should rename files.
-- `rename.pattern` controls downloaded filename shape. Supported tokens are `{alias}`, `{size}`, `{quantity}`, `{vp}`, `{detector}`, `{code}`, `{original}`, and `{ext}`.
-- `state` is for inspection/reuse; keep `outputAlias`, `sizeAlias`, `topBadge`, `bottomBadge`, and `params` useful when possible.
+- `state.params` and `debug` should contain useful raw facts for panel tokens.
+- `left` becomes `TM_testoLeft`, unless overridden by the panel.
+- `top` becomes `TM_top`, unless overridden by the panel.
+- `bottom` becomes `TM_bottom`, unless overridden by the panel.
+- Download renaming is opt-in only: set `rename.enabled: true` in the detector or through the panel.
+- `rename.pattern` controls downloaded filename shape and can be overridden by the panel.
 
 Current rename-enabled detectors:
 
@@ -85,6 +118,7 @@ Current rename-enabled detectors:
 ## Current modules
 
 - `detector_template.js`: safe copy-and-edit starting point for new detectors
+- `control_panel.js`: per-detector UI config panel
 - `detector_fotoobrazy.js`: fotoobrazy and HEXA fotoobrazy
   - `48rXXYY`, `48rXXXYYY`
   - `48rpXXYY`, `48rpXXXYYY`
@@ -99,6 +133,7 @@ Current rename-enabled detectors:
 - collect page context
 - identify currently opened internal code
 - route to exactly one detector
+- apply panel templates when configured
 - detect delivery date for every VP
 - write `TM_testoLeft`, `TM_testoRight`, `TM_top`, `TM_bottom`
 - keep per-tab state for download renaming
@@ -110,6 +145,8 @@ Current rename-enabled detectors:
 - text cleanup and normalization
 - VP id lookup
 - material alias config and helpers
+- panel config load/save helpers
+- token template rendering helpers
 - current internal-code extraction from product rows
 - ZD parameter parsing
 - generic size parsing for rename/fallback
