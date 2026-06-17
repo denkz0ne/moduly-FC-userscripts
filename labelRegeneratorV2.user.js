@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         labelRegenerator V2
+// @name         labelRegenerator
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.0
+// @version      2.0.1
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegeneratorV2.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegeneratorV2.user.js
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegenerator.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/*
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
@@ -20,9 +20,11 @@
     const SOURCE_LABEL_WIDTH_MM = 86;
     const SOURCE_LABEL_HEIGHT_MM = 50;
     const SAFE_MARGIN_MM = 1;
-    const CONFIG_STORAGE_KEY = 'labelRegeneratorLayoutConfigV150';
+    const CONFIG_STORAGE_KEY = 'labelRegeneratorLayoutConfigV201';
     const PANEL_OPEN_STORAGE_KEY = 'labelRegeneratorPanelOpen';
     const MODE_STORAGE_KEY = 'labelRegeneratorMode';
+    const SELECTED_BLOCK_STORAGE_KEY = 'labelRegeneratorSelectedBlock';
+    const EDIT_ZOOM = 1.45;
 
     const ZONE_DEFINITIONS = [
         {
@@ -234,6 +236,7 @@
     let currentMode = getStoredMode();
     let panelOpen = getStoredPanelOpen();
     let panelElements = null;
+    let selectedBlockKey = getStoredSelectedBlock();
 
     function isPrintLabelPage() {
         return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
@@ -268,6 +271,21 @@
 
     function setStoredPanelOpen(value) {
         localStorage.setItem(PANEL_OPEN_STORAGE_KEY, value ? '1' : '0');
+    }
+
+    function getStoredSelectedBlock() {
+        const value = localStorage.getItem(SELECTED_BLOCK_STORAGE_KEY) || '';
+        return ZONE_DEFINITIONS.some((definition) => definition.key === value) ? value : '';
+    }
+
+    function setStoredSelectedBlock(value) {
+        const normalized = ZONE_DEFINITIONS.some((definition) => definition.key === value) ? value : '';
+        selectedBlockKey = normalized;
+        if (normalized) {
+            localStorage.setItem(SELECTED_BLOCK_STORAGE_KEY, normalized);
+        } else {
+            localStorage.removeItem(SELECTED_BLOCK_STORAGE_KEY);
+        }
     }
 
     function getStoredMode() {
@@ -448,7 +466,7 @@
             }
 
             html.lr-panel-open body {
-                padding-right: calc(var(--lr-panel-width) + 28px) !important;
+                padding-right: calc(var(--lr-panel-width) + 96px) !important;
             }
 
             #label {
@@ -463,6 +481,11 @@
                 overflow: hidden !important;
                 border: 0 !important;
                 background: #fff;
+            }
+
+            html.lr-edit-mode #label {
+                transform: scale(${EDIT_ZOOM});
+                transform-origin: top left;
             }
 
             html.lr-edit-mode #label::after {
@@ -563,7 +586,8 @@
             #lr-config-panel {
                 position: fixed;
                 top: 14px;
-                right: 14px;
+                right: auto;
+                left: calc(${LABEL_WIDTH_MM}mm + 70px);
                 width: var(--lr-panel-width);
                 max-height: calc(100vh - 28px);
                 overflow: auto;
@@ -619,10 +643,30 @@
 
             .lr-panel-topbar {
                 display: grid;
-                grid-template-columns: 1fr auto auto;
+                grid-template-columns: 1fr auto auto auto;
                 gap: 8px;
                 align-items: end;
                 margin-bottom: 12px;
+            }
+
+            .lr-global-card {
+                border: 1px solid rgba(0, 0, 0, 0.08);
+                border-radius: 14px;
+                padding: 12px;
+                margin-bottom: 12px;
+                background: #f6f7f9;
+            }
+
+            .lr-global-card h3 {
+                margin: 0 0 8px;
+                font-size: 13px;
+                line-height: 1.2;
+            }
+
+            .lr-global-card p {
+                margin: 0;
+                color: #555;
+                font-size: 11px;
             }
 
             .lr-panel-topbar label,
@@ -698,6 +742,52 @@
                 padding-top: 4px;
             }
 
+            .lr-selected-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                min-height: 32px;
+                padding: 0 10px;
+                border-radius: 10px;
+                border: 1px solid rgba(0, 0, 0, 0.12);
+                background: #fff;
+                font: 700 11px/1 Arial, sans-serif;
+                color: #111;
+            }
+
+            .lr-selected-chip--empty {
+                color: #666;
+                font-weight: 500;
+            }
+
+            .lr-selection-list {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                margin-top: 10px;
+            }
+
+            .lr-select-block-btn {
+                appearance: none;
+                border: 1px solid rgba(0, 0, 0, 0.12);
+                background: #fff;
+                color: #111;
+                border-radius: 10px;
+                padding: 8px 10px;
+                font: 700 11px/1.2 Arial, sans-serif;
+                cursor: pointer;
+                text-align: left;
+            }
+
+            .lr-select-block-btn.is-active {
+                background: #111;
+                color: #fff;
+            }
+
+            .lr-form-shell[hidden] {
+                display: none !important;
+            }
+
             @media print {
                 @page {
                     size: ${LABEL_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm;
@@ -721,6 +811,10 @@
                     display: none !important;
                 }
 
+                html.lr-edit-mode #label {
+                    transform: none !important;
+                }
+
                 #label,
                 #label-regenerator-base,
                 #label-regenerator-overlay {
@@ -742,6 +836,7 @@
         zone.id = definition.id;
         zone.className = `lr-block lr-block--${definition.slug}`;
         zone.dataset.zone = definition.key;
+        zone.tabIndex = 0;
 
         const guide = document.createElement('div');
         guide.className = 'lr-guide-tag';
@@ -902,6 +997,7 @@
             applyBlockContainerStyles(definition, elements, blockConfig);
             applyBlockTextStyles(elements, blockConfig, resolveZoneValue(definition));
             fitZoneText(elements, blockConfig);
+            elements.zone.classList.toggle('is-selected', selectedBlockKey === definition.key);
         });
     }
 
@@ -1006,6 +1102,7 @@
     function buildBlockCard(definition) {
         const card = document.createElement('section');
         card.className = 'lr-block-card';
+        card.dataset.blockCard = definition.key;
 
         const title = document.createElement('h3');
         title.textContent = definition.title;
@@ -1048,6 +1145,33 @@
         return card;
     }
 
+    function buildGlobalCard() {
+        const card = document.createElement('section');
+        card.className = 'lr-global-card';
+        card.dataset.globalCard = 'true';
+
+        const title = document.createElement('h3');
+        title.textContent = 'Global';
+        card.appendChild(title);
+
+        const paragraph = document.createElement('p');
+        paragraph.textContent = 'Bez vybrateho bloku vies prepinať rezim, resetovat layout a vybrat blok na editaciu. Klik na blok priamo v stitku ho vyberie okamzite.';
+        card.appendChild(paragraph);
+
+        const list = document.createElement('div');
+        list.className = 'lr-selection-list';
+        ZONE_DEFINITIONS.forEach((definition) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'lr-select-block-btn';
+            button.dataset.selectBlock = definition.key;
+            button.textContent = definition.title;
+            list.appendChild(button);
+        });
+        card.appendChild(list);
+        return card;
+    }
+
     function updateEditorInputValues() {
         if (!panelElements || !panelElements.panel) return;
 
@@ -1063,6 +1187,25 @@
             } else {
                 input.value = value;
             }
+        });
+    }
+
+    function refreshPanelSelectionState() {
+        if (!panelElements) return;
+
+        const selectedDefinition = ZONE_DEFINITIONS.find((definition) => definition.key === selectedBlockKey) || null;
+        const selectedLabel = selectedDefinition ? selectedDefinition.title : 'No block selected';
+        panelElements.selectedChip.textContent = selectedLabel;
+        panelElements.selectedChip.classList.toggle('lr-selected-chip--empty', !selectedDefinition);
+
+        panelElements.globalCard.hidden = Boolean(selectedDefinition);
+
+        panelElements.panel.querySelectorAll('[data-block-card]').forEach((card) => {
+            card.hidden = card.dataset.blockCard !== selectedBlockKey;
+        });
+
+        panelElements.panel.querySelectorAll('[data-select-block]').forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.selectBlock === selectedBlockKey);
         });
     }
 
@@ -1099,6 +1242,12 @@
         saveLayoutConfig();
         renderOverlayZones();
         updateEditorInputValues();
+    }
+
+    function setSelectedBlock(blockKey) {
+        setStoredSelectedBlock(blockKey);
+        refreshPanelSelectionState();
+        renderOverlayZones();
     }
 
     function ensureConfigPanel() {
@@ -1169,7 +1318,15 @@
         editButton.textContent = 'Edit';
         topbar.appendChild(editButton);
 
+        const selectedChip = document.createElement('div');
+        selectedChip.className = 'lr-selected-chip lr-selected-chip--empty';
+        selectedChip.textContent = 'No block selected';
+        topbar.appendChild(selectedChip);
+
         panel.appendChild(topbar);
+
+        const globalCard = buildGlobalCard();
+        panel.appendChild(globalCard);
 
         ZONE_DEFINITIONS.forEach((definition) => {
             panel.appendChild(buildBlockCard(definition));
@@ -1183,7 +1340,7 @@
         document.body.appendChild(toggle);
         document.body.appendChild(panel);
 
-        panelElements = { toggle, panel, modeSelect, resetButton, closeButton, viewButton, editButton };
+        panelElements = { toggle, panel, modeSelect, resetButton, closeButton, viewButton, editButton, selectedChip, globalCard };
 
         toggle.addEventListener('click', () => {
             panelOpen = !panelOpen;
@@ -1219,11 +1376,22 @@
             updateEditorInputValues();
         });
 
+        panel.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-select-block]');
+            if (!button) return;
+            setSelectedBlock(button.dataset.selectBlock);
+            setStoredMode('edit');
+            panelOpen = true;
+            setStoredPanelOpen(true);
+            applyPanelOpenState();
+        });
+
         panel.addEventListener('input', handleConfigInput);
         panel.addEventListener('change', handleConfigInput);
 
         applyPanelOpenState();
         setStoredMode(currentMode);
+        refreshPanelSelectionState();
     }
 
     function exposeOverlayApi() {
@@ -1262,6 +1430,9 @@
         };
         window.labelRegeneratorSetMode = (mode) => {
             setStoredMode(mode);
+        };
+        window.labelRegeneratorSelectBlock = (blockKey) => {
+            setSelectedBlock(blockKey);
         };
     }
 
@@ -1365,9 +1536,42 @@
         ensureOverlayLayer();
         syncBaseScale();
         ensureConfigPanel();
+        bindBlockSelection();
         renderOverlayZones();
         updateEditorInputValues();
         markPrintReady();
+    }
+
+    function bindBlockSelection() {
+        ZONE_DEFINITIONS.forEach((definition) => {
+            const elements = getZoneElements(definition);
+            if (!elements || elements.zone.dataset.boundSelection === '1') return;
+
+            const handler = (event) => {
+                if (currentMode !== 'edit') return;
+                event.preventDefault();
+                event.stopPropagation();
+                setSelectedBlock(definition.key);
+                panelOpen = true;
+                setStoredPanelOpen(true);
+                applyPanelOpenState();
+            };
+
+            elements.zone.addEventListener('click', handler);
+            elements.zone.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    handler(event);
+                }
+            });
+            elements.zone.dataset.boundSelection = '1';
+        });
+
+        document.addEventListener('click', (event) => {
+            if (currentMode !== 'edit') return;
+            if (event.target.closest('#lr-config-panel')) return;
+            if (event.target.closest('.lr-block')) return;
+            setSelectedBlock('');
+        });
     }
 
     function bindEvents() {
