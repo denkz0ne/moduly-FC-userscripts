@@ -48,7 +48,7 @@
         detect(context) {
             const parsed = parseCode(context.internalCode);
             if (!parsed) return null;
-            const canvas = !parsed.kind.includes('hexa') && api.hasCanvasSelected(context.detailInfo);
+            const canvas = parsed.kind === 'regular' && api.hasCanvasSelected(context.detailInfo);
             const giftPack = api.hasGiftPack(context.detailInfo);
             const left = `${parsed.displayAlias}${canvas ? ' C' : ''}`.trim();
             return {
