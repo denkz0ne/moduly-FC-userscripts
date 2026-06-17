@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.0.1-core
+// @version      5.0.2-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
@@ -28,6 +28,7 @@
     const STATE_KEY_PREFIX = 'materialDetectorState:';
     const STATE_TTL_MS = 30000;
     const LAST_SIZE_ALIAS_STORAGE_PREFIX = api.LAST_SIZE_ALIAS_STORAGE_PREFIX || 'materialDetector.lastSizeAlias:';
+    const DEFAULT_RENAME_PATTERN = '{alias}_{size}_{quantity}_{vp} {original}.{ext}';
     const ZONE_KEYS = {
         left: 'TM_testoLeft',
         right: 'TM_testoRight',
@@ -254,19 +255,11 @@
         return api.stripSizeUnitSuffix(sizeAlias);
     }
 
-    function getNameParts() {
-        const vp = getCurrentVp();
-        const state = getPerTabState() || {};
-        const rename = state.rename || {};
-        const alias = rename.alias || state.outputAlias || window.TM_testoLeft || 'material';
-        const sizeAlias = rename.sizeAlias || state.sizeAlias || localStorage.getItem(LAST_SIZE_ALIAS_STORAGE_PREFIX + vp) || 'bez_rozmeru';
-        const quantity = rename.quantity || '1ks';
-        return {
-            aliasPart: api.sanitizeSnakeToken(String(alias).split('|')[0].trim() || 'material'),
-            sizePart: api.sanitizeSnakeToken(stripSizeUnitSuffix(sizeAlias) || 'bez_rozmeru'),
-            qtyPart: api.sanitizeSnakeToken(quantity || '1ks'),
-            vpPart: api.sanitizeSnakeToken(vp || 'bezVP')
-        };
+    function getRenameConfig() {
+        const state = getPerTabState();
+        const rename = state && state.rename;
+        if (!rename || rename.enabled !== true) return null;
+        return { state, rename };
     }
 
     function extractFilenameFromHref(href) {
@@ -281,13 +274,44 @@
         }
     }
 
-    function buildNewFileName(originalHref) {
-        const parts = getNameParts();
+    function buildRenameTokens(originalHref, state, rename) {
+        const vp = getCurrentVp();
         const original = extractFilenameFromHref(originalHref);
-        const prefix = [parts.aliasPart, parts.sizePart, parts.qtyPart, parts.vpPart].join('_');
-        const originalBase = api.sanitizeToken(original.base || 'subor');
-        const ext = api.sanitizeToken(original.ext || '');
-        return ext ? `${prefix} ${originalBase}.${ext}` : `${prefix} ${originalBase}`;
+        const alias = rename.alias || state.outputAlias || window.TM_testoLeft || 'material';
+        const sizeAlias = rename.sizeAlias || state.sizeAlias || localStorage.getItem(LAST_SIZE_ALIAS_STORAGE_PREFIX + vp) || 'bez_rozmeru';
+        const quantity = rename.quantity || '1ks';
+        return {
+            alias: api.sanitizeSnakeToken(String(alias).split('|')[0].trim() || 'material'),
+            size: api.sanitizeSnakeToken(stripSizeUnitSuffix(sizeAlias) || 'bez_rozmeru'),
+            quantity: api.sanitizeSnakeToken(quantity || '1ks'),
+            vp: api.sanitizeSnakeToken(vp || 'bezVP'),
+            detector: api.sanitizeSnakeToken(state.detector || ''),
+            code: api.sanitizeSnakeToken(state.productCode || ''),
+            original: api.sanitizeToken(original.base || 'subor'),
+            ext: api.sanitizeToken(original.ext || '')
+        };
+    }
+
+    function applyRenamePattern(pattern, tokens) {
+        const selectedPattern = pattern || DEFAULT_RENAME_PATTERN;
+        let fileName = selectedPattern.replace(/\{([a-zA-Z0-9_]+)\}/g, function (_, key) {
+            return tokens[key] || '';
+        });
+        fileName = fileName
+            .replace(/_+/g, '_')
+            .replace(/\s+/g, ' ')
+            .replace(/_\s/g, ' ')
+            .replace(/\s+\./g, '.')
+            .replace(/^[_\s]+|[_\s]+$/g, '');
+        if (!tokens.ext) fileName = fileName.replace(/\.$/, '');
+        return fileName || tokens.original || 'subor';
+    }
+
+    function buildNewFileName(originalHref) {
+        const config = getRenameConfig();
+        if (!config) return '';
+        const tokens = buildRenameTokens(originalHref, config.state, config.rename);
+        return applyRenamePattern(config.rename.pattern, tokens);
     }
 
     function isDownloadCandidate(anchor) {
@@ -304,8 +328,7 @@
     }
 
     function shouldRenameForCurrentOrder() {
-        const state = getPerTabState();
-        return !!(state && (state.outputAlias || state.rename));
+        return !!getRenameConfig();
     }
 
     function startDownload(url, fileName) {
@@ -331,9 +354,10 @@
             if (!link) return;
             if (!isDownloadCandidate(link)) return;
             if (!shouldRenameForCurrentOrder()) return;
+            const fileName = buildNewFileName(link.href);
+            if (!fileName) return;
             event.preventDefault();
             event.stopPropagation();
-            const fileName = buildNewFileName(link.href);
             startDownload(link.href, fileName);
             console.log('[materialDetector] download:', { from: link.href, as: fileName });
         }, true);
