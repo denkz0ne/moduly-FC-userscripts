@@ -15,7 +15,7 @@
         let colorCode = '';
         if (normalizedPrintType.includes('fareb')) colorCode = 'f';
         else if (normalizedPrintType.includes('ciernobiel') || normalizedPrintType.includes('cb')) colorCode = 'cb';
-        return { quantity, colorCode, material, materialAlias, folding };
+        return { quantity, colorCode, material, materialAlias, folding, printType };
     }
 
     function hasFoldingSelected(foldingText) {
@@ -37,6 +37,21 @@
 
     api.registerDetector({
         id: '41tv',
+        displayName: '41tv',
+        tokens: ['alias', 'size', 'quantity', 'vp', 'material', 'materialAlias', 'colorCode', 'folding', 'printType', 'original', 'ext'],
+        defaultRenameTemplate: [
+            { type: 'token', value: 'alias' },
+            { type: 'text', value: '_' },
+            { type: 'token', value: 'size' },
+            { type: 'text', value: '_' },
+            { type: 'token', value: 'quantity' },
+            { type: 'text', value: '_' },
+            { type: 'token', value: 'vp' },
+            { type: 'text', value: ' ' },
+            { type: 'token', value: 'original' },
+            { type: 'text', value: '.' },
+            { type: 'token', value: 'ext' }
+        ],
         match(internalCode) {
             return String(internalCode || '').toLowerCase() === '41tv';
         },
