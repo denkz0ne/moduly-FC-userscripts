@@ -2,6 +2,7 @@
     'use strict';
 
     const MATERIAL_ALIAS_STORAGE_KEY = 'materialDetector.materialAliases.v1';
+    const PANEL_CONFIG_STORAGE_KEY = 'materialDetector.panelConfig.v1';
     const LAST_SIZE_ALIAS_STORAGE_PREFIX = 'materialDetector.lastSizeAlias:';
     const detectors = [];
 
@@ -45,6 +46,7 @@
         map[normalizeKey('neonovy papier zlty 90g/m2')] = '90n_zlt';
         map[normalizeKey('42foto/web|economy plagat|120g')] = '120';
         map[normalizeKey('42foto/web|economy plagat|140g')] = '140';
+        map[normalizeKey('42foto/web|economy plagat|180g')] = '180';
         map[normalizeKey('42foto/web|Plagatovy papier|135g')] = '135';
         map[normalizeKey('42foto/web|Plagatovy papier|200g')] = '200';
         map[normalizeKey('42foto/web|fotopapier|leskly|200g')] = '200 lesk';
@@ -85,6 +87,36 @@
         }
     }
 
+    function saveMaterialAliasConfig(config) {
+        const normalized = {};
+        Object.entries(config || {}).forEach(([key, value]) => {
+            const normKey = normalizeKey(key);
+            const alias = String(value || '').trim();
+            if (normKey && alias) normalized[normKey] = alias;
+        });
+        localStorage.setItem(MATERIAL_ALIAS_STORAGE_KEY, JSON.stringify(normalized));
+        return normalized;
+    }
+
+    function setMaterialAlias(materialLabel, alias) {
+        const key = normalizeKey(materialLabel);
+        const value = String(alias || '').trim();
+        if (!key || !value) return false;
+        const current = loadMaterialAliasConfig();
+        current[key] = value;
+        saveMaterialAliasConfig(current);
+        return true;
+    }
+
+    function clearMaterialAlias(materialLabel) {
+        const key = normalizeKey(materialLabel);
+        if (!key) return false;
+        const current = loadMaterialAliasConfig();
+        delete current[key];
+        saveMaterialAliasConfig(current);
+        return true;
+    }
+
     function resolveMaterialAlias(materialText) {
         const cleanText = clean(materialText);
         if (!cleanText) return '';
@@ -97,27 +129,88 @@
         return '';
     }
 
+    function getDefaultPanelConfig() {
+        return { version: 1, detectors: {} };
+    }
+
+    function normalizePanelConfig(config) {
+        const base = getDefaultPanelConfig();
+        if (!config || typeof config !== 'object') return base;
+        const detectorsConfig = config.detectors && typeof config.detectors === 'object' ? config.detectors : {};
+        return { version: 1, detectors: detectorsConfig };
+    }
+
+    function loadPanelConfig() {
+        try {
+            const raw = localStorage.getItem(PANEL_CONFIG_STORAGE_KEY);
+            if (!raw) return getDefaultPanelConfig();
+            return normalizePanelConfig(JSON.parse(raw));
+        } catch (e) {
+            console.warn('[materialDetector] panel config load failed', e);
+            return getDefaultPanelConfig();
+        }
+    }
+
+    function savePanelConfig(config) {
+        const normalized = normalizePanelConfig(config);
+        localStorage.setItem(PANEL_CONFIG_STORAGE_KEY, JSON.stringify(normalized));
+        return normalized;
+    }
+
+    function getDetectorSettings(detectorId) {
+        const id = String(detectorId || '');
+        const config = loadPanelConfig();
+        const settings = config.detectors[id];
+        return settings && typeof settings === 'object' ? settings : {};
+    }
+
+    function saveDetectorSettings(detectorId, settings) {
+        const id = String(detectorId || '');
+        if (!id) return loadPanelConfig();
+        const config = loadPanelConfig();
+        config.detectors[id] = Object.assign({}, settings || {});
+        return savePanelConfig(config);
+    }
+
+    function normalizeTemplateBlocks(template) {
+        if (!template) return [];
+        if (Array.isArray(template)) {
+            return template.map(block => ({
+                type: block && block.type === 'token' ? 'token' : 'text',
+                value: clean(block && block.value != null ? block.value : '')
+            })).filter(block => block.value !== '');
+        }
+        const text = String(template || '');
+        const blocks = [];
+        const re = /\{([a-zA-Z0-9_]+)\}/g;
+        let last = 0;
+        let match;
+        while ((match = re.exec(text))) {
+            if (match.index > last) blocks.push({ type: 'text', value: text.slice(last, match.index) });
+            blocks.push({ type: 'token', value: match[1] });
+            last = match.index + match[0].length;
+        }
+        if (last < text.length) blocks.push({ type: 'text', value: text.slice(last) });
+        return blocks.filter(block => block.value !== '');
+    }
+
+    function templateToPattern(template) {
+        return normalizeTemplateBlocks(template).map(block => block.type === 'token' ? `{${block.value}}` : block.value).join('');
+    }
+
+    function renderTemplate(template, tokens) {
+        return normalizeTemplateBlocks(template).map(block => {
+            if (block.type === 'token') return tokens && tokens[block.value] != null ? String(tokens[block.value]) : '';
+            return block.value;
+        }).join('').replace(/[ \t]+/g, ' ').trim();
+    }
+
     function exposeAliasHelpers() {
-        window.__getMaterialAliasConfig = function () {
-            return loadMaterialAliasConfig();
-        };
-        window.__setMaterialAlias = function (materialLabel, alias) {
-            const key = normalizeKey(materialLabel);
-            const value = String(alias || '').trim();
-            if (!key || !value) return false;
-            const current = loadMaterialAliasConfig();
-            current[key] = value;
-            localStorage.setItem(MATERIAL_ALIAS_STORAGE_KEY, JSON.stringify(current));
-            return true;
-        };
-        window.__clearMaterialAlias = function (materialLabel) {
-            const key = normalizeKey(materialLabel);
-            if (!key) return false;
-            const current = loadMaterialAliasConfig();
-            delete current[key];
-            localStorage.setItem(MATERIAL_ALIAS_STORAGE_KEY, JSON.stringify(current));
-            return true;
-        };
+        window.__getMaterialAliasConfig = function () { return loadMaterialAliasConfig(); };
+        window.__setMaterialAlias = setMaterialAlias;
+        window.__clearMaterialAlias = clearMaterialAlias;
+        window.__getMaterialDetectorPanelConfig = function () { return loadPanelConfig(); };
+        window.__setMaterialDetectorPanelConfig = function (config) { return savePanelConfig(config); };
     }
 
     function getProductCodeFromPriceRows() {
@@ -206,7 +299,7 @@
     }
 
     function parseSizeAlias(text) {
-        const raw = clean(text).replace(/×/g, 'x').replace(/,/g, '.');
+        const raw = clean(text).replace(/\u00d7/g, 'x').replace(/,/g, '.');
         if (!raw) return '';
         const aMatch = raw.match(/\bA\s*([0-9]{1,2})\b/i);
         if (aMatch) return ('A' + aMatch[1]).toUpperCase();
@@ -240,7 +333,7 @@
                 if (!value) return;
                 if (label.includes('format') || label.includes('velkost') || label.includes('rozmer') || label.includes('sirka') || label.includes('vyska')) {
                     candidates.unshift(value);
-                } else if (/\bA\s*\d{1,2}\b/i.test(value) || /\d+[,.]?\d*\s*[x×]\s*\d+[,.]?\d*/.test(value)) {
+                } else if (/\bA\s*\d{1,2}\b/i.test(value) || /\d+[,.]?\d*\s*[x\u00d7]\s*\d+[,.]?\d*/.test(value)) {
                     candidates.push(value);
                 }
             });
@@ -295,8 +388,18 @@
         getParamValueByLabelContains,
         getAllParamValues,
         loadMaterialAliasConfig,
+        saveMaterialAliasConfig,
+        setMaterialAlias,
+        clearMaterialAlias,
         resolveMaterialAlias,
         exposeAliasHelpers,
+        loadPanelConfig,
+        savePanelConfig,
+        getDetectorSettings,
+        saveDetectorSettings,
+        normalizeTemplateBlocks,
+        templateToPattern,
+        renderTemplate,
         parseSizeAlias,
         detectUniversalSizeAlias,
         stripSizeUnitSuffix,
@@ -305,6 +408,8 @@
         registerDetector,
         getDetectors: () => detectors.slice(),
         findDetector: (internalCode, context) => detectors.find(detector => detectorMatches(detector, internalCode, context)),
+        MATERIAL_ALIAS_STORAGE_KEY,
+        PANEL_CONFIG_STORAGE_KEY,
         LAST_SIZE_ALIAS_STORAGE_PREFIX
     };
 
