@@ -6,10 +6,10 @@
 
     function splitDigits(digits) {
         const raw = String(digits || '').trim();
-        if (!raw || raw.length % 2 !== 0) return null;
-        const mid = raw.length / 2;
-        const left = String(Number(raw.slice(0, mid)));
-        const right = String(Number(raw.slice(mid)));
+        if (!/^\d{4,6}$/.test(raw)) return null;
+        const splitAt = raw.length === 5 ? 3 : raw.length / 2;
+        const left = String(Number(raw.slice(0, splitAt)));
+        const right = String(Number(raw.slice(splitAt)));
         if (!left || !right) return null;
         return { left, right, displaySize: `${left} ${right}`, sizeAlias: `${left}x${right}_cm` };
     }
