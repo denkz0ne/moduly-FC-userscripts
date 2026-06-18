@@ -14,6 +14,17 @@
         return { left, right, displaySize: `${left} ${right}`, sizeAlias: `${left}x${right}_cm` };
     }
 
+    function hasStiffenerSelected(detailInfo) {
+        const root = detailInfo || document;
+        const select = root.querySelector && root.querySelector('select[name="FO_STIFFENER"]');
+        if (!select) return false;
+        return String(select.value || '').trim() !== '';
+    }
+
+    function addStiffenerMark(displayAlias) {
+        return String(displayAlias || '').replace(/^(\d+\s+\d+)/, '$1+');
+    }
+
     function parseCode(code) {
         const lower = String(code || '').toLowerCase();
         if (lower === '48xk') {
@@ -43,7 +54,7 @@
     api.registerDetector({
         id: 'fotoobrazy',
         displayName: 'Fotoobrazy',
-        tokens: ['alias', 'size', 'quantity', 'vp', 'code', 'kind', 'canvas', 'giftPack', 'displayAlias', 'original', 'ext'],
+        tokens: ['alias', 'size', 'quantity', 'vp', 'code', 'kind', 'canvas', 'giftPack', 'stiffener', 'displayAlias', 'original', 'ext'],
         match(internalCode) {
             return /^48(?:r|rp|fh|x)/i.test(String(internalCode || ''));
         },
@@ -52,7 +63,9 @@
             if (!parsed) return null;
             const canvas = parsed.kind === 'regular' && api.hasCanvasSelected(context.detailInfo);
             const giftPack = api.hasGiftPack(context.detailInfo);
-            const left = `${parsed.displayAlias}${canvas ? ' C' : ''}`.trim();
+            const stiffener = !!parsed.sizeAlias && hasStiffenerSelected(context.detailInfo);
+            const displayAlias = stiffener ? addStiffenerMark(parsed.displayAlias) : parsed.displayAlias;
+            const left = `${displayAlias}${canvas ? ' C' : ''}`.trim();
             return {
                 detector: 'fotoobrazy',
                 left,
@@ -69,9 +82,9 @@
                     outputAlias: parsed.code,
                     sizeAlias: parsed.sizeAlias,
                     topBadge: giftPack ? 'DBAL' : '',
-                    params: { code: parsed.code, kind: parsed.kind, canvas, giftPack, sizeAlias: parsed.sizeAlias, displayAlias: parsed.displayAlias }
+                    params: { code: parsed.code, kind: parsed.kind, canvas, giftPack, stiffener, sizeAlias: parsed.sizeAlias, displayAlias }
                 },
-                debug: { code: parsed.code, parsed, kind: parsed.kind, canvas, giftPack, displayAlias: parsed.displayAlias }
+                debug: { code: parsed.code, parsed, kind: parsed.kind, canvas, giftPack, stiffener, displayAlias }
             };
         }
     });
