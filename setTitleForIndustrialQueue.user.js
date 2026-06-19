@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.2
+// @version      1.5.3
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -87,16 +87,16 @@
 
             #industrial_vp_list .fc-vp-badge-link {
                 display: inline-block;
-                padding: 5px 9px;
-                border-radius: 999px;
+                padding: 2px 7px;
+                border-radius: 3px;
                 background: #1f1f1f;
                 color: #ffffff;
                 font-weight: 700;
-                font-size: 12px;
-                line-height: 1;
+                font-size: 11px;
+                line-height: 1.2;
                 text-decoration: none;
                 border: 1px solid #1f1f1f;
-                letter-spacing: 0.02em;
+                letter-spacing: 0.01em;
                 white-space: nowrap;
             }
 
@@ -323,22 +323,39 @@
 
         rows.forEach(row => {
             const firstCell = row.cells?.[0];
+            const secondCell = row.cells?.[1];
             const vpData = getVpLinkData(row);
             if (!firstCell || !vpData) return;
 
-            if (firstCell.dataset.fcVpBadgeId === vpData.id) return;
+            if (firstCell.dataset.fcVpBadgeId !== vpData.id) {
+                firstCell.textContent = '';
 
-            firstCell.textContent = '';
+                const badgeLink = document.createElement('a');
+                badgeLink.href = vpData.href;
+                badgeLink.target = vpData.target;
+                badgeLink.className = 'fc-vp-badge-link';
+                badgeLink.textContent = vpData.id;
+                badgeLink.title = `Otvoriť VP ${vpData.id}`;
 
-            const badgeLink = document.createElement('a');
-            badgeLink.href = vpData.href;
-            badgeLink.target = vpData.target;
-            badgeLink.className = 'fc-vp-badge-link';
-            badgeLink.textContent = vpData.id;
-            badgeLink.title = `Otvoriť VP ${vpData.id}`;
+                firstCell.appendChild(badgeLink);
+                firstCell.dataset.fcVpBadgeId = vpData.id;
+            }
 
-            firstCell.appendChild(badgeLink);
-            firstCell.dataset.fcVpBadgeId = vpData.id;
+            if (secondCell && secondCell.dataset.fcVpNameCleaned !== vpData.id) {
+                const mainVpLink = secondCell.querySelector(`a[href*="/vyrobne_prikazy/detail/index/${vpData.id}"]`);
+                if (mainVpLink) {
+                    const nodes = [...mainVpLink.childNodes];
+                    const nameText = nodes
+                        .map(node => node.textContent || '')
+                        .join(' ')
+                        .replace(vpData.id, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+
+                    mainVpLink.textContent = nameText || vpData.id;
+                }
+                secondCell.dataset.fcVpNameCleaned = vpData.id;
+            }
         });
     }
 
