@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.4
+// @version      1.5.5
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -260,7 +260,18 @@
     function applyDefaultHiddenSections() {
         DEFAULT_HIDDEN_SECTION_IDS.forEach(sectionId => {
             const section = document.getElementById(sectionId);
-            if (section) section.style.display = 'none';
+            if (section) {
+                section.style.display = 'none';
+                localStorage.setItem(getSectionStorageKey(sectionId), 'hidden');
+            }
+        });
+    }
+
+    function forceHiddenSectionsWithDelay() {
+        [0, 100, 500].forEach(delay => {
+            setTimeout(() => {
+                applyDefaultHiddenSections();
+            }, delay);
         });
     }
 
@@ -543,6 +554,7 @@
         if (url.includes('/industrialQueue/detail/')) {
             injectStyles();
             applyDefaultHiddenSections();
+            forceHiddenSectionsWithDelay();
             restoreCollapsedSections();
             persistCollapsedSections();
             refreshTitleFromDocument();
