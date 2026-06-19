@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.3
+// @version      1.5.4
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -19,6 +19,7 @@
     const EXPR_ROW_CLASS = 'fc-expr-row';
     const STOP_ROW_CLASS = 'fc-stop-row';
     const CANCELLED_ROW_CLASS = 'fc-cancelled-row';
+    const DEFAULT_HIDDEN_SECTION_IDS = ['iqInfo', 'filter-content'];
 
     let currentSnapshot = null;
     let faviconBadgeApplied = false;
@@ -256,11 +257,21 @@
             .filter(Boolean);
     }
 
+    function applyDefaultHiddenSections() {
+        DEFAULT_HIDDEN_SECTION_IDS.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) section.style.display = 'none';
+        });
+    }
+
     function restoreCollapsedSections() {
         getToggleSectionPairs().forEach(({ section, sectionId }) => {
             const stored = localStorage.getItem(getSectionStorageKey(sectionId));
             if (stored === 'hidden') {
                 section.style.display = 'none';
+            }
+            if (stored === 'visible') {
+                section.style.display = '';
             }
         });
     }
@@ -531,6 +542,7 @@
 
         if (url.includes('/industrialQueue/detail/')) {
             injectStyles();
+            applyDefaultHiddenSections();
             restoreCollapsedSections();
             persistCollapsedSections();
             refreshTitleFromDocument();
