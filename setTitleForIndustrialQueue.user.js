@@ -27,7 +27,9 @@
             if (skratka) break;
         }
 
-        const infoDiv = document.getElementById('vp_list_info');
+        const infoDiv =
+            document.getElementById('industrial_vp_list_info') ||
+            document.getElementById('vp_list_info');
         if (infoDiv) {
             const m = infoDiv.textContent.match(/z celkovo\s+(\d+)/);
             if (m) totalRecords = m[1];
