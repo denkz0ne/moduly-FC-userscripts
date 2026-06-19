@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.4.0
+// @version      1.4.1
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -16,6 +16,7 @@
 
     const SECTION_STATE_PREFIX = 'fc-industrial-queue-section-state';
     const BACKGROUND_CHECK_INTERVAL = 30000;
+    const EXPR_ROW_CLASS = 'fc-expr-row';
 
     let currentSnapshot = null;
     let faviconBadgeApplied = false;
@@ -30,6 +31,29 @@
               }
             : null;
     })();
+
+    function injectStyles() {
+        if (document.getElementById('fc-industrial-queue-enhancements')) return;
+
+        const style = document.createElement('style');
+        style.id = 'fc-industrial-queue-enhancements';
+        style.textContent = `
+            #industrial_vp_list tbody tr.${EXPR_ROW_CLASS} td {
+                background-color: #fff6ed;
+                transition: background-color 0.2s ease;
+            }
+
+            #industrial_vp_list tbody tr.${EXPR_ROW_CLASS}:hover td {
+                background-color: #ffefdf;
+            }
+
+            #industrial_vp_list tbody tr.${EXPR_ROW_CLASS} td:first-child {
+                box-shadow: inset 3px 0 0 #e7b07a;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
 
     function parseSkratka(root = document) {
         const elems = [...root.querySelectorAll('p, div, span, strong, td')];
@@ -201,12 +225,20 @@
         return [...tr.querySelectorAll('.badge')].some(badge => badge.textContent.trim() === 'EXPR');
     }
 
+    function applyExprRowHighlighting(rows) {
+        rows.forEach(row => {
+            row.classList.toggle(EXPR_ROW_CLASS, rowHasExpr(row));
+        });
+    }
+
     function moveExprRowsToTop() {
         const tbody = document.querySelector('#industrial_vp_list tbody');
         if (!tbody) return;
 
         const rows = [...tbody.querySelectorAll('tr')];
         if (!rows.length) return;
+
+        applyExprRowHighlighting(rows);
 
         const exprRows = rows.filter(rowHasExpr);
         if (!exprRows.length) return;
@@ -361,6 +393,7 @@
         const url = location.href;
 
         if (url.includes('/industrialQueue/detail/')) {
+            injectStyles();
             restoreCollapsedSections();
             persistCollapsedSections();
             refreshTitleFromDocument();
