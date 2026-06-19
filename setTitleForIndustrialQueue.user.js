@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.4.1
+// @version      1.4.2
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -17,6 +17,7 @@
     const SECTION_STATE_PREFIX = 'fc-industrial-queue-section-state';
     const BACKGROUND_CHECK_INTERVAL = 30000;
     const EXPR_ROW_CLASS = 'fc-expr-row';
+    const STOP_ROW_CLASS = 'fc-stop-row';
 
     let currentSnapshot = null;
     let faviconBadgeApplied = false;
@@ -49,6 +50,19 @@
 
             #industrial_vp_list tbody tr.${EXPR_ROW_CLASS} td:first-child {
                 box-shadow: inset 3px 0 0 #e7b07a;
+            }
+
+            #industrial_vp_list tbody tr.${STOP_ROW_CLASS} td {
+                background-color: #f3f3f3;
+                transition: background-color 0.2s ease;
+            }
+
+            #industrial_vp_list tbody tr.${STOP_ROW_CLASS}:hover td {
+                background-color: #ebebeb;
+            }
+
+            #industrial_vp_list tbody tr.${STOP_ROW_CLASS} td:first-child {
+                box-shadow: inset 3px 0 0 #6e6e6e;
             }
         `;
 
@@ -221,13 +235,22 @@
         });
     }
 
-    function rowHasExpr(tr) {
-        return [...tr.querySelectorAll('.badge')].some(badge => badge.textContent.trim() === 'EXPR');
+    function rowHasBadge(tr, badgeName) {
+        return [...tr.querySelectorAll('.badge')].some(badge => badge.textContent.trim() === badgeName);
     }
 
-    function applyExprRowHighlighting(rows) {
+    function rowHasExpr(tr) {
+        return rowHasBadge(tr, 'EXPR');
+    }
+
+    function rowHasStop(tr) {
+        return rowHasBadge(tr, 'STOP');
+    }
+
+    function applyRowHighlighting(rows) {
         rows.forEach(row => {
             row.classList.toggle(EXPR_ROW_CLASS, rowHasExpr(row));
+            row.classList.toggle(STOP_ROW_CLASS, rowHasStop(row));
         });
     }
 
@@ -238,7 +261,7 @@
         const rows = [...tbody.querySelectorAll('tr')];
         if (!rows.length) return;
 
-        applyExprRowHighlighting(rows);
+        applyRowHighlighting(rows);
 
         const exprRows = rows.filter(rowHasExpr);
         if (!exprRows.length) return;
