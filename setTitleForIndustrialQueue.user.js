@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.4.2
+// @version      1.5.0
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -18,6 +18,7 @@
     const BACKGROUND_CHECK_INTERVAL = 30000;
     const EXPR_ROW_CLASS = 'fc-expr-row';
     const STOP_ROW_CLASS = 'fc-stop-row';
+    const CANCELLED_ROW_CLASS = 'fc-cancelled-row';
 
     let currentSnapshot = null;
     let faviconBadgeApplied = false;
@@ -63,6 +64,46 @@
 
             #industrial_vp_list tbody tr.${STOP_ROW_CLASS} td:first-child {
                 box-shadow: inset 3px 0 0 #6e6e6e;
+            }
+
+            #industrial_vp_list tbody tr.${CANCELLED_ROW_CLASS} td {
+                background-color: #efefef;
+                color: #444444;
+                transition: background-color 0.2s ease;
+            }
+
+            #industrial_vp_list tbody tr.${CANCELLED_ROW_CLASS}:hover td {
+                background-color: #e7e7e7;
+            }
+
+            #industrial_vp_list tbody tr.${CANCELLED_ROW_CLASS} td:first-child {
+                box-shadow: inset 3px 0 0 #5f5f5f;
+            }
+
+            #industrial_vp_list tbody tr.${CANCELLED_ROW_CLASS} td:nth-child(2) a {
+                text-decoration: line-through;
+                opacity: 0.78;
+            }
+
+            #industrial_vp_list .fc-vp-badge-link {
+                display: inline-block;
+                padding: 5px 9px;
+                border-radius: 999px;
+                background: #1f1f1f;
+                color: #ffffff;
+                font-weight: 700;
+                font-size: 12px;
+                line-height: 1;
+                text-decoration: none;
+                border: 1px solid #1f1f1f;
+                letter-spacing: 0.02em;
+                white-space: nowrap;
+            }
+
+            #industrial_vp_list .fc-vp-badge-link:hover {
+                background: #2e2e2e;
+                border-color: #2e2e2e;
+                text-decoration: none;
             }
         `;
 
@@ -247,20 +288,72 @@
         return rowHasBadge(tr, 'STOP');
     }
 
+    function rowIsCancelled(tr) {
+        const statusCell = tr.cells?.[8];
+        return statusCell?.textContent?.trim() === 'Zrušená';
+    }
+
+    function getVpLinkData(tr) {
+        const vpLink = tr.querySelector('a[href*="/vyrobne_prikazy/detail/index/"]');
+        if (!vpLink) return null;
+
+        const href = vpLink.getAttribute('href') || '';
+        const match = href.match(/detail\/index\/(\d+)/);
+        if (!match?.[1]) return null;
+
+        return {
+            id: match[1],
+            href,
+            target: vpLink.getAttribute('target') || '_blank'
+        };
+    }
+
+    function replaceOrderColumnWithVpBadge(rows) {
+        const headerWrapper = document.querySelector('#industrial_vp_list thead th:first-child .DataTables_sort_wrapper');
+        if (headerWrapper && !headerWrapper.dataset.fcRenamed) {
+            const sortIcon = headerWrapper.querySelector('.DataTables_sort_icon');
+            headerWrapper.textContent = 'ID VP';
+            if (sortIcon) headerWrapper.appendChild(sortIcon);
+            headerWrapper.dataset.fcRenamed = '1';
+        }
+
+        rows.forEach(row => {
+            const firstCell = row.cells?.[0];
+            const vpData = getVpLinkData(row);
+            if (!firstCell || !vpData) return;
+
+            if (firstCell.dataset.fcVpBadgeId === vpData.id) return;
+
+            firstCell.textContent = '';
+
+            const badgeLink = document.createElement('a');
+            badgeLink.href = vpData.href;
+            badgeLink.target = vpData.target;
+            badgeLink.className = 'fc-vp-badge-link';
+            badgeLink.textContent = vpData.id;
+            badgeLink.title = `Otvoriť VP ${vpData.id}`;
+
+            firstCell.appendChild(badgeLink);
+            firstCell.dataset.fcVpBadgeId = vpData.id;
+        });
+    }
+
     function applyRowHighlighting(rows) {
         rows.forEach(row => {
             row.classList.toggle(EXPR_ROW_CLASS, rowHasExpr(row));
             row.classList.toggle(STOP_ROW_CLASS, rowHasStop(row));
+            row.classList.toggle(CANCELLED_ROW_CLASS, rowIsCancelled(row));
         });
     }
 
-    function moveExprRowsToTop() {
+    function enhanceQueueRows() {
         const tbody = document.querySelector('#industrial_vp_list tbody');
         if (!tbody) return;
 
         const rows = [...tbody.querySelectorAll('tr')];
         if (!rows.length) return;
 
+        replaceOrderColumnWithVpBadge(rows);
         applyRowHighlighting(rows);
 
         const exprRows = rows.filter(rowHasExpr);
@@ -276,7 +369,7 @@
         exprMoveScheduled = true;
         setTimeout(() => {
             exprMoveScheduled = false;
-            moveExprRowsToTop();
+            enhanceQueueRows();
         }, 0);
     }
 
