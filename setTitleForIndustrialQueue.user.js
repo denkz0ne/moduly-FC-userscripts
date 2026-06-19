@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.0
+// @version      1.5.1
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -290,7 +290,11 @@
 
     function rowIsCancelled(tr) {
         const statusCell = tr.cells?.[8];
-        return statusCell?.textContent?.trim() === 'Zrušená';
+        const productionCell = tr.cells?.[6];
+        const statusText = statusCell?.textContent?.trim() || '';
+        const productionText = productionCell?.textContent?.trim() || '';
+
+        return statusText === 'Zrušená' || (productionText && productionText !== '01-CPG');
     }
 
     function getVpLinkData(tr) {
