@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.1
+// @version      1.5.2
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -50,7 +50,7 @@
             }
 
             #industrial_vp_list tbody tr.${EXPR_ROW_CLASS} td:first-child {
-                box-shadow: inset 3px 0 0 #e7b07a;
+                box-shadow: inset 3px 0 0 #d61f1f;
             }
 
             #industrial_vp_list tbody tr.${STOP_ROW_CLASS} td {
