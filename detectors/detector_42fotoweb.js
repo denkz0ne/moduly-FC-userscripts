@@ -14,6 +14,24 @@
         return match ? match[1] : '';
     }
 
+    function extractCmNumber(value) {
+        const match = String(value || '').replace(',', '.').match(/(\d{1,4}(?:\.\d+)?)\s*cm\b/i);
+        return match ? match[1] : '';
+    }
+
+    function detectPosterSizeAlias(params) {
+        if (!params) return '';
+        for (const [key, item] of Object.entries(params)) {
+            if (!key.includes('rozmer')) continue;
+            const values = item.values || [];
+            if (values.length < 2) continue;
+            const numbers = values.map(extractCmNumber).filter(Boolean);
+            if (numbers.length < 2) continue;
+            return api.parseSizeAlias(`${numbers[0]}x${numbers[1]} cm`);
+        }
+        return '';
+    }
+
     function parseDetails(params) {
         const mediaTypeRaw = api.getParamValueByLabelContains(params, ['typ tlacoveho media']);
         const mediaType = api.normalizeKey(mediaTypeRaw);
@@ -118,7 +136,7 @@
             const details = parseDetails(params);
             const aliasInfo = buildAliasInfo(details);
             const left = aliasInfo.alias;
-            const sizeAlias = api.detectUniversalSizeAlias();
+            const sizeAlias = detectPosterSizeAlias(params) || api.detectUniversalSizeAlias();
             return {
                 detector: '42foto/web',
                 left,
@@ -139,7 +157,7 @@
                     topBadge: '',
                     params: Object.assign({}, details, aliasInfo, { sizeAlias })
                 },
-                debug: Object.assign({}, details, aliasInfo)
+                debug: Object.assign({}, details, aliasInfo, { sizeAlias })
             };
         }
     });
