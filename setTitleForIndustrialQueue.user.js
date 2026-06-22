@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.8
+// @version      1.5.9
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -465,6 +465,20 @@
         });
     }
 
+    function rowsNeedExprReorder(rows) {
+        let seenNonExpr = false;
+
+        for (const row of rows) {
+            if (rowHasExpr(row)) {
+                if (seenNonExpr) return true;
+            } else {
+                seenNonExpr = true;
+            }
+        }
+
+        return false;
+    }
+
     function enhanceQueueRows() {
         const tbody = document.querySelector('#industrial_vp_list tbody');
         if (!tbody) return;
@@ -477,7 +491,7 @@
         bindSafeVpLinks(tbody);
 
         const exprRows = rows.filter(rowHasExpr);
-        if (!exprRows.length) return;
+        if (!exprRows.length || !rowsNeedExprReorder(rows)) return;
 
         const otherRows = rows.filter(row => !rowHasExpr(row));
         [...exprRows, ...otherRows].forEach(row => tbody.appendChild(row));
