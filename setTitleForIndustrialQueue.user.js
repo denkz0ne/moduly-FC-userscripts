@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.6.0
+// @version      1.6.1
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -576,6 +576,7 @@
 
     function startQueueAutoRefresh() {
         setInterval(() => {
+            if (!document.hidden) return;
             refreshQueueData();
         }, BACKGROUND_CHECK_INTERVAL);
     }
