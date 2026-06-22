@@ -21,6 +21,15 @@
         return String(select.value || '').trim() !== '';
     }
 
+    function detectExpressToken() {
+        const badges = Array.from(document.querySelectorAll('.badge'));
+        return badges.some(badge => api.clean(badge.textContent).toUpperCase() === 'EXPR') ? 'EXPR' : '';
+    }
+
+    function joinBadges() {
+        return Array.from(arguments).filter(Boolean).join(' ');
+    }
+
     function addStiffenerMark(displayAlias) {
         return String(displayAlias || '').replace(/^(\d+\s+\d+)/, '$1+');
     }
@@ -54,7 +63,7 @@
     api.registerDetector({
         id: 'fotoobrazy',
         displayName: 'Fotoobrazy',
-        tokens: ['alias', 'size', 'quantity', 'vp', 'code', 'kind', 'canvas', 'giftPack', 'stiffener', 'displayAlias', 'original', 'ext'],
+        tokens: ['alias', 'size', 'quantity', 'vp', 'code', 'kind', 'canvas', 'giftPack', 'stiffener', 'express', 'displayAlias', 'original', 'ext'],
         match(internalCode) {
             return /^48(?:r|rp|fh|x)/i.test(String(internalCode || ''));
         },
@@ -63,13 +72,15 @@
             if (!parsed) return null;
             const canvas = parsed.kind === 'regular' && api.hasCanvasSelected(context.detailInfo);
             const giftPack = api.hasGiftPack(context.detailInfo);
+            const express = detectExpressToken();
             const stiffener = !!parsed.sizeAlias && hasStiffenerSelected(context.detailInfo);
             const displayAlias = stiffener ? addStiffenerMark(parsed.displayAlias) : parsed.displayAlias;
             const left = `${displayAlias}${canvas ? ' C' : ''}`.trim();
+            const top = joinBadges(giftPack ? 'DBAL' : '', express);
             return {
                 detector: 'fotoobrazy',
                 left,
-                top: giftPack ? 'DBAL' : '',
+                top,
                 bottom: '',
                 rename: {
                     alias: parsed.code,
@@ -81,10 +92,10 @@
                     productCode: parsed.code,
                     outputAlias: parsed.code,
                     sizeAlias: parsed.sizeAlias,
-                    topBadge: giftPack ? 'DBAL' : '',
-                    params: { code: parsed.code, kind: parsed.kind, canvas, giftPack, stiffener, sizeAlias: parsed.sizeAlias, displayAlias }
+                    topBadge: top,
+                    params: { code: parsed.code, kind: parsed.kind, canvas, giftPack, stiffener, express, sizeAlias: parsed.sizeAlias, displayAlias }
                 },
-                debug: { code: parsed.code, parsed, kind: parsed.kind, canvas, giftPack, stiffener, displayAlias }
+                debug: { code: parsed.code, parsed, kind: parsed.kind, canvas, giftPack, stiffener, express, displayAlias }
             };
         }
     });
