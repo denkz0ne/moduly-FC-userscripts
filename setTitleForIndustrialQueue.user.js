@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.5
+// @version      1.5.6
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -330,6 +330,7 @@
         return {
             id: match[1],
             href,
+            absoluteHref: new URL(href, location.origin).href,
             target: vpLink.getAttribute('target') || '_blank'
         };
     }
@@ -353,11 +354,17 @@
                 firstCell.textContent = '';
 
                 const badgeLink = document.createElement('a');
-                badgeLink.href = vpData.href;
+                badgeLink.href = vpData.absoluteHref;
                 badgeLink.target = vpData.target;
+                badgeLink.rel = 'noopener noreferrer';
                 badgeLink.className = 'fc-vp-badge-link';
                 badgeLink.textContent = vpData.id;
                 badgeLink.title = `Otvoriť VP ${vpData.id}`;
+                badgeLink.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    window.open(vpData.absoluteHref, vpData.target, 'noopener');
+                });
 
                 firstCell.appendChild(badgeLink);
                 firstCell.dataset.fcVpBadgeId = vpData.id;
