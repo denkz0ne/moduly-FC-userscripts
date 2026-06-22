@@ -4,6 +4,11 @@
     const api = window.MaterialDetectorAPI;
     if (!api) return;
 
+    function detectExpressToken() {
+        const badges = Array.from(document.querySelectorAll('.badge'));
+        return badges.some(badge => api.clean(badge.textContent).toUpperCase() === 'EXPR') ? 'EXPR' : '';
+    }
+
     function parseDetails(params) {
         const printType = api.getParamValueByLabelContains(params, ['druh tlace']);
         const material = api.getParamValueByLabelContains(params, ['tlacove medium', 'tlacove medium pre', 'medium pre', 'material']);
@@ -38,7 +43,7 @@
     api.registerDetector({
         id: '41tv',
         displayName: '41tv',
-        tokens: ['alias', 'size', 'quantity', 'vp', 'material', 'materialAlias', 'colorCode', 'folding', 'printType', 'original', 'ext'],
+        tokens: ['alias', 'size', 'quantity', 'vp', 'material', 'materialAlias', 'colorCode', 'folding', 'printType', 'express', 'original', 'ext'],
         defaultRenameTemplate: [
             { type: 'token', value: 'alias' },
             { type: 'text', value: '_' },
@@ -58,12 +63,13 @@
         detect() {
             const params = api.parseZdParams();
             const details = parseDetails(params);
+            const express = detectExpressToken();
             const left = buildAlias(details);
             const sizeAlias = api.detectUniversalSizeAlias();
             return {
                 detector: '41tv',
                 left,
-                top: '',
+                top: express,
                 bottom: '',
                 rename: {
                     enabled: true,
@@ -77,10 +83,10 @@
                     productCode: '41tv',
                     outputAlias: left,
                     sizeAlias,
-                    topBadge: '',
-                    params: Object.assign({}, details, { sizeAlias })
+                    topBadge: express,
+                    params: Object.assign({}, details, { express, sizeAlias })
                 },
-                debug: details
+                debug: Object.assign({}, details, { express })
             };
         }
     });
