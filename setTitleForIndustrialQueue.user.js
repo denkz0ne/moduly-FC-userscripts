@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.7
+// @version      1.5.8
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -329,6 +329,43 @@
         window.open(absoluteHref, target, 'noopener');
     }
 
+    function bindSafeVpAnchor(anchor) {
+        if (!anchor || anchor.dataset.fcSafeBound === '1') return;
+
+        const href = anchor.getAttribute('href');
+        if (!href || !href.includes('/vyrobne_prikazy/detail/index/')) return;
+
+        anchor.href = new URL(href, location.origin).href;
+        anchor.target = anchor.getAttribute('target') || '_blank';
+        anchor.rel = 'noopener noreferrer';
+
+        const openHandler = event => {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof event.stopImmediatePropagation === 'function') {
+                    event.stopImmediatePropagation();
+                }
+            }
+            openVpLink(anchor);
+            return false;
+        };
+
+        anchor.onclick = openHandler;
+        anchor.onmousedown = event => {
+            event.stopPropagation();
+        };
+        anchor.onmouseup = event => {
+            event.stopPropagation();
+        };
+        anchor.dataset.fcSafeBound = '1';
+    }
+
+    function bindSafeVpLinks(root = document) {
+        root.querySelectorAll('#industrial_vp_list a[href*="/vyrobne_prikazy/detail/index/"]').forEach(bindSafeVpAnchor);
+        root.querySelectorAll('#queue_log a[href*="/vyrobne_prikazy/detail/index/"]').forEach(bindSafeVpAnchor);
+    }
+
     function installSafeVpLinkHandler() {
         if (safeVpLinkHandlerInstalled) return;
 
@@ -395,17 +432,10 @@
                 badgeLink.className = 'fc-vp-badge-link';
                 badgeLink.textContent = vpData.id;
                 badgeLink.title = `Otvoriť VP ${vpData.id}`;
-                badgeLink.addEventListener('click', event => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    if (typeof event.stopImmediatePropagation === 'function') {
-                        event.stopImmediatePropagation();
-                    }
-                    openVpLink(badgeLink);
-                });
 
                 firstCell.appendChild(badgeLink);
                 firstCell.dataset.fcVpBadgeId = vpData.id;
+                bindSafeVpAnchor(badgeLink);
             }
 
             if (secondCell && secondCell.dataset.fcVpNameCleaned !== vpData.id) {
@@ -420,6 +450,7 @@
                         .trim();
 
                     mainVpLink.textContent = nameText || vpData.id;
+                    bindSafeVpAnchor(mainVpLink);
                 }
                 secondCell.dataset.fcVpNameCleaned = vpData.id;
             }
@@ -443,6 +474,7 @@
 
         replaceOrderColumnWithVpBadge(rows);
         applyRowHighlighting(rows);
+        bindSafeVpLinks(tbody);
 
         const exprRows = rows.filter(rowHasExpr);
         if (!exprRows.length) return;
@@ -519,6 +551,7 @@
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType !== 1) return;
                     addPrintLabelLink(node);
+                    bindSafeVpLinks(node);
                 });
             });
 
@@ -607,6 +640,7 @@
             startSilentBackgroundWatcher();
             handleVisibilityChange();
             installSafeVpLinkHandler();
+            bindSafeVpLinks();
 
             addPrintLabelLink();
             observeTableChanges();
