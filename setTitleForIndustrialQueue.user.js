@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.6
+// @version      1.5.7
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -24,6 +24,7 @@
     let currentSnapshot = null;
     let faviconBadgeApplied = false;
     let exprMoveScheduled = false;
+    let safeVpLinkHandlerInstalled = false;
 
     const originalFavicon = (() => {
         const link = document.querySelector("link[rel*='icon']");
@@ -319,6 +320,40 @@
         return statusText === 'Zrušená' || (productionText && productionText !== '01-CPG');
     }
 
+    function openVpLink(anchor) {
+        const href = anchor?.getAttribute('href');
+        if (!href) return;
+
+        const absoluteHref = new URL(href, location.origin).href;
+        const target = anchor.getAttribute('target') || '_blank';
+        window.open(absoluteHref, target, 'noopener');
+    }
+
+    function installSafeVpLinkHandler() {
+        if (safeVpLinkHandlerInstalled) return;
+
+        document.addEventListener(
+            'click',
+            event => {
+                const anchor = event.target.closest(
+                    '#industrial_vp_list a[href*="/vyrobne_prikazy/detail/index/"], #queue_log a[href*="/vyrobne_prikazy/detail/index/"]'
+                );
+                if (!anchor) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof event.stopImmediatePropagation === 'function') {
+                    event.stopImmediatePropagation();
+                }
+
+                openVpLink(anchor);
+            },
+            true
+        );
+
+        safeVpLinkHandlerInstalled = true;
+    }
+
     function getVpLinkData(tr) {
         const vpLink = tr.querySelector('a[href*="/vyrobne_prikazy/detail/index/"]');
         if (!vpLink) return null;
@@ -363,7 +398,10 @@
                 badgeLink.addEventListener('click', event => {
                     event.preventDefault();
                     event.stopPropagation();
-                    window.open(vpData.absoluteHref, vpData.target, 'noopener');
+                    if (typeof event.stopImmediatePropagation === 'function') {
+                        event.stopImmediatePropagation();
+                    }
+                    openVpLink(badgeLink);
                 });
 
                 firstCell.appendChild(badgeLink);
@@ -568,6 +606,7 @@
             observeTitleInputs();
             startSilentBackgroundWatcher();
             handleVisibilityChange();
+            installSafeVpLinkHandler();
 
             addPrintLabelLink();
             observeTableChanges();
