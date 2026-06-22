@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setTitleForIndustrialQueue
 // @namespace    http://tvoj-namespace.example
-// @version      1.5.9
+// @version      1.6.0
 // @description  Nastavuje title fronty, drží stav sekcií, presúva EXPR navrch a ticho sleduje zmeny na pozadí
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setTitleForIndustrialQueue.user.js
@@ -16,6 +16,7 @@
 
     const SECTION_STATE_PREFIX = 'fc-industrial-queue-section-state';
     const BACKGROUND_CHECK_INTERVAL = 30000;
+    const TABLE_REFRESH_SETTLE_MS = 4000;
     const EXPR_ROW_CLASS = 'fc-expr-row';
     const STOP_ROW_CLASS = 'fc-stop-row';
     const CANCELLED_ROW_CLASS = 'fc-cancelled-row';
@@ -25,6 +26,7 @@
     let faviconBadgeApplied = false;
     let exprMoveScheduled = false;
     let safeVpLinkHandlerInstalled = false;
+    let queueRefreshInFlight = false;
 
     const originalFavicon = (() => {
         const link = document.querySelector("link[rel*='icon']");
@@ -523,6 +525,61 @@
         scheduleMoveExprRowsToTop();
     }
 
+    function getDataTableSettingsById(tableId) {
+        const settingsList = window.jQuery?.fn?.dataTableSettings;
+        if (!settingsList?.length) return null;
+
+        for (let i = 0; i < settingsList.length; i += 1) {
+            const settings = settingsList[i];
+            if (settings?.nTable?.id === tableId) return settings;
+        }
+
+        return null;
+    }
+
+    function redrawDataTable(tableId) {
+        const settings = getDataTableSettingsById(tableId);
+        const instance = settings?.oInstance;
+        if (!instance || typeof instance.fnDraw !== 'function') return false;
+
+        instance.fnDraw(false);
+        return true;
+    }
+
+    function finishQueueRefresh(previousTotal) {
+        const latestSnapshot = readSnapshot(document);
+        const latestTotal = Number(latestSnapshot.totalRecords || 0);
+        currentSnapshot = latestSnapshot;
+        setTitle(latestSnapshot);
+
+        if (document.hidden && latestTotal > previousTotal) {
+            applyFaviconBadge();
+        }
+
+        queueRefreshInFlight = false;
+    }
+
+    function refreshQueueData() {
+        if (queueRefreshInFlight) return;
+
+        const previousTotal = Number(parseTotalRecords(document) || 0);
+        const vpReloaded = redrawDataTable('industrial_vp_list');
+        const logReloaded = redrawDataTable('queue_log');
+
+        if (!vpReloaded && !logReloaded) return;
+
+        queueRefreshInFlight = true;
+        setTimeout(() => {
+            finishQueueRefresh(previousTotal);
+        }, TABLE_REFRESH_SETTLE_MS);
+    }
+
+    function startQueueAutoRefresh() {
+        setInterval(() => {
+            refreshQueueData();
+        }, BACKGROUND_CHECK_INTERVAL);
+    }
+
     function setTitleForVPDetail() {
         const strong = document.querySelector('strong.red');
         if (strong) {
@@ -593,49 +650,11 @@
         });
     }
 
-    async function fetchLatestQueueSnapshot() {
-        try {
-            const response = await fetch(location.href, {
-                credentials: 'include',
-                cache: 'no-store'
-            });
-
-            if (!response.ok) return null;
-
-            const html = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            return readSnapshot(doc);
-        } catch (error) {
-            console.warn('[UserScript] Nepodarilo sa načítať snapshot fronty:', error);
-            return null;
-        }
-    }
-
-    function startSilentBackgroundWatcher() {
-        setInterval(async () => {
-            if (!document.hidden) return;
-
-            const latestSnapshot = await fetchLatestQueueSnapshot();
-            if (!latestSnapshot?.skratka) return;
-
-            const previousTotal = Number(currentSnapshot?.totalRecords || 0);
-            const latestTotal = Number(latestSnapshot.totalRecords || 0);
-
-            currentSnapshot = latestSnapshot;
-            setTitle(latestSnapshot);
-
-            if (latestTotal > previousTotal) {
-                applyFaviconBadge();
-            }
-        }, BACKGROUND_CHECK_INTERVAL);
-    }
-
     function handleVisibilityChange() {
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 clearFaviconBadge();
-                refreshTitleFromDocument();
+                refreshQueueData();
             }
         });
     }
@@ -651,7 +670,7 @@
             persistCollapsedSections();
             refreshTitleFromDocument();
             observeTitleInputs();
-            startSilentBackgroundWatcher();
+            startQueueAutoRefresh();
             handleVisibilityChange();
             installSafeVpLinkHandler();
             bindSafeVpLinks();
