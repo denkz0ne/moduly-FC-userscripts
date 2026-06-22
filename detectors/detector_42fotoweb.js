@@ -32,6 +32,11 @@
         return '';
     }
 
+    function detectExpressToken() {
+        const badges = Array.from(document.querySelectorAll('.badge'));
+        return badges.some(badge => api.clean(badge.textContent).toUpperCase() === 'EXPR') ? 'EXPR' : '';
+    }
+
     function parseDetails(params) {
         const mediaTypeRaw = api.getParamValueByLabelContains(params, ['typ tlacoveho media']);
         const mediaType = api.normalizeKey(mediaTypeRaw);
@@ -114,7 +119,7 @@
     api.registerDetector({
         id: '42foto/web',
         displayName: '42foto/web',
-        tokens: ['alias', 'size', 'quantity', 'vp', 'mediaType', 'mediaTypeRaw', 'weight', 'variant', 'aliasKey', 'original', 'ext'],
+        tokens: ['alias', 'size', 'quantity', 'vp', 'mediaType', 'mediaTypeRaw', 'weight', 'variant', 'aliasKey', 'express', 'original', 'ext'],
         defaultRenameTemplate: [
             { type: 'token', value: 'alias' },
             { type: 'text', value: '_' },
@@ -135,12 +140,13 @@
             const params = api.parseZdParams();
             const details = parseDetails(params);
             const aliasInfo = buildAliasInfo(details);
+            const express = detectExpressToken();
             const left = aliasInfo.alias;
             const sizeAlias = detectPosterSizeAlias(params) || api.detectUniversalSizeAlias();
             return {
                 detector: '42foto/web',
                 left,
-                top: '',
+                top: express,
                 bottom: '',
                 rename: {
                     enabled: true,
@@ -154,10 +160,10 @@
                     productCode: '42foto/web',
                     outputAlias: left,
                     sizeAlias,
-                    topBadge: '',
-                    params: Object.assign({}, details, aliasInfo, { sizeAlias })
+                    topBadge: express,
+                    params: Object.assign({}, details, aliasInfo, { express, sizeAlias })
                 },
-                debug: Object.assign({}, details, aliasInfo, { sizeAlias })
+                debug: Object.assign({}, details, aliasInfo, { express, sizeAlias })
             };
         }
     });
