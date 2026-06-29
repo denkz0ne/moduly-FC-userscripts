@@ -79,8 +79,8 @@
 
     function parseDetails(params) {
         const option = getParam(params, ['moznosti']);
-        const constructionType = getParam(params, ['typ konstrukcia + platno', 'typ konstrukcia', 'typ']);
-        const quality = getParam(params, ['platno kvalita']);
+        const constructionType = getParam(params, ['konstrukcia + platno', 'typ (konstrukcia', 'typ konstrukcia']);
+        const quality = getParam(params, ['platno - kvalita', 'kvalita']);
         const mode = optionMode(option);
         const qAlias = qualityAlias(quality);
         const printAlias = printBaseAlias(constructionType);
