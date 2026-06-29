@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.1.4-core
+// @version      5.1.5-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
@@ -12,6 +12,7 @@
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_fotoobrazy.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_41tv.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_42fotoweb.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_67mf.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_common_size.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/control_panel.js
 // @run-at       document-start
