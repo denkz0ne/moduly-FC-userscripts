@@ -161,9 +161,9 @@
         ],
         match(internalCode, context) {
             const code = String(internalCode || '').toLowerCase();
+            if (code) return code === '49ban';
             const text = api.normalizeKey((context && context.productText) || '');
-            return code === '49ban'
-                || /\b49ban\b/i.test(text)
+            return /\b49ban\b/i.test(text)
                 || text.includes('49ban - bannery')
                 || text.includes('material banneru')
                 || text.includes('pocet kusov bannerov')
