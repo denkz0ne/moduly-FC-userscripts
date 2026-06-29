@@ -120,9 +120,14 @@
         return 'samol';
     }
 
-    function buildLeft(alias, quantity) {
+    function cutMark(cutting) {
+        return api.normalizeKey(cutting).includes('chcem predrezat') ? '+R' : '';
+    }
+
+    function buildLeft(alias, quantity, marker) {
+        const base = `${alias}${marker || ''}`;
         const qty = parseInt(quantity, 10);
-        return !Number.isNaN(qty) && qty >= 2 ? `${alias} | ${qty}ks` : alias;
+        return !Number.isNaN(qty) && qty >= 2 ? `${base} | ${qty}ks` : base;
     }
 
     function parseDetails() {
@@ -133,6 +138,7 @@
         const quantity = parseQuantity(rows);
         const cutCount = parseCutCount(rows);
         const foilType = valueOf(foilGroupRow);
+        const cutting = valueOf(exactRow(rows, ['rezanie']));
         const alias = foilAlias(foilType || valueOf(selectedFoilRow) || (selectedFoilRow && selectedFoilRow.label));
         const details = {
             stickerKind: valueOf(firstRow(rows, ['druh samolepiek'])),
@@ -144,7 +150,8 @@
             printType: valueOf(exactRow(rows, ['tlac'])),
             printArea: valueOf(firstRow(rows, ['vypocitane pole tlac'])),
             uploadFiles: valueOf(firstRow(rows, ['nahrajte subor', 'nahrat subor', 'subory'])),
-            cutting: valueOf(exactRow(rows, ['rezanie'])),
+            cutting,
+            cutMark: cutMark(cutting),
             cutCount,
             packing: valueOf(exactRow(rows, ['balenie'])),
             specificRequirements: valueOf(firstRow(rows, ['specificke poziadavky'])),
@@ -162,7 +169,7 @@
             'stickerKind', 'note', 'foilType', 'foilAlias', 'foilMaterial', 'foilMaterialCode',
             'printType', 'stickerSizeMode', 'stickerRollAmount', 'width', 'height', 'widthMm',
             'heightMm', 'widthCm', 'heightCm', 'widthRaw', 'heightRaw', 'printArea',
-            'uploadFiles', 'fileNames', 'cutting', 'cutCount', 'packing', 'specificRequirements',
+            'uploadFiles', 'fileNames', 'cutting', 'cutMark', 'cutCount', 'packing', 'specificRequirements',
             'original', 'ext'
         ],
         defaultRenameTemplate: [
@@ -187,7 +194,8 @@
             const details = parseDetails();
             const express = detectExpressToken();
             const alias = details.foilAlias || 'samol';
-            const left = buildLeft(alias, details.quantity);
+            const leftAlias = `${alias}${details.cutMark || ''}`;
+            const left = buildLeft(alias, details.quantity, details.cutMark);
             const quantity = details.quantity ? `${details.quantity}ks` : '1ks';
             return {
                 detector: '49s',
@@ -197,7 +205,7 @@
                 rename: {
                     enabled: true,
                     pattern: '{alias}_{size}_{quantity}_{vp} {original}.{ext}',
-                    alias,
+                    alias: leftAlias,
                     sizeAlias: details.sizeAlias,
                     quantity
                 },
@@ -207,9 +215,9 @@
                     outputAlias: left,
                     sizeAlias: details.sizeAlias,
                     topBadge: express,
-                    params: Object.assign({}, details, { alias, express, code: '49s', productCode: '49s' })
+                    params: Object.assign({}, details, { alias: leftAlias, baseAlias: alias, express, code: '49s', productCode: '49s' })
                 },
-                debug: Object.assign({}, details, { alias, express, code: '49s', productCode: '49s' })
+                debug: Object.assign({}, details, { alias: leftAlias, baseAlias: alias, express, code: '49s', productCode: '49s' })
             };
         }
     });
