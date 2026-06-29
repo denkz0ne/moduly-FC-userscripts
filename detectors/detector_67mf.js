@@ -16,13 +16,22 @@
     function extractCode(valueCell) {
         if (!valueCell) return '';
         const codeEl = Array.from(valueCell.querySelectorAll('.text-gray, [class*="text-gray"]'))
-            .find(el => /#\w+/.test(el.textContent || ''));
-        const match = (codeEl ? codeEl.textContent : valueCell.textContent || '').match(/#\s*([A-Z0-9_-]+)/i);
+            .find(el => /#?FV\w+/i.test(el.textContent || ''));
+        const match = (codeEl ? codeEl.textContent : valueCell.textContent || '').match(/#?\s*([A-Z]{1,4}\d{2,6})/i);
         return match ? `#${match[1]}` : '';
     }
 
     function getParam(params, labels) {
         return api.getParamValueByLabelContains(params, labels);
+    }
+
+    function getExactParam(params, labels) {
+        if (!params) return '';
+        const normalizedLabels = labels.map(api.normalizeKey);
+        for (const [key, item] of Object.entries(params)) {
+            if (normalizedLabels.includes(key)) return item.value || '';
+        }
+        return '';
     }
 
     function getParamRowMeta(labelPatterns) {
@@ -74,7 +83,13 @@
     }
 
     function parseQuantity(params) {
-        const raw = getParam(params, ['pocet kusov', 'pocet']);
+        const raw = getExactParam(params, ['pocet kusov']);
+        const match = String(raw || '').match(/\d+/);
+        return match ? match[0] : '';
+    }
+
+    function parseCutCount(params) {
+        const raw = getParam(params, ['pocet rezov na format', 'pocet rezov']);
         const match = String(raw || '').match(/\d+/);
         return match ? match[0] : '';
     }
@@ -89,6 +104,7 @@
         const magneticFoil = getParamRowMeta(['magneticka folia']);
         const size = parseSizeFromParams(params);
         const quantity = parseQuantity(params);
+        const cutCount = parseCutCount(params);
         const details = {
             format: getParam(params, ['format folie']),
             foilFormat: getParam(params, ['format folie']),
@@ -101,6 +117,11 @@
             graphicDesign: getParam(params, ['navrh grafiky potlace']),
             uploadFiles: getParam(params, ['nahrat subory', 'subory']),
             cutType: getParam(params, ['typ orezu']),
+            cutting: getParam(params, ['rezanie']),
+            cutCount,
+            cutLineSource: getParam(params, ['podklady pre orez']),
+            cutGraphicWork: getParam(params, ['graficke prace orez']),
+            cutFileUpload: getParam(params, ['nahrat subor s orezovou linkou']),
             specificRequirements: getParam(params, ['specificke poziadavky']),
             quantity
         };
@@ -115,8 +136,8 @@
             'alias', 'size', 'sizeAlias', 'quantity', 'vp', 'code', 'productCode', 'express',
             'format', 'foilFormat', 'stickerType', 'stickerTypeCode', 'magneticFoil', 'magneticFoilCode',
             'width', 'height', 'widthMm', 'heightMm', 'widthCm', 'heightCm', 'widthRaw', 'heightRaw',
-            'areaM2', 'magnetArea', 'graphicDesign', 'uploadFiles', 'fileNames', 'cutType',
-            'specificRequirements', 'original', 'ext'
+            'areaM2', 'magnetArea', 'graphicDesign', 'uploadFiles', 'fileNames', 'cutType', 'cutting',
+            'cutCount', 'cutLineSource', 'cutGraphicWork', 'cutFileUpload', 'specificRequirements', 'original', 'ext'
         ],
         defaultRenameTemplate: [
             { type: 'token', value: 'alias' },
