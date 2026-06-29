@@ -111,6 +111,12 @@
         return prefix;
     }
 
+    function foilMaterialAlias(material, code) {
+        const normalized = api.normalizeKey(`${material || ''} ${code || ''}`);
+        if (normalized.includes('fv027') || normalized.includes('biela polymericka')) return 'poly';
+        return '';
+    }
+
     function foilAlias(raw) {
         const normalized = api.normalizeKey(raw);
         if (normalized.includes('transparent')) return finishAlias(normalized, 'trans');
@@ -138,15 +144,18 @@
         const quantity = parseQuantity(rows);
         const cutCount = parseCutCount(rows);
         const foilType = valueOf(foilGroupRow);
+        const foilMaterial = valueOf(selectedFoilRow);
+        const foilMaterialCode = codeOf(selectedFoilRow);
         const cutting = valueOf(exactRow(rows, ['rezanie']));
-        const alias = foilAlias(foilType || valueOf(selectedFoilRow) || (selectedFoilRow && selectedFoilRow.label));
+        const alias = foilMaterialAlias(foilMaterial, foilMaterialCode)
+            || foilAlias(foilType || foilMaterial || (selectedFoilRow && selectedFoilRow.label));
         const details = {
             stickerKind: valueOf(firstRow(rows, ['druh samolepiek'])),
             note: valueOf(exactRow(rows, ['poznamka'])),
             foilType,
             foilAlias: alias,
-            foilMaterial: valueOf(selectedFoilRow),
-            foilMaterialCode: codeOf(selectedFoilRow),
+            foilMaterial,
+            foilMaterialCode,
             printType: valueOf(exactRow(rows, ['tlac'])),
             printArea: valueOf(firstRow(rows, ['vypocitane pole tlac'])),
             uploadFiles: valueOf(firstRow(rows, ['nahrajte subor', 'nahrat subor', 'subory'])),
