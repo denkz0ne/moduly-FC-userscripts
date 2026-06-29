@@ -130,8 +130,9 @@
         ],
         match(internalCode, context) {
             const code = String(internalCode || '').toLowerCase();
+            if (code) return code === '68bs';
             const text = api.normalizeKey((context && context.productText) || '');
-            return code === '68bs' || /\b68bs\b/i.test(text) || text.includes('rollup/display') || text.includes('rollup display');
+            return /\b68bs\b/i.test(text) || text.includes('rollup/display') || text.includes('rollup display');
         },
         detect() {
             const params = api.parseZdParams();
