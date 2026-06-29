@@ -105,8 +105,15 @@
         };
     }
 
+    function finishAlias(normalized, prefix) {
+        if (normalized.includes('mat')) return `${prefix} mat`;
+        if (normalized.includes('lesk')) return `${prefix} lesk`;
+        return prefix;
+    }
+
     function foilAlias(raw) {
         const normalized = api.normalizeKey(raw);
+        if (normalized.includes('transparent')) return finishAlias(normalized, 'trans');
         if (normalized.includes('metal')) return 'metal';
         if (normalized.includes('mat')) return 'mat';
         if (normalized.includes('lesk')) return 'lesk';
@@ -126,7 +133,7 @@
         const quantity = parseQuantity(rows);
         const cutCount = parseCutCount(rows);
         const foilType = valueOf(foilGroupRow);
-        const alias = foilAlias(foilType || (selectedFoilRow && selectedFoilRow.label) || valueOf(selectedFoilRow));
+        const alias = foilAlias(foilType || valueOf(selectedFoilRow) || (selectedFoilRow && selectedFoilRow.label));
         const details = {
             stickerKind: valueOf(firstRow(rows, ['druh samolepiek'])),
             note: valueOf(exactRow(rows, ['poznamka'])),
