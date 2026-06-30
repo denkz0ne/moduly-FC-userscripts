@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.3-core
+// @version      5.3.1-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
@@ -33,6 +33,7 @@
     const STATE_TTL_MS = 30000;
     const LAST_SIZE_ALIAS_STORAGE_PREFIX = api.LAST_SIZE_ALIAS_STORAGE_PREFIX || 'materialDetector.lastSizeAlias:';
     const DEFAULT_RENAME_PATTERN = '{alias}_{size}_{quantity}_{vp} {original}.{ext}';
+    const NATIVE_DOWNLOAD_ATTR = 'data-material-detector-native-download';
     const ZONE_KEYS = {
         left: 'TM_testoLeft',
         right: 'TM_testoRight',
@@ -406,14 +407,20 @@
         return applyRenamePattern(config.rename.pattern, tokens);
     }
 
+    function hasDownloadFileHref(href) {
+        return /\/data\/servicesForm\//i.test(href)
+            || /\/vyrobne_prikazy\/detail\/downloadZip\//i.test(href)
+            || /\/svg_editor\//i.test(href)
+            || /\.[a-z0-9]{1,12}(\?|$)/i.test(href);
+    }
+
     function isDownloadCandidate(anchor) {
         if (!anchor || !anchor.href) return false;
+        if (anchor.hasAttribute(NATIVE_DOWNLOAD_ATTR)) return false;
         const href = anchor.href;
-        const text = (anchor.textContent || '').toLowerCase();
+        const text = api.normalizeKey(anchor.textContent || '');
         const cls = anchor.className || '';
-        if (/\/data\/servicesForm\//i.test(href)) return true;
-        if (/\/svg_editor\//i.test(href)) return true;
-        if (/\.(pdf|png|jpg|jpeg|tif|tiff|zip)(\?|$)/i.test(href)) return true;
+        if (hasDownloadFileHref(href)) return true;
         if (text.includes('stiahni') || text.includes('stiahnut')) return true;
         if (cls.includes('block mt5')) return true;
         return false;
@@ -423,19 +430,63 @@
         return !!getRenameConfig();
     }
 
-    function startDownload(url, fileName) {
-        if (typeof GM_download === 'function') {
-            GM_download({
+    function browserDownload(url, fileName) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || '';
+        a.rel = 'noopener';
+        a.style.display = 'none';
+        a.setAttribute(NATIVE_DOWNLOAD_ATTR, '1');
+        document.body.append(a);
+        a.click();
+        setTimeout(() => a.remove(), 0);
+    }
+
+    async function blobDownload(url, fileName) {
+        const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        browserDownload(objectUrl, fileName);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+    }
+
+    function gmDownload(url, fileName) {
+        if (typeof GM_download !== 'function') {
+            browserDownload(url, fileName);
+            return;
+        }
+        try {
+            const result = GM_download({
                 url,
                 name: fileName,
                 saveAs: false,
                 onerror: function (error) {
-                    console.warn('[materialDetector] renamed download cancelled or failed', error);
+                    console.warn('[materialDetector] GM_download fallback failed', error);
+                    browserDownload(url, fileName);
+                },
+                ontimeout: function (error) {
+                    console.warn('[materialDetector] GM_download fallback timeout', error);
+                    browserDownload(url, fileName);
                 }
             });
-            return;
+            if (result && typeof result.catch === 'function') {
+                result.catch(error => {
+                    console.warn('[materialDetector] GM_download promise failed', error);
+                    browserDownload(url, fileName);
+                });
+            }
+        } catch (error) {
+            console.warn('[materialDetector] GM_download throw', error);
+            browserDownload(url, fileName);
         }
-        window.open(url, '_blank', 'noopener');
+    }
+
+    function startDownload(url, fileName) {
+        blobDownload(url, fileName).catch(error => {
+            console.warn('[materialDetector] blob download failed, using GM_download fallback', error);
+            gmDownload(url, fileName);
+        });
     }
 
     function initDownloadRename() {
