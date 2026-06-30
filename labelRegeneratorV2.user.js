@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.12
+// @version      2.0.13
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
@@ -17,7 +17,7 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.12';
+    window.labelRegeneratorV2Version = '2.0.13';
 
     const POSITIONS = {
         TM_top: 'top1',
@@ -26,60 +26,60 @@
         TM_testoRight: 'bottomRight'
     };
 
-    const FALLBACK_LABELS = {
+    const LABELS = {
         TM_top: 'pravy horny 1',
         TM_bottom: 'pravy horny 2',
         TM_testoLeft: 'lavy dolny',
         TM_testoRight: 'pravy dolny'
     };
 
-    function ensureFloatingStyles() {
-        if (document.getElementById('lr-floating-overrides-style')) return;
+    function ensureDetachedStyles() {
+        if (document.getElementById('lr-detached-overrides-style')) return;
         const style = document.createElement('style');
-        style.id = 'lr-floating-overrides-style';
+        style.id = 'lr-detached-overrides-style';
         style.textContent = `
-            #lr-floating-overrides {
+            #lr-detached-overrides {
                 position: fixed;
                 inset: 0 auto auto 0;
                 z-index: 2147483645;
                 pointer-events: none;
             }
 
-            #lr-floating-overrides .lr-override-field {
+            #lr-detached-overrides .lr-override-field {
                 position: fixed;
                 margin: 0;
                 padding: 0;
                 pointer-events: auto;
             }
 
-            #lr-floating-overrides .lr-override-field label {
+            #lr-detached-overrides .lr-override-field label {
                 display: none !important;
             }
 
-            #lr-floating-overrides input[data-override-zone] {
-                width: 28mm;
-                height: 5.2mm;
+            #lr-detached-overrides input[data-override-zone] {
+                width: 32mm;
+                height: 6mm;
                 box-sizing: border-box;
-                border: 1px solid rgba(0, 0, 0, 0.12);
+                border: 1px solid rgba(255, 0, 0, 0.9);
                 border-radius: 3px;
-                padding: 0.6mm 1mm;
-                background: rgba(255, 255, 255, 0.92);
+                padding: 0.7mm 1mm;
+                background: rgba(255, 255, 255, 0.96);
                 color: #111;
                 font: 400 4mm/1 'Roboto Condensed', Arial, sans-serif;
                 outline: none;
             }
 
-            #lr-floating-overrides input[data-override-zone]::placeholder {
-                color: rgba(0, 0, 0, 0.42);
+            #lr-detached-overrides input[data-override-zone]::placeholder {
+                color: rgba(0, 0, 0, 0.38);
             }
 
-            #lr-floating-overrides input[data-override-zone]:focus {
-                border-color: rgba(0, 0, 0, 0.45);
+            #lr-detached-overrides input[data-override-zone]:focus {
+                border-color: rgba(0, 0, 0, 0.55);
                 background: #fff;
             }
 
             @media print {
-                #lr-floating-overrides { display: none !important; }
+                #lr-detached-overrides { display: none !important; }
             }
         `;
         document.head.appendChild(style);
@@ -97,25 +97,25 @@
             const stored = localStorage.getItem(key);
             if (stored != null && String(stored).trim()) return String(stored).trim();
         }
-        return FALLBACK_LABELS[zone] || '';
+        return LABELS[zone] || '';
     }
 
-    function getOrCreateFloatRoot() {
-        let root = document.getElementById('lr-floating-overrides');
+    function getOrCreateDetachedRoot() {
+        let root = document.getElementById('lr-detached-overrides');
         if (!root) {
             root = document.createElement('div');
-            root.id = 'lr-floating-overrides';
+            root.id = 'lr-detached-overrides';
             document.body.appendChild(root);
         }
         return root;
     }
 
-    function moveOverrideInputs() {
+    function moveOverrideInputsOutOfPanel() {
         const sourceCard = document.querySelector('.lr-override-card');
         if (!sourceCard) return false;
 
-        ensureFloatingStyles();
-        const root = getOrCreateFloatRoot();
+        ensureDetachedStyles();
+        const root = getOrCreateDetachedRoot();
 
         sourceCard.querySelectorAll('.lr-override-field').forEach((field) => {
             const input = field.querySelector('input[data-override-zone]');
@@ -133,9 +133,9 @@
         return true;
     }
 
-    function positionOverrideInputs() {
+    function positionDetachedInputs() {
         const label = document.querySelector('#label');
-        const root = document.getElementById('lr-floating-overrides');
+        const root = document.getElementById('lr-detached-overrides');
         if (!label || !root) return;
 
         const rect = label.getBoundingClientRect();
@@ -143,12 +143,14 @@
         const scaleY = rect.height / 45;
         const mmX = (mm) => rect.left + (mm * scaleX);
         const mmY = (mm) => rect.top + (mm * scaleY);
+        const gapX = 4 * scaleX;
+        const gapY = 5.5 * scaleY;
 
         const positions = {
-            top1: { left: mmX(40.5), top: mmY(0.4), width: 20.5 * scaleX, height: 5.2 * scaleY },
-            top2: { left: mmX(40.5), top: mmY(6.8), width: 20.5 * scaleX, height: 5.2 * scaleY },
-            bottomLeft: { left: mmX(1), top: mmY(35.4), width: 41 * scaleX, height: 5.2 * scaleY },
-            bottomRight: { left: mmX(43), top: mmY(35.4), width: 18 * scaleX, height: 5.2 * scaleY }
+            top1: { left: mmX(62) + gapX, top: mmY(0.4), width: 22 * scaleX, height: 5.6 * scaleY },
+            top2: { left: mmX(62) + gapX, top: mmY(6.8), width: 22 * scaleX, height: 5.6 * scaleY },
+            bottomLeft: { left: mmX(0), top: mmY(45) + gapY, width: 25 * scaleX, height: 5.6 * scaleY },
+            bottomRight: { left: mmX(37), top: mmY(45) + gapY, width: 25 * scaleX, height: 5.6 * scaleY }
         };
 
         root.querySelectorAll('.lr-override-field[data-override-position]').forEach((field) => {
@@ -163,35 +165,35 @@
         });
     }
 
-    function refreshFloatingOverrides() {
-        moveOverrideInputs();
-        positionOverrideInputs();
+    function refreshDetachedInputs() {
+        moveOverrideInputsOutOfPanel();
+        positionDetachedInputs();
     }
 
-    function scheduleFloatingOverrides() {
-        refreshFloatingOverrides();
-        requestAnimationFrame(refreshFloatingOverrides);
-        setTimeout(refreshFloatingOverrides, 80);
-        setTimeout(refreshFloatingOverrides, 250);
-        setTimeout(refreshFloatingOverrides, 800);
+    function scheduleDetachedInputs() {
+        refreshDetachedInputs();
+        requestAnimationFrame(refreshDetachedInputs);
+        setTimeout(refreshDetachedInputs, 80);
+        setTimeout(refreshDetachedInputs, 250);
+        setTimeout(refreshDetachedInputs, 800);
     }
 
-    window.addEventListener('labelRegeneratorReady', scheduleFloatingOverrides);
-    window.addEventListener('resize', scheduleFloatingOverrides);
-    window.addEventListener('scroll', scheduleFloatingOverrides, true);
+    window.addEventListener('labelRegeneratorReady', scheduleDetachedInputs);
+    window.addEventListener('resize', scheduleDetachedInputs);
+    window.addEventListener('scroll', scheduleDetachedInputs, true);
 
     const originalRefresh = window.labelRegeneratorRefresh;
     if (typeof originalRefresh === 'function') {
         window.labelRegeneratorRefresh = function () {
             const result = originalRefresh.apply(this, arguments);
-            scheduleFloatingOverrides();
+            scheduleDetachedInputs();
             return result;
         };
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', scheduleFloatingOverrides);
+        document.addEventListener('DOMContentLoaded', scheduleDetachedInputs);
     } else {
-        scheduleFloatingOverrides();
+        scheduleDetachedInputs();
     }
 })();
