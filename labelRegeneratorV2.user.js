@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.13
+// @version      2.0.14
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
@@ -17,7 +17,7 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.13';
+    window.labelRegeneratorV2Version = '2.0.14';
 
     const POSITIONS = {
         TM_top: 'top1',
@@ -78,6 +78,10 @@
                 background: #fff;
             }
 
+            #lr-config-panel .lr-override-card {
+                display: none !important;
+            }
+
             @media print {
                 #lr-detached-overrides { display: none !important; }
             }
@@ -110,27 +114,56 @@
         return root;
     }
 
-    function moveOverrideInputsOutOfPanel() {
-        const sourceCard = document.querySelector('.lr-override-card');
-        if (!sourceCard) return false;
+    function getSourceInput(zone) {
+        return document.querySelector(`.lr-override-card input[data-override-zone="${zone}"]`)
+            || document.querySelector(`#lr-detached-overrides input[data-override-zone="${zone}"]`);
+    }
 
+    function createDetachedField(zone) {
+        const field = document.createElement('div');
+        field.className = 'lr-override-field';
+        field.dataset.overridePosition = POSITIONS[zone];
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.placeholder = zoneValue(zone);
+        input.dataset.overrideZone = zone;
+
+        const sourceInput = getSourceInput(zone);
+        if (sourceInput) input.value = sourceInput.value || '';
+
+        input.addEventListener('input', () => {
+            const source = document.querySelector(`.lr-override-card input[data-override-zone="${zone}"]`);
+            if (source && source !== input) {
+                source.value = input.value;
+                source.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+
+        field.appendChild(input);
+        return field;
+    }
+
+    function ensureDetachedInputs() {
         ensureDetachedStyles();
         const root = getOrCreateDetachedRoot();
 
-        sourceCard.querySelectorAll('.lr-override-field').forEach((field) => {
-            const input = field.querySelector('input[data-override-zone]');
-            if (!input) return;
-            const zone = input.dataset.overrideZone;
-            const position = POSITIONS[zone];
-            if (!position) return;
-
-            field.dataset.overridePosition = position;
-            input.placeholder = zoneValue(zone);
-            root.appendChild(field);
+        Object.keys(POSITIONS).forEach((zone) => {
+            let input = root.querySelector(`input[data-override-zone="${zone}"]`);
+            if (!input) {
+                root.appendChild(createDetachedField(zone));
+                input = root.querySelector(`input[data-override-zone="${zone}"]`);
+            }
+            if (input && !input.value) input.placeholder = zoneValue(zone);
         });
+    }
 
-        sourceCard.remove();
-        return true;
+    function hideOriginalOverrideCard() {
+        document.querySelectorAll('#lr-config-panel .lr-override-card').forEach((card) => {
+            card.style.display = 'none';
+        });
     }
 
     function positionDetachedInputs() {
@@ -166,7 +199,8 @@
     }
 
     function refreshDetachedInputs() {
-        moveOverrideInputsOutOfPanel();
+        ensureDetachedInputs();
+        hideOriginalOverrideCard();
         positionDetachedInputs();
     }
 
