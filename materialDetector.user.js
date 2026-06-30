@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.2.6-core
+// @version      5.2.7-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
@@ -414,7 +414,13 @@
         return text.includes('nahlad') && !anchor.hasAttribute('download');
     }
 
-    function isDownloadCandidate(anchor) {
+    function hasDownloadFileHref(href) {
+        return /\/data\/servicesForm\//i.test(href)
+            || /\/svg_editor\//i.test(href)
+            || /\.(pdf|png|jpg|jpeg|tif|tiff|zip)(\?|$)/i.test(href);
+    }
+
+    function isDownloadCandidate(anchor, allowFileOnly = false) {
         if (!anchor || !anchor.href) return false;
         if (anchor.hasAttribute(NATIVE_DOWNLOAD_ATTR)) return false;
         if (isPreviewLink(anchor)) return false;
@@ -422,11 +428,54 @@
         const text = api.normalizeKey(anchor.textContent || '');
         const cls = anchor.className || '';
         const hasDownloadHint = anchor.hasAttribute('download') || text.includes('stiahni') || text.includes('stiahnut');
-        if (/\/data\/servicesForm\//i.test(href) && hasDownloadHint) return true;
-        if (/\/svg_editor\//i.test(href) && hasDownloadHint) return true;
-        if (/\.(pdf|png|jpg|jpeg|tif|tiff|zip)(\?|$)/i.test(href) && hasDownloadHint) return true;
+        if (hasDownloadFileHref(href) && (hasDownloadHint || allowFileOnly)) return true;
         if (cls.includes('block mt5')) return true;
         return false;
+    }
+
+    function findZdParamRow(element) {
+        let node = element && element.nodeType === 1 ? element : element && element.parentElement;
+        while (node && node !== document.body) {
+            if (node.parentElement && node.parentElement.id === 'VPZDParams') return node;
+            node = node.parentElement;
+        }
+        return null;
+    }
+
+    function isDownloadAllControl(element) {
+        const control = element && element.closest && element.closest('button, [title], [role=button]');
+        if (!control) return false;
+        const text = api.normalizeKey((control.getAttribute('title') || '') + ' ' + (control.textContent || ''));
+        return text.includes('stiahnut vsetky') || text.includes('stiahni vsetky');
+    }
+
+    function uniqueAnchors(anchors) {
+        const seen = new Set();
+        return anchors.filter(anchor => {
+            const key = anchor.href;
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
+
+    function findDownloadTargets(eventTarget) {
+        const directLink = eventTarget && eventTarget.closest && eventTarget.closest('a[href]');
+        if (isDownloadCandidate(directLink)) return [directLink];
+
+        const row = findZdParamRow(eventTarget);
+        if (row && isDownloadAllControl(eventTarget)) {
+            return uniqueAnchors(Array.from(row.querySelectorAll('a[href]'))
+                .filter(anchor => isDownloadCandidate(anchor, true)));
+        }
+
+        if (isDownloadAllControl(eventTarget)) {
+            const root = document.querySelector('#VPZDParams') || document;
+            return uniqueAnchors(Array.from(root.querySelectorAll('a[href]'))
+                .filter(anchor => isDownloadCandidate(anchor, true)));
+        }
+
+        return [];
     }
 
     function shouldRenameForCurrentOrder() {
@@ -497,16 +546,28 @@
         if (renameBound) return;
         renameBound = true;
         document.addEventListener('click', function (event) {
-            const link = event.target.closest('a[href]');
-            if (!link) return;
-            if (!isDownloadCandidate(link)) return;
-            if (!shouldRenameForCurrentOrder()) return;
-            const fileName = buildNewFileName(link.href);
-            if (!fileName) return;
+            const links = findDownloadTargets(event.target);
+            if (!links.length) return;
+            const config = getRenameConfig();
+            if (!config) {
+                console.warn('[materialDetector] download click ignored: rename config unavailable', {
+                    detectorState: getPerTabState(),
+                    links: links.map(link => link.href)
+                });
+                return;
+            }
+
             event.preventDefault();
             event.stopPropagation();
-            startDownload(link.href, fileName);
-            console.log('[materialDetector] download:', { from: link.href, as: fileName });
+            links.forEach(link => {
+                const fileName = buildNewFileName(link.href);
+                if (!fileName) {
+                    console.warn('[materialDetector] download click ignored: empty filename', { href: link.href, config });
+                    return;
+                }
+                startDownload(link.href, fileName);
+                console.log('[materialDetector] download:', { from: link.href, as: fileName });
+            });
         }, true);
     }
 
