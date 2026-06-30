@@ -2,14 +2,12 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.2.7-core
+// @version      5.3-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        GM_download
-// @connect      moduly.faxcopy.sk
-// @connect      www.faxcopy.sk
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_api.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_fotoobrazy.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_41tv.js
@@ -35,7 +33,6 @@
     const STATE_TTL_MS = 30000;
     const LAST_SIZE_ALIAS_STORAGE_PREFIX = api.LAST_SIZE_ALIAS_STORAGE_PREFIX || 'materialDetector.lastSizeAlias:';
     const DEFAULT_RENAME_PATTERN = '{alias}_{size}_{quantity}_{vp} {original}.{ext}';
-    const NATIVE_DOWNLOAD_ATTR = 'data-material-detector-native-download';
     const ZONE_KEYS = {
         left: 'TM_testoLeft',
         right: 'TM_testoRight',
@@ -409,165 +406,52 @@
         return applyRenamePattern(config.rename.pattern, tokens);
     }
 
-    function isPreviewLink(anchor) {
-        const text = api.normalizeKey(anchor.textContent || '');
-        return text.includes('nahlad') && !anchor.hasAttribute('download');
-    }
-
-    function hasDownloadFileHref(href) {
-        return /\/data\/servicesForm\//i.test(href)
-            || /\/svg_editor\//i.test(href)
-            || /\.(pdf|png|jpg|jpeg|tif|tiff|zip)(\?|$)/i.test(href);
-    }
-
-    function isDownloadCandidate(anchor, allowFileOnly = false) {
+    function isDownloadCandidate(anchor) {
         if (!anchor || !anchor.href) return false;
-        if (anchor.hasAttribute(NATIVE_DOWNLOAD_ATTR)) return false;
-        if (isPreviewLink(anchor)) return false;
         const href = anchor.href;
-        const text = api.normalizeKey(anchor.textContent || '');
+        const text = (anchor.textContent || '').toLowerCase();
         const cls = anchor.className || '';
-        const hasDownloadHint = anchor.hasAttribute('download') || text.includes('stiahni') || text.includes('stiahnut');
-        if (hasDownloadFileHref(href) && (hasDownloadHint || allowFileOnly)) return true;
+        if (/\/data\/servicesForm\//i.test(href)) return true;
+        if (/\/svg_editor\//i.test(href)) return true;
+        if (/\.(pdf|png|jpg|jpeg|tif|tiff|zip)(\?|$)/i.test(href)) return true;
+        if (text.includes('stiahni') || text.includes('stiahnut')) return true;
         if (cls.includes('block mt5')) return true;
         return false;
-    }
-
-    function findZdParamRow(element) {
-        let node = element && element.nodeType === 1 ? element : element && element.parentElement;
-        while (node && node !== document.body) {
-            if (node.parentElement && node.parentElement.id === 'VPZDParams') return node;
-            node = node.parentElement;
-        }
-        return null;
-    }
-
-    function isDownloadAllControl(element) {
-        const control = element && element.closest && element.closest('button, [title], [role=button]');
-        if (!control) return false;
-        const text = api.normalizeKey((control.getAttribute('title') || '') + ' ' + (control.textContent || ''));
-        return text.includes('stiahnut vsetky') || text.includes('stiahni vsetky');
-    }
-
-    function uniqueAnchors(anchors) {
-        const seen = new Set();
-        return anchors.filter(anchor => {
-            const key = anchor.href;
-            if (!key || seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-    }
-
-    function findDownloadTargets(eventTarget) {
-        const directLink = eventTarget && eventTarget.closest && eventTarget.closest('a[href]');
-        if (isDownloadCandidate(directLink)) return [directLink];
-
-        const row = findZdParamRow(eventTarget);
-        if (row && isDownloadAllControl(eventTarget)) {
-            return uniqueAnchors(Array.from(row.querySelectorAll('a[href]'))
-                .filter(anchor => isDownloadCandidate(anchor, true)));
-        }
-
-        if (isDownloadAllControl(eventTarget)) {
-            const root = document.querySelector('#VPZDParams') || document;
-            return uniqueAnchors(Array.from(root.querySelectorAll('a[href]'))
-                .filter(anchor => isDownloadCandidate(anchor, true)));
-        }
-
-        return [];
     }
 
     function shouldRenameForCurrentOrder() {
         return !!getRenameConfig();
     }
 
-    function browserDownload(url, fileName) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName || '';
-        a.rel = 'noopener';
-        a.style.display = 'none';
-        a.setAttribute(NATIVE_DOWNLOAD_ATTR, '1');
-        document.body.append(a);
-        a.click();
-        setTimeout(() => a.remove(), 0);
-    }
-
-    async function blobDownload(url, fileName) {
-        const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        browserDownload(objectUrl, fileName);
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
-    }
-
-    function gmDownload(url, fileName) {
-        if (typeof GM_download !== 'function') {
-            browserDownload(url, fileName);
-            return;
-        }
-
-        try {
-            const result = GM_download({
+    function startDownload(url, fileName) {
+        if (typeof GM_download === 'function') {
+            GM_download({
                 url,
                 name: fileName,
                 saveAs: false,
                 onerror: function (error) {
-                    console.warn('[materialDetector] GM_download fallback failed', error);
-                    browserDownload(url, fileName);
-                },
-                ontimeout: function (error) {
-                    console.warn('[materialDetector] GM_download fallback timeout', error);
-                    browserDownload(url, fileName);
+                    console.warn('[materialDetector] renamed download cancelled or failed', error);
                 }
             });
-            if (result && typeof result.catch === 'function') {
-                result.catch(error => {
-                    console.warn('[materialDetector] GM_download promise failed', error);
-                    browserDownload(url, fileName);
-                });
-            }
-        } catch (error) {
-            console.warn('[materialDetector] GM_download throw', error);
-            browserDownload(url, fileName);
+            return;
         }
-    }
-
-    function startDownload(url, fileName) {
-        blobDownload(url, fileName).catch(error => {
-            console.warn('[materialDetector] blob download failed, using GM_download fallback', error);
-            gmDownload(url, fileName);
-        });
+        window.open(url, '_blank', 'noopener');
     }
 
     function initDownloadRename() {
         if (renameBound) return;
         renameBound = true;
         document.addEventListener('click', function (event) {
-            const links = findDownloadTargets(event.target);
-            if (!links.length) return;
-            const config = getRenameConfig();
-            if (!config) {
-                console.warn('[materialDetector] download click ignored: rename config unavailable', {
-                    detectorState: getPerTabState(),
-                    links: links.map(link => link.href)
-                });
-                return;
-            }
-
+            const link = event.target.closest('a[href]');
+            if (!link) return;
+            if (!isDownloadCandidate(link)) return;
+            if (!shouldRenameForCurrentOrder()) return;
+            const fileName = buildNewFileName(link.href);
+            if (!fileName) return;
             event.preventDefault();
             event.stopPropagation();
-            links.forEach(link => {
-                const fileName = buildNewFileName(link.href);
-                if (!fileName) {
-                    console.warn('[materialDetector] download click ignored: empty filename', { href: link.href, config });
-                    return;
-                }
-                startDownload(link.href, fileName);
-                console.log('[materialDetector] download:', { from: link.href, as: fileName });
-            });
+            startDownload(link.href, fileName);
+            console.log('[materialDetector] download:', { from: link.href, as: fileName });
         }, true);
     }
 
