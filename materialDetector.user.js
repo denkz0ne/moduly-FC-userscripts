@@ -2,12 +2,14 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.2.3-core
+// @version      5.2.4-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        GM_download
+// @connect      moduly.faxcopy.sk
+// @connect      www.faxcopy.sk
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_api.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_fotoobrazy.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_41tv.js
@@ -33,6 +35,7 @@
     const STATE_TTL_MS = 30000;
     const LAST_SIZE_ALIAS_STORAGE_PREFIX = api.LAST_SIZE_ALIAS_STORAGE_PREFIX || 'materialDetector.lastSizeAlias:';
     const DEFAULT_RENAME_PATTERN = '{alias}_{size}_{quantity}_{vp} {original}.{ext}';
+    const NATIVE_DOWNLOAD_ATTR = 'data-material-detector-native-download';
     const ZONE_KEYS = {
         left: 'TM_testoLeft',
         right: 'TM_testoRight',
@@ -406,15 +409,22 @@
         return applyRenamePattern(config.rename.pattern, tokens);
     }
 
+    function isPreviewLink(anchor) {
+        const text = api.normalizeKey(anchor.textContent || '');
+        return text.includes('nahlad') && !anchor.hasAttribute('download');
+    }
+
     function isDownloadCandidate(anchor) {
         if (!anchor || !anchor.href) return false;
+        if (anchor.hasAttribute(NATIVE_DOWNLOAD_ATTR)) return false;
+        if (isPreviewLink(anchor)) return false;
         const href = anchor.href;
-        const text = (anchor.textContent || '').toLowerCase();
+        const text = api.normalizeKey(anchor.textContent || '');
         const cls = anchor.className || '';
-        if (/\/data\/servicesForm\//i.test(href)) return true;
-        if (/\/svg_editor\//i.test(href)) return true;
-        if (/\.(pdf|png|jpg|jpeg|tif|tiff|zip)(\?|$)/i.test(href)) return true;
-        if (text.includes('stiahni') || text.includes('stiahnut')) return true;
+        const hasDownloadHint = anchor.hasAttribute('download') || text.includes('stiahni') || text.includes('stiahnut');
+        if (/\/data\/servicesForm\//i.test(href) && hasDownloadHint) return true;
+        if (/\/svg_editor\//i.test(href) && hasDownloadHint) return true;
+        if (/\.(pdf|png|jpg|jpeg|tif|tiff|zip)(\?|$)/i.test(href) && hasDownloadHint) return true;
         if (cls.includes('block mt5')) return true;
         return false;
     }
@@ -423,19 +433,44 @@
         return !!getRenameConfig();
     }
 
+    function nativeDownload(url, fileName) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || '';
+        a.rel = 'noopener';
+        a.style.display = 'none';
+        a.setAttribute(NATIVE_DOWNLOAD_ATTR, '1');
+        document.body.append(a);
+        a.click();
+        setTimeout(() => a.remove(), 0);
+    }
+
     function startDownload(url, fileName) {
+        const fallback = function (reason) {
+            console.warn('[materialDetector] renamed download fallback', reason || 'unknown');
+            nativeDownload(url, fileName);
+        };
+
         if (typeof GM_download === 'function') {
-            GM_download({
-                url,
-                name: fileName,
-                saveAs: false,
-                onerror: function (error) {
-                    console.warn('[materialDetector] renamed download cancelled or failed', error);
+            try {
+                const result = GM_download({
+                    url,
+                    name: fileName,
+                    saveAs: false,
+                    onerror: fallback,
+                    ontimeout: fallback
+                });
+                if (result && typeof result.catch === 'function') {
+                    result.catch(fallback);
                 }
-            });
-            return;
+                return;
+            } catch (error) {
+                fallback(error);
+                return;
+            }
         }
-        window.open(url, '_blank', 'noopener');
+
+        fallback('GM_download unavailable');
     }
 
     function initDownloadRename() {
