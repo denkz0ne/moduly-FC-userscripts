@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.2.5-core
+// @version      5.2.6-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
@@ -454,35 +454,43 @@
         setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
     }
 
-    function startDownload(url, fileName) {
-        const fallback = function (reason) {
-            console.warn('[materialDetector] renamed download fallback', reason || 'unknown');
-            blobDownload(url, fileName).catch(error => {
-                console.warn('[materialDetector] blob download fallback failed', error);
-                browserDownload(url, fileName);
-            });
-        };
-
-        if (typeof GM_download === 'function') {
-            try {
-                const result = GM_download({
-                    url,
-                    name: fileName,
-                    saveAs: false,
-                    onerror: fallback,
-                    ontimeout: fallback
-                });
-                if (result && typeof result.catch === 'function') {
-                    result.catch(fallback);
-                }
-                return;
-            } catch (error) {
-                fallback(error);
-                return;
-            }
+    function gmDownload(url, fileName) {
+        if (typeof GM_download !== 'function') {
+            browserDownload(url, fileName);
+            return;
         }
 
-        fallback('GM_download unavailable');
+        try {
+            const result = GM_download({
+                url,
+                name: fileName,
+                saveAs: false,
+                onerror: function (error) {
+                    console.warn('[materialDetector] GM_download fallback failed', error);
+                    browserDownload(url, fileName);
+                },
+                ontimeout: function (error) {
+                    console.warn('[materialDetector] GM_download fallback timeout', error);
+                    browserDownload(url, fileName);
+                }
+            });
+            if (result && typeof result.catch === 'function') {
+                result.catch(error => {
+                    console.warn('[materialDetector] GM_download promise failed', error);
+                    browserDownload(url, fileName);
+                });
+            }
+        } catch (error) {
+            console.warn('[materialDetector] GM_download throw', error);
+            browserDownload(url, fileName);
+        }
+    }
+
+    function startDownload(url, fileName) {
+        blobDownload(url, fileName).catch(error => {
+            console.warn('[materialDetector] blob download failed, using GM_download fallback', error);
+            gmDownload(url, fileName);
+        });
     }
 
     function initDownloadRename() {
