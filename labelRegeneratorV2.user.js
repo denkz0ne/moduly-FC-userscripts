@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.5
+// @version      2.0.6
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegeneratorV2.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/labelRegeneratorV2.user.js
@@ -15,13 +15,12 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.5';
+    window.labelRegeneratorV2Version = '2.0.6';
 
     const LABEL_WIDTH_MM = 62;
     const LABEL_HEIGHT_MM = 45;
     const SOURCE_LABEL_WIDTH_MM = 86;
     const SOURCE_LABEL_HEIGHT_MM = 50;
-    const SAFE_MARGIN_MM = 1;
     const CONFIG_STORAGE_KEY = 'labelRegeneratorLayoutConfigV201';
     const PANEL_OPEN_STORAGE_KEY = 'labelRegeneratorPanelOpen';
     const MODE_STORAGE_KEY = 'labelRegeneratorMode';
@@ -29,198 +28,58 @@
     const EDIT_ZOOM = 1.45;
 
     const ZONE_DEFINITIONS = [
-        {
-            key: 'TM_testoLeft',
-            aliases: ['testoleft'],
-            id: 'lr-zone-testoleft',
-            slug: 'testo-left',
-            title: 'TM_testoLeft',
-            defaults: {
-                container: { x: 1, y: 35.4, width: 41, height: 5.6, zIndex: 20, visible: true, paddingLeft: 1.2, paddingRight: 1.2, paddingTop: 0.3, paddingBottom: 0.3, borderWidth: 0, borderColor: '#999999', borderRadius: 0, backgroundColor: 'transparent' },
-                text: { fontFamily: "'Roboto Condensed', Arial, sans-serif", fontSize: 4.8, fontWeight: 400, lineHeight: 1, letterSpacing: 0, scaleX: 100, textAlign: 'left', color: '#111111', backgroundColor: 'transparent', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, paddingX: 0, paddingY: 0, uppercase: false }
-            }
-        },
-        {
-            key: 'TM_testoRight',
-            aliases: ['testoright'],
-            id: 'lr-zone-testoright',
-            slug: 'testo-right',
-            title: 'TM_testoRight',
-            defaults: {
-                container: { x: 43, y: 35.4, width: 18, height: 5.6, zIndex: 20, visible: true, paddingLeft: 1.2, paddingRight: 1.2, paddingTop: 0.3, paddingBottom: 0.3, borderWidth: 0, borderColor: '#999999', borderRadius: 0, backgroundColor: 'transparent' },
-                text: { fontFamily: "'Roboto Condensed', Arial, sans-serif", fontSize: 4.5, fontWeight: 400, lineHeight: 1, letterSpacing: 0, scaleX: 100, textAlign: 'right', color: '#111111', backgroundColor: 'transparent', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, paddingX: 0, paddingY: 0, uppercase: false }
-            }
-        },
-        {
-            key: 'TM_top',
-            aliases: [],
-            id: 'lr-zone-top',
-            slug: 'top',
-            title: 'TM_top',
-            defaults: {
-                container: { x: 40.5, y: 0.4, width: 20.5, height: 6.2, zIndex: 20, visible: true, paddingLeft: 1.2, paddingRight: 1.2, paddingTop: 0.3, paddingBottom: 0.3, borderWidth: 0, borderColor: '#999999', borderRadius: 0, backgroundColor: 'transparent' },
-                text: { fontFamily: "'Roboto Condensed', Arial, sans-serif", fontSize: 4.7, fontWeight: 400, lineHeight: 1, letterSpacing: 0, scaleX: 100, textAlign: 'right', color: '#111111', backgroundColor: 'transparent', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, paddingX: 0, paddingY: 0, uppercase: false }
-            }
-        },
-        {
-            key: 'TM_bottom',
-            aliases: [],
-            id: 'lr-zone-bottom',
-            slug: 'bottom',
-            title: 'TM_bottom',
-            defaults: {
-                container: { x: 40.5, y: 6.8, width: 20.5, height: 6.2, zIndex: 20, visible: true, paddingLeft: 1.2, paddingRight: 1.2, paddingTop: 0.3, paddingBottom: 0.3, borderWidth: 0, borderColor: '#999999', borderRadius: 0, backgroundColor: 'transparent' },
-                text: { fontFamily: "'Roboto Condensed', Arial, sans-serif", fontSize: 4.7, fontWeight: 400, lineHeight: 1, letterSpacing: 0, scaleX: 100, textAlign: 'right', color: '#111111', backgroundColor: 'transparent', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, paddingX: 0, paddingY: 0, uppercase: false }
-            }
-        }
+        { key: 'TM_testoLeft', aliases: ['testoleft'], id: 'lr-zone-testoleft', slug: 'testo-left', title: 'TM_testoLeft', defaults: { container: { x: 1, y: 35.4, width: 41, height: 5.6, zIndex: 20, visible: true, paddingLeft: 1.2, paddingRight: 1.2, paddingTop: 0.3, paddingBottom: 0.3, borderWidth: 0, borderColor: '#999999', borderRadius: 0, backgroundColor: 'transparent' }, text: { fontFamily: "'Roboto Condensed', Arial, sans-serif", fontSize: 4.8, fontWeight: 400, lineHeight: 1, letterSpacing: 0, scaleX: 100, textAlign: 'left', color: '#111111', backgroundColor: 'transparent', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, paddingX: 0, paddingY: 0, uppercase: false } } },
+        { key: 'TM_testoRight', aliases: ['testoright'], id: 'lr-zone-testoright', slug: 'testo-right', title: 'TM_testoRight', defaults: { container: { x: 43, y: 35.4, width: 18, height: 5.6, zIndex: 20, visible: true, paddingLeft: 1.2, paddingRight: 1.2, paddingTop: 0.3, paddingBottom: 0.3, borderWidth: 0, borderColor: '#999999', borderRadius: 0, backgroundColor: 'transparent' }, text: { fontFamily: "'Roboto Condensed', Arial, sans-serif", fontSize: 4.5, fontWeight: 400, lineHeight: 1, letterSpacing: 0, scaleX: 100, textAlign: 'right', color: '#111111', backgroundColor: 'transparent', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, paddingX: 0, paddingY: 0, uppercase: false } } },
+        { key: 'TM_top', aliases: [], id: 'lr-zone-top', slug: 'top', title: 'TM_top', defaults: { container: { x: 40.5, y: 0.4, width: 20.5, height: 6.2, zIndex: 20, visible: true, paddingLeft: 1.2, paddingRight: 1.2, paddingTop: 0.3, paddingBottom: 0.3, borderWidth: 0, borderColor: '#999999', borderRadius: 0, backgroundColor: 'transparent' }, text: { fontFamily: "'Roboto Condensed', Arial, sans-serif", fontSize: 4.7, fontWeight: 400, lineHeight: 1, letterSpacing: 0, scaleX: 100, textAlign: 'right', color: '#111111', backgroundColor: 'transparent', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, paddingX: 0, paddingY: 0, uppercase: false } } },
+        { key: 'TM_bottom', aliases: [], id: 'lr-zone-bottom', slug: 'bottom', title: 'TM_bottom', defaults: { container: { x: 40.5, y: 6.8, width: 20.5, height: 6.2, zIndex: 20, visible: true, paddingLeft: 1.2, paddingRight: 1.2, paddingTop: 0.3, paddingBottom: 0.3, borderWidth: 0, borderColor: '#999999', borderRadius: 0, backgroundColor: 'transparent' }, text: { fontFamily: "'Roboto Condensed', Arial, sans-serif", fontSize: 4.7, fontWeight: 400, lineHeight: 1, letterSpacing: 0, scaleX: 100, textAlign: 'right', color: '#111111', backgroundColor: 'transparent', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, paddingX: 0, paddingY: 0, uppercase: false } } }
     ];
 
     const FIELD_GROUPS = {
         container: [
-            { key: 'x', label: 'X', type: 'number', min: 0, max: LABEL_WIDTH_MM, step: 0.1, unit: 'mm' },
-            { key: 'y', label: 'Y', type: 'number', min: 0, max: LABEL_HEIGHT_MM, step: 0.1, unit: 'mm' },
-            { key: 'width', label: 'Width', type: 'number', min: 0.5, max: LABEL_WIDTH_MM, step: 0.1, unit: 'mm' },
-            { key: 'height', label: 'Height', type: 'number', min: 0.5, max: LABEL_HEIGHT_MM, step: 0.1, unit: 'mm' },
-            { key: 'zIndex', label: 'Z-index', type: 'number', min: 1, max: 9999, step: 1 },
-            { key: 'visible', label: 'Visible', type: 'checkbox' },
-            { key: 'paddingLeft', label: 'Pad Left', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' },
-            { key: 'paddingRight', label: 'Pad Right', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' },
-            { key: 'paddingTop', label: 'Pad Top', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' },
-            { key: 'paddingBottom', label: 'Pad Bottom', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' },
-            { key: 'borderWidth', label: 'Border', type: 'number', min: 0, max: 3, step: 0.1, unit: 'mm' },
-            { key: 'borderRadius', label: 'Radius', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' },
-            { key: 'borderColor', label: 'Border Color', type: 'text' },
-            { key: 'backgroundColor', label: 'Block Bg', type: 'text' }
+            { key: 'x', label: 'X', type: 'number', min: 0, max: LABEL_WIDTH_MM, step: 0.1, unit: 'mm' }, { key: 'y', label: 'Y', type: 'number', min: 0, max: LABEL_HEIGHT_MM, step: 0.1, unit: 'mm' }, { key: 'width', label: 'Width', type: 'number', min: 0.5, max: LABEL_WIDTH_MM, step: 0.1, unit: 'mm' }, { key: 'height', label: 'Height', type: 'number', min: 0.5, max: LABEL_HEIGHT_MM, step: 0.1, unit: 'mm' }, { key: 'zIndex', label: 'Z-index', type: 'number', min: 1, max: 9999, step: 1 }, { key: 'visible', label: 'Visible', type: 'checkbox' }, { key: 'paddingLeft', label: 'Pad Left', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' }, { key: 'paddingRight', label: 'Pad Right', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' }, { key: 'paddingTop', label: 'Pad Top', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' }, { key: 'paddingBottom', label: 'Pad Bottom', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' }, { key: 'borderWidth', label: 'Border', type: 'number', min: 0, max: 3, step: 0.1, unit: 'mm' }, { key: 'borderRadius', label: 'Radius', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' }, { key: 'borderColor', label: 'Border Color', type: 'text' }, { key: 'backgroundColor', label: 'Block Bg', type: 'text' }
         ],
         text: [
-            { key: 'fontSize', label: 'Font', type: 'number', min: 1, max: 16, step: 0.1, unit: 'mm' },
-            { key: 'fontWeight', label: 'Weight', type: 'number', min: 100, max: 900, step: 100 },
-            { key: 'lineHeight', label: 'Line', type: 'number', min: 0.7, max: 2, step: 0.05 },
-            { key: 'letterSpacing', label: 'Letter', type: 'number', min: -1, max: 3, step: 0.05, unit: 'mm' },
-            { key: 'scaleX', label: 'Stretch', type: 'number', min: 50, max: 200, step: 1, unit: '%' },
-            { key: 'paddingX', label: 'Text Pad X', type: 'number', min: 0, max: 5, step: 0.1, unit: 'mm' },
-            { key: 'paddingY', label: 'Text Pad Y', type: 'number', min: 0, max: 5, step: 0.1, unit: 'mm' },
-            { key: 'borderWidth', label: 'Text Border', type: 'number', min: 0, max: 3, step: 0.1, unit: 'mm' },
-            { key: 'borderRadius', label: 'Text Radius', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' },
-            { key: 'textAlign', label: 'Align', type: 'select', options: ['left', 'center', 'right'] },
-            { key: 'uppercase', label: 'Uppercase', type: 'checkbox' },
-            { key: 'color', label: 'Text Color', type: 'text' },
-            { key: 'backgroundColor', label: 'Text Bg', type: 'text' },
-            { key: 'borderColor', label: 'Text Border Color', type: 'text' }
+            { key: 'fontSize', label: 'Font', type: 'number', min: 1, max: 16, step: 0.1, unit: 'mm' }, { key: 'fontWeight', label: 'Weight', type: 'number', min: 100, max: 900, step: 100 }, { key: 'lineHeight', label: 'Line', type: 'number', min: 0.7, max: 2, step: 0.05 }, { key: 'letterSpacing', label: 'Letter', type: 'number', min: -1, max: 3, step: 0.05, unit: 'mm' }, { key: 'scaleX', label: 'Stretch', type: 'number', min: 50, max: 200, step: 1, unit: '%' }, { key: 'paddingX', label: 'Text Pad X', type: 'number', min: 0, max: 5, step: 0.1, unit: 'mm' }, { key: 'paddingY', label: 'Text Pad Y', type: 'number', min: 0, max: 5, step: 0.1, unit: 'mm' }, { key: 'borderWidth', label: 'Text Border', type: 'number', min: 0, max: 3, step: 0.1, unit: 'mm' }, { key: 'borderRadius', label: 'Text Radius', type: 'number', min: 0, max: 10, step: 0.1, unit: 'mm' }, { key: 'textAlign', label: 'Align', type: 'select', options: ['left', 'center', 'right'] }, { key: 'uppercase', label: 'Uppercase', type: 'checkbox' }, { key: 'color', label: 'Text Color', type: 'text' }, { key: 'backgroundColor', label: 'Text Bg', type: 'text' }, { key: 'borderColor', label: 'Text Border Color', type: 'text' }
         ]
     };
 
     let layoutConfig = loadLayoutConfig();
     let currentMode = getStoredMode();
-    let panelOpen = getStoredPanelOpen();
+    let panelOpen = true;
     let panelElements = null;
     let selectedBlockKey = getStoredSelectedBlock();
 
     function isPrintLabelPage() { return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname); }
-
-    function ensureRobotoCondensedFont() {
-        if (!document.head || document.querySelector('link[data-label-regenerator-font="roboto-condensed"]')) return;
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap';
-        link.setAttribute('data-label-regenerator-font', 'roboto-condensed');
-        document.head.appendChild(link);
-    }
-
+    function ensureRobotoCondensedFont() { if (!document.head || document.querySelector('link[data-label-regenerator-font="roboto-condensed"]')) return; const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap'; link.setAttribute('data-label-regenerator-font', 'roboto-condensed'); document.head.appendChild(link); }
     function deepClone(value) { return JSON.parse(JSON.stringify(value)); }
     function buildDefaultLayoutConfig() { const config = { blocks: {} }; ZONE_DEFINITIONS.forEach((definition) => { config.blocks[definition.key] = deepClone(definition.defaults); }); return config; }
-    function getStoredPanelOpen() { return localStorage.getItem(PANEL_OPEN_STORAGE_KEY) === '1'; }
     function setStoredPanelOpen(value) { localStorage.setItem(PANEL_OPEN_STORAGE_KEY, value ? '1' : '0'); }
     function getStoredSelectedBlock() { const value = localStorage.getItem(SELECTED_BLOCK_STORAGE_KEY) || ''; return ZONE_DEFINITIONS.some((definition) => definition.key === value) ? value : ''; }
     function setStoredSelectedBlock(value) { const normalized = ZONE_DEFINITIONS.some((definition) => definition.key === value) ? value : ''; selectedBlockKey = normalized; normalized ? localStorage.setItem(SELECTED_BLOCK_STORAGE_KEY, normalized) : localStorage.removeItem(SELECTED_BLOCK_STORAGE_KEY); }
     function getStoredMode() { return localStorage.getItem(MODE_STORAGE_KEY) === 'edit' ? 'edit' : 'view'; }
+    function setStoredMode(value) { currentMode = value === 'edit' ? 'edit' : 'view'; localStorage.setItem(MODE_STORAGE_KEY, currentMode); document.documentElement.classList.toggle('lr-edit-mode', currentMode === 'edit'); if (panelElements && panelElements.modeSelect) panelElements.modeSelect.value = currentMode; updateConfiguratorPosition(); updateModeButtons(); }
+    function setPanelOpen(value) { panelOpen = true; setStoredPanelOpen(true); if (value) { setStoredMode('edit'); } else { setStoredMode('view'); setStoredSelectedBlock(''); refreshPanelSelectionState(); } applyPanelOpenState(); renderOverlayZones(); }
 
-    function setStoredMode(value) {
-        currentMode = value === 'edit' ? 'edit' : 'view';
-        localStorage.setItem(MODE_STORAGE_KEY, currentMode);
-        document.documentElement.classList.toggle('lr-edit-mode', currentMode === 'edit');
-        if (panelElements && panelElements.modeSelect) panelElements.modeSelect.value = currentMode;
-        updateConfiguratorPosition();
-    }
-
-    function setPanelOpen(value) {
-        panelOpen = Boolean(value);
-        setStoredPanelOpen(panelOpen);
-        if (panelOpen) {
-            setStoredMode('edit');
-        } else {
-            setStoredMode('view');
-            setStoredSelectedBlock('');
-        }
-        applyPanelOpenState();
-        renderOverlayZones();
-    }
-
-    function loadLayoutConfig() {
-        const defaults = buildDefaultLayoutConfig();
-        const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
-        if (!raw) return defaults;
-        try { return normalizeLayoutConfig(JSON.parse(raw), defaults); } catch (error) { return defaults; }
-    }
-
+    function loadLayoutConfig() { const defaults = buildDefaultLayoutConfig(); const raw = localStorage.getItem(CONFIG_STORAGE_KEY); if (!raw) return defaults; try { return normalizeLayoutConfig(JSON.parse(raw), defaults); } catch (error) { return defaults; } }
     function saveLayoutConfig() { localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(layoutConfig)); }
     function normalizeLayoutConfig(input, defaults) { const normalized = deepClone(defaults); const sourceBlocks = input && input.blocks ? input.blocks : {}; ZONE_DEFINITIONS.forEach((definition) => { const incoming = sourceBlocks[definition.key] || {}; normalized.blocks[definition.key] = normalizeBlockConfig(incoming, defaults.blocks[definition.key]); }); return normalized; }
     function normalizeBlockConfig(input, defaults) { const block = deepClone(defaults); const incomingContainer = input && input.container ? input.container : {}; const incomingText = input && input.text ? input.text : {}; Object.keys(block.container).forEach((key) => { block.container[key] = normalizeValue(key, incomingContainer[key], block.container[key], 'container'); }); Object.keys(block.text).forEach((key) => { block.text[key] = normalizeValue(key, incomingText[key], block.text[key], 'text'); }); sanitizeBlockConfig(block); return block; }
     function normalizeValue(key, value, fallback, scope) { if (typeof fallback === 'boolean') return Boolean(value); if (typeof fallback === 'number') { const numeric = Number(value); return Number.isFinite(numeric) ? numeric : fallback; } if (scope === 'text' && key === 'textAlign') return ['left', 'center', 'right'].includes(value) ? value : fallback; return typeof value === 'string' && value.trim() ? value.trim() : fallback; }
     function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
-
-    function sanitizeBlockConfig(block) {
-        const container = block.container;
-        const text = block.text;
-        container.x = clamp(container.x, 0, LABEL_WIDTH_MM);
-        container.y = clamp(container.y, 0, LABEL_HEIGHT_MM);
-        container.width = clamp(container.width, 0.5, LABEL_WIDTH_MM - container.x);
-        container.height = clamp(container.height, 0.5, LABEL_HEIGHT_MM - container.y);
-        container.zIndex = clamp(Math.round(container.zIndex), 1, 9999);
-        container.paddingLeft = clamp(container.paddingLeft, 0, LABEL_WIDTH_MM);
-        container.paddingRight = clamp(container.paddingRight, 0, LABEL_WIDTH_MM);
-        container.paddingTop = clamp(container.paddingTop, 0, LABEL_HEIGHT_MM);
-        container.paddingBottom = clamp(container.paddingBottom, 0, LABEL_HEIGHT_MM);
-        container.borderWidth = clamp(container.borderWidth, 0, 3);
-        container.borderRadius = clamp(container.borderRadius, 0, 10);
-        text.fontSize = clamp(text.fontSize, 1, 16);
-        text.fontWeight = clamp(Math.round(text.fontWeight / 100) * 100, 100, 900);
-        text.lineHeight = clamp(text.lineHeight, 0.7, 2);
-        text.letterSpacing = clamp(text.letterSpacing, -1, 3);
-        text.scaleX = clamp(text.scaleX, 50, 200);
-        text.paddingX = clamp(text.paddingX, 0, 5);
-        text.paddingY = clamp(text.paddingY, 0, 5);
-        text.borderWidth = clamp(text.borderWidth, 0, 3);
-        text.borderRadius = clamp(text.borderRadius, 0, 10);
-        if (!['left', 'center', 'right'].includes(text.textAlign)) text.textAlign = 'left';
-    }
-
+    function sanitizeBlockConfig(block) { const container = block.container; const text = block.text; container.x = clamp(container.x, 0, LABEL_WIDTH_MM); container.y = clamp(container.y, 0, LABEL_HEIGHT_MM); container.width = clamp(container.width, 0.5, LABEL_WIDTH_MM - container.x); container.height = clamp(container.height, 0.5, LABEL_HEIGHT_MM - container.y); container.zIndex = clamp(Math.round(container.zIndex), 1, 9999); container.paddingLeft = clamp(container.paddingLeft, 0, LABEL_WIDTH_MM); container.paddingRight = clamp(container.paddingRight, 0, LABEL_WIDTH_MM); container.paddingTop = clamp(container.paddingTop, 0, LABEL_HEIGHT_MM); container.paddingBottom = clamp(container.paddingBottom, 0, LABEL_HEIGHT_MM); container.borderWidth = clamp(container.borderWidth, 0, 3); container.borderRadius = clamp(container.borderRadius, 0, 10); text.fontSize = clamp(text.fontSize, 1, 16); text.fontWeight = clamp(Math.round(text.fontWeight / 100) * 100, 100, 900); text.lineHeight = clamp(text.lineHeight, 0.7, 2); text.letterSpacing = clamp(text.letterSpacing, -1, 3); text.scaleX = clamp(text.scaleX, 50, 200); text.paddingX = clamp(text.paddingX, 0, 5); text.paddingY = clamp(text.paddingY, 0, 5); text.borderWidth = clamp(text.borderWidth, 0, 3); text.borderRadius = clamp(text.borderRadius, 0, 10); if (!['left', 'center', 'right'].includes(text.textAlign)) text.textAlign = 'left'; }
     function getStoredZoneValue(key) { return localStorage.getItem(key) || ''; }
     function setStoredZoneValue(key, value) { const normalized = value == null ? '' : String(value); normalized ? localStorage.setItem(key, normalized) : localStorage.removeItem(key); return normalized; }
     function findZoneDefinition(zoneName) { const normalized = String(zoneName || '').trim(); return ZONE_DEFINITIONS.find((definition) => definition.key === normalized || definition.aliases.includes(normalized)) || null; }
-
-    function resolveZoneValue(definition) {
-        const candidates = [definition.key, ...definition.aliases];
-        for (const key of candidates) { const runtimeValue = window[key]; if (runtimeValue != null && String(runtimeValue).trim()) return String(runtimeValue).trim(); }
-        for (const key of candidates) { const stored = getStoredZoneValue(key); if (stored) return stored.trim(); }
-        return '';
-    }
-
-    function persistZoneValue(definition, value) {
-        const normalized = value == null ? '' : String(value);
-        window[definition.key] = normalized;
-        setStoredZoneValue(definition.key, normalized);
-        definition.aliases.forEach((alias) => { window[alias] = normalized; setStoredZoneValue(alias, normalized); });
-        return normalized;
-    }
+    function resolveZoneValue(definition) { const candidates = [definition.key, ...definition.aliases]; for (const key of candidates) { const runtimeValue = window[key]; if (runtimeValue != null && String(runtimeValue).trim()) return String(runtimeValue).trim(); } for (const key of candidates) { const stored = getStoredZoneValue(key); if (stored) return stored.trim(); } return ''; }
+    function persistZoneValue(definition, value) { const normalized = value == null ? '' : String(value); window[definition.key] = normalized; setStoredZoneValue(definition.key, normalized); definition.aliases.forEach((alias) => { window[alias] = normalized; setStoredZoneValue(alias, normalized); }); return normalized; }
 
     function injectBaseStyles() {
         if (!document.head || document.getElementById('label-regenerator-styles')) return;
         const style = document.createElement('style');
         style.id = 'label-regenerator-styles';
         style.textContent = `
-            :root { --lr-label-width: ${LABEL_WIDTH_MM}mm; --lr-label-height: ${LABEL_HEIGHT_MM}mm; --lr-panel-width: 360px; --lr-guide-color: rgba(25, 118, 210, 0.85); --lr-guide-fill: rgba(25, 118, 210, 0.08); --lr-panel-shadow: 0 18px 42px rgba(0, 0, 0, 0.18); --lr-panel-border: rgba(0, 0, 0, 0.08); }
-            html.lr-panel-open body { padding-right: calc(var(--lr-panel-width) + 96px) !important; }
+            :root { --lr-label-width: ${LABEL_WIDTH_MM}mm; --lr-label-height: ${LABEL_HEIGHT_MM}mm; --lr-panel-width: 360px; --lr-guide-color: rgba(35, 35, 35, 0.5); --lr-guide-fill: rgba(0, 0, 0, 0.035); --lr-panel-shadow: 0 10px 28px rgba(0, 0, 0, 0.14); --lr-panel-border: rgba(0, 0, 0, 0.1); }
+            html.lr-panel-open body { padding-right: 0 !important; }
             #label { position: relative !important; width: var(--lr-label-width) !important; min-width: var(--lr-label-width) !important; max-width: var(--lr-label-width) !important; height: var(--lr-label-height) !important; min-height: var(--lr-label-height) !important; max-height: var(--lr-label-height) !important; box-sizing: border-box !important; overflow: hidden !important; border: 0 !important; background: #fff; }
             html.lr-edit-mode #label { transform: scale(${EDIT_ZOOM}); transform-origin: top left; }
             html.lr-edit-mode #label::after { content: ''; position: absolute; inset: 0; border: 1px dashed var(--lr-guide-color); box-sizing: border-box; pointer-events: none; z-index: 2147483646; }
@@ -228,36 +87,34 @@
             #label-regenerator-overlay { position: absolute; inset: 0; z-index: 2147483647; box-sizing: border-box; overflow: hidden; pointer-events: none; }
             .lr-block { position: absolute; box-sizing: border-box; overflow: hidden; }
             html.lr-edit-mode .lr-block { outline: 1px dashed var(--lr-guide-color); outline-offset: -1px; background-image: linear-gradient(180deg, var(--lr-guide-fill), transparent); }
-            .lr-guide-tag { position: absolute; top: 0; left: 0; padding: 1px 4px; font: 700 9px/1.2 Arial, sans-serif; letter-spacing: 0.03em; color: #0d47a1; background: rgba(255, 255, 255, 0.92); border-right: 1px solid rgba(13, 71, 161, 0.3); border-bottom: 1px solid rgba(13, 71, 161, 0.3); display: none; pointer-events: none; }
+            .lr-guide-tag { position: absolute; top: 0; left: 0; padding: 1px 4px; font: 700 9px/1.2 Arial, sans-serif; letter-spacing: 0.03em; color: #333; background: rgba(255, 255, 255, 0.9); border-right: 1px solid rgba(0, 0, 0, 0.16); border-bottom: 1px solid rgba(0, 0, 0, 0.16); display: none; pointer-events: none; }
             html.lr-edit-mode .lr-guide-tag { display: block; }
             .lr-text-anchor { position: absolute; display: flex; align-items: center; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; }
             .lr-text { display: inline-block; white-space: nowrap; transform: scale(1, 1); }
-            #lr-config-toggle { position: fixed; top: 16px; right: 16px; z-index: 2147483647; border: 0; border-radius: 999px; padding: 8px 14px; font: 700 12px/1 Arial, sans-serif; letter-spacing: 0.04em; background: #111; color: #fff; cursor: pointer; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22); }
-            #lr-config-panel { position: fixed; top: 14px; right: auto; left: 14px; width: var(--lr-panel-width); max-height: calc(100vh - 28px); overflow: auto; z-index: 2147483646; background: rgba(255, 255, 255, 0.98); border: 1px solid var(--lr-panel-border); border-radius: 18px; box-shadow: var(--lr-panel-shadow); font: 12px/1.35 Arial, sans-serif; color: #111; display: none; padding: 14px; box-sizing: border-box; }
+            #lr-config-toggle { display: none !important; }
+            #lr-config-panel { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: var(--lr-panel-width); max-height: calc(100vh - 20px); overflow: auto; z-index: 2147483646; background: rgba(255, 255, 255, 0.97); border: 1px solid var(--lr-panel-border); border-radius: 12px; box-shadow: var(--lr-panel-shadow); font: 12px/1.35 Arial, sans-serif; color: #111; display: block; padding: 10px; box-sizing: border-box; backdrop-filter: blur(5px); }
             #lr-config-panel.is-open { display: block; }
-            .lr-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
-            .lr-panel-title { font-size: 14px; font-weight: 700; }
-            .lr-panel-actions { display: flex; gap: 6px; }
-            .lr-btn { appearance: none; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; color: #111; border-radius: 10px; padding: 7px 10px; font: 700 11px/1 Arial, sans-serif; cursor: pointer; }
-            .lr-btn--primary { background: #111; color: #fff; }
-            .lr-panel-topbar { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: end; margin-bottom: 12px; }
-            .lr-global-card, .lr-block-card { border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 14px; padding: 12px; margin-bottom: 12px; background: #f6f7f9; }
-            .lr-block-card { background: #fafafa; }
-            .lr-global-card h3, .lr-block-card h3 { margin: 0 0 8px; font-size: 13px; line-height: 1.2; }
-            .lr-global-card p, .lr-block-card p { margin: 0 0 10px; color: #555; font-size: 11px; }
+            .lr-panel-header { display: none; }
+            .lr-panel-actions { display: none; }
+            .lr-btn { appearance: none; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; color: #111; border-radius: 9px; padding: 7px 12px; font: 700 11px/1 Arial, sans-serif; cursor: pointer; }
+            .lr-btn--primary { background: #111; color: #fff; border-color: #111; }
+            .lr-panel-topbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: center; margin-bottom: 10px; }
+            .lr-global-card, .lr-block-card { border: 1px solid rgba(0, 0, 0, 0.07); border-radius: 10px; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+            .lr-global-card h3, .lr-block-card h3 { margin: 0 0 8px; font-size: 12px; line-height: 1.2; }
+            .lr-global-card p, .lr-block-card p { margin: 0 0 10px; color: #666; font-size: 11px; }
             .lr-panel-topbar label, .lr-block-form label { display: block; font-weight: 700; margin-bottom: 4px; }
-            .lr-panel-topbar select, .lr-block-form input, .lr-block-form select { width: 100%; box-sizing: border-box; border: 1px solid rgba(0, 0, 0, 0.14); border-radius: 9px; padding: 7px 8px; font: 12px/1.2 Arial, sans-serif; background: #fff; color: #111; }
-            .lr-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
-            .lr-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #555; margin: 8px 0; }
+            .lr-panel-topbar select, .lr-block-form input, .lr-block-form select { width: 100%; box-sizing: border-box; border: 1px solid rgba(0, 0, 0, 0.14); border-radius: 8px; padding: 6px 7px; font: 12px/1.2 Arial, sans-serif; background: #fff; color: #111; }
+            .lr-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-bottom: 10px; }
+            .lr-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #555; margin: 8px 0; }
             .lr-input-unit { display: block; margin-top: 3px; color: #777; font-size: 10px; }
             .lr-panel-footer { color: #666; font-size: 11px; padding-top: 4px; }
-            .lr-selected-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; font: 700 11px/1 Arial, sans-serif; color: #111; }
+            .lr-selected-chip { display: flex; align-items: center; min-height: 26px; padding: 0 8px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.1); background: #fff; font: 700 11px/1 Arial, sans-serif; color: #111; margin-bottom: 10px; }
             .lr-selected-chip--empty { color: #666; font-weight: 500; }
-            .lr-selection-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
-            .lr-select-block-btn { appearance: none; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; color: #111; border-radius: 10px; padding: 8px 10px; font: 700 11px/1.2 Arial, sans-serif; cursor: pointer; text-align: left; }
+            .lr-selection-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
+            .lr-select-block-btn { appearance: none; border: 1px solid rgba(0, 0, 0, 0.12); background: #fff; color: #111; border-radius: 8px; padding: 7px 9px; font: 700 11px/1.2 Arial, sans-serif; cursor: pointer; text-align: left; }
             .lr-select-block-btn.is-active { background: #111; color: #fff; }
             .lr-form-shell[hidden] { display: none !important; }
-            @media print { @page { size: ${LABEL_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm; margin: 0; } html, body { margin: 0 !important; padding: 0 !important; width: ${LABEL_WIDTH_MM}mm !important; height: ${LABEL_HEIGHT_MM}mm !important; overflow: hidden !important; max-height: ${LABEL_HEIGHT_MM}mm !important; } #lr-config-toggle, #lr-config-panel, .lr-guide-tag, html.lr-edit-mode #label::after { display: none !important; } html.lr-edit-mode #label { transform: none !important; } #label, #label-regenerator-base, #label-regenerator-overlay { page-break-inside: avoid !important; break-inside: avoid !important; overflow: hidden !important; } html.lr-panel-open body { padding-right: 0 !important; } }
+            @media print { @page { size: ${LABEL_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm; margin: 0; } html, body { margin: 0 !important; padding: 0 !important; width: ${LABEL_WIDTH_MM}mm !important; height: ${LABEL_HEIGHT_MM}mm !important; overflow: hidden !important; max-height: ${LABEL_HEIGHT_MM}mm !important; } #lr-config-toggle, #lr-config-panel, .lr-guide-tag, html.lr-edit-mode #label::after { display: none !important; } html.lr-edit-mode #label { transform: none !important; } #label, #label-regenerator-base, #label-regenerator-overlay { page-break-inside: avoid !important; break-inside: avoid !important; overflow: hidden !important; } }
         `;
         document.head.appendChild(style);
     }
@@ -267,212 +124,47 @@
     function syncBaseScale() { const base = document.getElementById('label-regenerator-base'); if (!base) return; const scale = Math.min(LABEL_WIDTH_MM / SOURCE_LABEL_WIDTH_MM, LABEL_HEIGHT_MM / SOURCE_LABEL_HEIGHT_MM); base.style.transform = `scale(${scale})`; }
     function ensureOverlayLayer() { const label = document.querySelector('#label'); if (!label) return null; let overlay = document.getElementById('label-regenerator-overlay'); if (overlay) return overlay; overlay = document.createElement('div'); overlay.id = 'label-regenerator-overlay'; ZONE_DEFINITIONS.forEach((definition) => { overlay.appendChild(buildZone(definition)); }); label.appendChild(overlay); return overlay; }
     function getZoneElements(definition) { const zone = document.getElementById(definition.id); if (!zone) return null; return { zone, anchor: zone.querySelector('.lr-text-anchor'), text: zone.querySelector('.lr-text') }; }
-
-    function applyBlockContainerStyles(definition, elements, config, content) {
-        const zone = elements.zone;
-        const anchor = elements.anchor;
-        const container = config.container;
-        const text = config.text;
-        const hasContent = String(content || '').trim().length > 0;
-        const visibleForEditing = currentMode === 'edit' && panelOpen;
-
-        zone.style.display = container.visible && (hasContent || visibleForEditing) ? 'block' : 'none';
-        zone.style.left = `${container.x}mm`;
-        zone.style.top = `${container.y}mm`;
-        zone.style.width = `${container.width}mm`;
-        zone.style.height = `${container.height}mm`;
-        zone.style.zIndex = String(container.zIndex);
-        zone.style.border = container.borderWidth > 0 ? `${container.borderWidth}mm solid ${container.borderColor}` : '0 solid transparent';
-        zone.style.borderRadius = `${container.borderRadius}mm`;
-        zone.style.background = container.backgroundColor;
-        anchor.style.left = `${container.paddingLeft}mm`;
-        anchor.style.right = `${container.paddingRight}mm`;
-        anchor.style.top = `${container.paddingTop}mm`;
-        anchor.style.bottom = `${container.paddingBottom}mm`;
-        anchor.style.justifyContent = text.textAlign === 'right' ? 'flex-end' : text.textAlign === 'center' ? 'center' : 'flex-start';
-    }
-
-    function applyBlockTextStyles(elements, config, content) {
-        const text = elements.text;
-        const textConfig = config.text;
-        text.textContent = textConfig.uppercase ? String(content || '').toUpperCase() : String(content || '');
-        text.style.fontFamily = textConfig.fontFamily;
-        text.style.fontSize = `${textConfig.fontSize}mm`;
-        text.style.fontWeight = String(textConfig.fontWeight);
-        text.style.lineHeight = String(textConfig.lineHeight);
-        text.style.letterSpacing = `${textConfig.letterSpacing}mm`;
-        text.style.color = textConfig.color;
-        text.style.background = textConfig.backgroundColor;
-        text.style.border = textConfig.borderWidth > 0 ? `${textConfig.borderWidth}mm solid ${textConfig.borderColor}` : '0 solid transparent';
-        text.style.borderRadius = `${textConfig.borderRadius}mm`;
-        text.style.padding = `${textConfig.paddingY}mm ${textConfig.paddingX}mm`;
-        text.style.textAlign = textConfig.textAlign;
-        text.style.transformOrigin = textConfig.textAlign === 'right' ? 'right center' : textConfig.textAlign === 'center' ? 'center center' : 'left center';
-    }
-
+    function applyBlockContainerStyles(definition, elements, config, content) { const zone = elements.zone; const anchor = elements.anchor; const container = config.container; const text = config.text; const hasContent = String(content || '').trim().length > 0; const visibleForEditing = currentMode === 'edit'; zone.style.display = container.visible && (hasContent || visibleForEditing) ? 'block' : 'none'; zone.style.left = `${container.x}mm`; zone.style.top = `${container.y}mm`; zone.style.width = `${container.width}mm`; zone.style.height = `${container.height}mm`; zone.style.zIndex = String(container.zIndex); zone.style.border = container.borderWidth > 0 ? `${container.borderWidth}mm solid ${container.borderColor}` : '0 solid transparent'; zone.style.borderRadius = `${container.borderRadius}mm`; zone.style.background = container.backgroundColor; anchor.style.left = `${container.paddingLeft}mm`; anchor.style.right = `${container.paddingRight}mm`; anchor.style.top = `${container.paddingTop}mm`; anchor.style.bottom = `${container.paddingBottom}mm`; anchor.style.justifyContent = text.textAlign === 'right' ? 'flex-end' : text.textAlign === 'center' ? 'center' : 'flex-start'; }
+    function applyBlockTextStyles(elements, config, content) { const text = elements.text; const textConfig = config.text; text.textContent = textConfig.uppercase ? String(content || '').toUpperCase() : String(content || ''); text.style.fontFamily = textConfig.fontFamily; text.style.fontSize = `${textConfig.fontSize}mm`; text.style.fontWeight = String(textConfig.fontWeight); text.style.lineHeight = String(textConfig.lineHeight); text.style.letterSpacing = `${textConfig.letterSpacing}mm`; text.style.color = textConfig.color; text.style.background = textConfig.backgroundColor; text.style.border = textConfig.borderWidth > 0 ? `${textConfig.borderWidth}mm solid ${textConfig.borderColor}` : '0 solid transparent'; text.style.borderRadius = `${textConfig.borderRadius}mm`; text.style.padding = `${textConfig.paddingY}mm ${textConfig.paddingX}mm`; text.style.textAlign = textConfig.textAlign; text.style.transformOrigin = textConfig.textAlign === 'right' ? 'right center' : textConfig.textAlign === 'center' ? 'center center' : 'left center'; }
     function fitZoneText(elements, config) { const anchor = elements.anchor; const text = elements.text; const textConfig = config.text; text.style.transform = 'scale(1, 1)'; const scaleX = textConfig.scaleX / 100; const naturalWidth = text.scrollWidth * scaleX; const naturalHeight = text.scrollHeight; const availableWidth = anchor.clientWidth; const availableHeight = anchor.clientHeight; if (availableWidth <= 0 || availableHeight <= 0 || naturalWidth <= 0 || naturalHeight <= 0) { text.style.transform = `scale(${scaleX}, 1)`; return; } const fitWidth = availableWidth / naturalWidth; const fitHeight = availableHeight / naturalHeight; const fitScale = Math.min(1, fitWidth, fitHeight); text.style.transform = `scale(${scaleX * fitScale}, ${fitScale})`; }
+    function renderOverlayZones() { ensureOverlayLayer(); ZONE_DEFINITIONS.forEach((definition) => { const elements = getZoneElements(definition); if (!elements) return; const blockConfig = layoutConfig.blocks[definition.key]; sanitizeBlockConfig(blockConfig); const content = resolveZoneValue(definition); applyBlockContainerStyles(definition, elements, blockConfig, content); applyBlockTextStyles(elements, blockConfig, content); fitZoneText(elements, blockConfig); elements.zone.classList.toggle('is-selected', selectedBlockKey === definition.key); }); }
 
-    function renderOverlayZones() {
-        ensureOverlayLayer();
-        ZONE_DEFINITIONS.forEach((definition) => {
-            const elements = getZoneElements(definition);
-            if (!elements) return;
-            const blockConfig = layoutConfig.blocks[definition.key];
-            sanitizeBlockConfig(blockConfig);
-            const content = resolveZoneValue(definition);
-            applyBlockContainerStyles(definition, elements, blockConfig, content);
-            applyBlockTextStyles(elements, blockConfig, content);
-            fitZoneText(elements, blockConfig);
-            elements.zone.classList.toggle('is-selected', selectedBlockKey === definition.key);
-        });
-    }
-
-    function applyLabelCanvas() {
-        const predajnaText = document.querySelector('#predajna .rotate');
-        if (predajnaText) predajnaText.style.fontSize = '27pt';
-        const label = document.querySelector('#label');
-        if (!label) return;
-        label.style.position = 'relative';
-        label.style.width = `${LABEL_WIDTH_MM}mm`;
-        label.style.height = `${LABEL_HEIGHT_MM}mm`;
-        label.style.overflow = 'hidden';
-        label.style.border = '0';
-        const obj = document.querySelector('.obj');
-        if (obj) obj.style.height = '16mm';
-        const block = document.querySelector('#data > div');
-        if (block) block.style.marginBottom = '1mm';
-        const wrapper = document.querySelector('#data > div');
-        if (wrapper) {
-            const vpText = wrapper.querySelector('span');
-            if (vpText && vpText.previousSibling && vpText.previousSibling.textContent.trim() === 'VP') {
-                const newSpan = document.createElement('span');
-                newSpan.innerHTML = 'VP: ' + vpText.textContent.trim();
-                newSpan.style.color = '#ffffff';
-                newSpan.style.background = '#000';
-                newSpan.style.padding = '1px 4px';
-                newSpan.style.margin = '2px 0';
-                newSpan.style.borderRadius = '6px';
-                newSpan.style.fontSize = '13pt';
-                newSpan.style.display = 'inline-block';
-                newSpan.style.verticalAlign = 'middle';
-                wrapper.innerHTML = wrapper.innerHTML.replace(/VP.*<\/span>/, '');
-                wrapper.prepend(newSpan);
-            }
-        }
-        ensureBaseLayer();
-        syncBaseScale();
-    }
-
+    function applyLabelCanvas() { const predajnaText = document.querySelector('#predajna .rotate'); if (predajnaText) predajnaText.style.fontSize = '27pt'; const label = document.querySelector('#label'); if (!label) return; label.style.position = 'relative'; label.style.width = `${LABEL_WIDTH_MM}mm`; label.style.height = `${LABEL_HEIGHT_MM}mm`; label.style.overflow = 'hidden'; label.style.border = '0'; const obj = document.querySelector('.obj'); if (obj) obj.style.height = '16mm'; const block = document.querySelector('#data > div'); if (block) block.style.marginBottom = '1mm'; const wrapper = document.querySelector('#data > div'); if (wrapper) { const vpText = wrapper.querySelector('span'); if (vpText && vpText.previousSibling && vpText.previousSibling.textContent.trim() === 'VP') { const newSpan = document.createElement('span'); newSpan.innerHTML = 'VP: ' + vpText.textContent.trim(); newSpan.style.color = '#ffffff'; newSpan.style.background = '#000'; newSpan.style.padding = '1px 4px'; newSpan.style.margin = '2px 0'; newSpan.style.borderRadius = '6px'; newSpan.style.fontSize = '13pt'; newSpan.style.display = 'inline-block'; newSpan.style.verticalAlign = 'middle'; wrapper.innerHTML = wrapper.innerHTML.replace(/VP.*<\/span>/, ''); wrapper.prepend(newSpan); } } ensureBaseLayer(); syncBaseScale(); }
     function createInput(field, value, blockKey, scope) { const wrap = document.createElement('div'); wrap.className = 'lr-field'; const label = document.createElement('label'); label.textContent = field.label; wrap.appendChild(label); let input; if (field.type === 'select') { input = document.createElement('select'); field.options.forEach((optionValue) => { const option = document.createElement('option'); option.value = optionValue; option.textContent = optionValue; if (optionValue === value) option.selected = true; input.appendChild(option); }); } else { input = document.createElement('input'); input.type = field.type; if (field.type === 'checkbox') input.checked = Boolean(value); else input.value = value; if (field.type === 'number') { input.min = String(field.min); input.max = String(field.max); input.step = String(field.step); } } input.dataset.block = blockKey; input.dataset.scope = scope; input.dataset.field = field.key; wrap.appendChild(input); if (field.unit) { const unit = document.createElement('span'); unit.className = 'lr-input-unit'; unit.textContent = field.unit; wrap.appendChild(unit); } return wrap; }
     function buildBlockCard(definition) { const card = document.createElement('section'); card.className = 'lr-block-card'; card.dataset.blockCard = definition.key; const title = document.createElement('h3'); title.textContent = definition.title; card.appendChild(title); const note = document.createElement('p'); note.textContent = `Classy: .lr-block--${definition.slug} a .lr-text--${definition.slug}`; card.appendChild(note); const blockForm = document.createElement('div'); blockForm.className = 'lr-block-form'; const containerTitle = document.createElement('div'); containerTitle.className = 'lr-section-title'; containerTitle.textContent = 'Block'; blockForm.appendChild(containerTitle); const containerGrid = document.createElement('div'); containerGrid.className = 'lr-field-grid'; FIELD_GROUPS.container.forEach((field) => { const configValue = layoutConfig.blocks[definition.key].container[field.key]; containerGrid.appendChild(createInput(field, configValue, definition.key, 'container')); }); blockForm.appendChild(containerGrid); const textTitle = document.createElement('div'); textTitle.className = 'lr-section-title'; textTitle.textContent = 'Text Element'; blockForm.appendChild(textTitle); const textGrid = document.createElement('div'); textGrid.className = 'lr-field-grid'; FIELD_GROUPS.text.forEach((field) => { const configValue = layoutConfig.blocks[definition.key].text[field.key]; textGrid.appendChild(createInput(field, configValue, definition.key, 'text')); }); blockForm.appendChild(textGrid); card.appendChild(blockForm); return card; }
-    function buildGlobalCard() { const card = document.createElement('section'); card.className = 'lr-global-card'; card.dataset.globalCard = 'true'; const title = document.createElement('h3'); title.textContent = 'Global'; card.appendChild(title); const paragraph = document.createElement('p'); paragraph.textContent = 'Bez vybrateho bloku vies prepínať rezim, resetovat layout a vybrat blok na editaciu. Klik na blok priamo v stitku ho vyberie okamzite.'; card.appendChild(paragraph); const list = document.createElement('div'); list.className = 'lr-selection-list'; ZONE_DEFINITIONS.forEach((definition) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'lr-select-block-btn'; button.dataset.selectBlock = definition.key; button.textContent = definition.title; list.appendChild(button); }); card.appendChild(list); return card; }
-
+    function buildGlobalCard() { const card = document.createElement('section'); card.className = 'lr-global-card'; card.dataset.globalCard = 'true'; const paragraph = document.createElement('p'); paragraph.textContent = 'Print je finalny view rezim. Edit je layout rezim; klik na blok v stitku alebo vyber blok nizsie.'; card.appendChild(paragraph); const list = document.createElement('div'); list.className = 'lr-selection-list'; ZONE_DEFINITIONS.forEach((definition) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'lr-select-block-btn'; button.dataset.selectBlock = definition.key; button.textContent = definition.title; list.appendChild(button); }); card.appendChild(list); return card; }
     function updateEditorInputValues() { if (!panelElements || !panelElements.panel) return; panelElements.panel.querySelectorAll('input, select').forEach((input) => { const blockKey = input.dataset.block; const scope = input.dataset.scope; const field = input.dataset.field; if (!blockKey || !scope || !field) return; const value = layoutConfig.blocks[blockKey][scope][field]; if (input.type === 'checkbox') input.checked = Boolean(value); else input.value = value; }); }
     function refreshPanelSelectionState() { if (!panelElements) return; const selectedDefinition = ZONE_DEFINITIONS.find((definition) => definition.key === selectedBlockKey) || null; const selectedLabel = selectedDefinition ? selectedDefinition.title : 'No block selected'; panelElements.selectedChip.textContent = selectedLabel; panelElements.selectedChip.classList.toggle('lr-selected-chip--empty', !selectedDefinition); panelElements.globalCard.hidden = Boolean(selectedDefinition); panelElements.panel.querySelectorAll('[data-block-card]').forEach((card) => { card.hidden = card.dataset.blockCard !== selectedBlockKey; }); panelElements.panel.querySelectorAll('[data-select-block]').forEach((button) => { button.classList.toggle('is-active', button.dataset.selectBlock === selectedBlockKey); }); }
-    function applyPanelOpenState() { if (!panelElements) return; panelElements.panel.classList.toggle('is-open', panelOpen); document.documentElement.classList.toggle('lr-panel-open', panelOpen); panelElements.toggle.textContent = panelOpen ? 'Close CFG' : 'CFG'; updateConfiguratorPosition(); }
-
-    function updateConfiguratorPosition() {
-        if (!panelElements) return;
-        const label = document.querySelector('#label');
-        if (!label) return;
-        const spacing = 18;
-        const margin = 14;
-        const rect = label.getBoundingClientRect();
-        const panelWidth = panelElements.panel.offsetWidth || 360;
-        const panelHeight = panelElements.panel.offsetHeight || 0;
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        let left = rect.right + spacing;
-        if (left + panelWidth + margin > viewportWidth) left = Math.max(margin, rect.left - panelWidth - spacing);
-        if (left < margin) left = margin;
-        let top = Math.max(margin, rect.top);
-        if (panelHeight > 0 && top + panelHeight + margin > viewportHeight) top = Math.max(margin, viewportHeight - panelHeight - margin);
-        panelElements.panel.style.left = `${left}px`;
-        panelElements.panel.style.top = `${top}px`;
-        const toggleLeft = Math.max(margin, left + panelWidth - 86);
-        const toggleTop = Math.max(margin, top - 44);
-        panelElements.toggle.style.left = `${toggleLeft}px`;
-        panelElements.toggle.style.right = 'auto';
-        panelElements.toggle.style.top = `${toggleTop}px`;
-    }
-
+    function updateModeButtons() { if (!panelElements) return; panelElements.viewButton.classList.toggle('lr-btn--primary', currentMode === 'view'); panelElements.editButton.classList.toggle('lr-btn--primary', currentMode === 'edit'); }
+    function applyPanelOpenState() { if (!panelElements) return; panelOpen = true; panelElements.panel.classList.add('is-open'); document.documentElement.classList.add('lr-panel-open'); panelElements.toggle.textContent = 'CFG'; updateModeButtons(); updateConfiguratorPosition(); }
+    function updateConfiguratorPosition() { if (!panelElements) return; panelElements.panel.style.left = '50%'; panelElements.panel.style.top = '10px'; panelElements.panel.style.transform = 'translateX(-50%)'; panelElements.toggle.style.display = 'none'; }
     function handleConfigInput(event) { const target = event.target; if (!target || !target.dataset) return; const blockKey = target.dataset.block; const scope = target.dataset.scope; const field = target.dataset.field; if (!blockKey || !scope || !field) return; const fieldDefinition = FIELD_GROUPS[scope].find((item) => item.key === field); if (!fieldDefinition) return; let value; if (fieldDefinition.type === 'checkbox') value = target.checked; else if (fieldDefinition.type === 'number') value = Number(target.value); else value = target.value; layoutConfig.blocks[blockKey][scope][field] = value; sanitizeBlockConfig(layoutConfig.blocks[blockKey]); saveLayoutConfig(); renderOverlayZones(); updateEditorInputValues(); }
     function setSelectedBlock(blockKey) { setStoredSelectedBlock(blockKey); refreshPanelSelectionState(); renderOverlayZones(); updateConfiguratorPosition(); }
 
     function ensureConfigPanel() {
         if (!isPrintLabelPage() || panelElements) return;
-        const toggle = document.createElement('button');
-        toggle.id = 'lr-config-toggle';
-        toggle.type = 'button';
-        toggle.textContent = 'CFG';
-        const panel = document.createElement('aside');
-        panel.id = 'lr-config-panel';
-        const header = document.createElement('div');
-        header.className = 'lr-panel-header';
-        const headerTitle = document.createElement('div');
-        headerTitle.className = 'lr-panel-title';
-        headerTitle.textContent = 'Label Configurator';
-        header.appendChild(headerTitle);
-        const headerActions = document.createElement('div');
-        headerActions.className = 'lr-panel-actions';
-        const resetButton = document.createElement('button');
-        resetButton.type = 'button';
-        resetButton.className = 'lr-btn';
-        resetButton.textContent = 'Reset';
-        headerActions.appendChild(resetButton);
-        const closeButton = document.createElement('button');
-        closeButton.type = 'button';
-        closeButton.className = 'lr-btn';
-        closeButton.textContent = 'Close';
-        headerActions.appendChild(closeButton);
-        header.appendChild(headerActions);
-        panel.appendChild(header);
-        const topbar = document.createElement('div');
-        topbar.className = 'lr-panel-topbar';
-        const modeWrap = document.createElement('div');
-        const modeLabel = document.createElement('label');
-        modeLabel.textContent = 'Mode';
-        const modeSelect = document.createElement('select');
-        ['view', 'edit'].forEach((mode) => { const option = document.createElement('option'); option.value = mode; option.textContent = mode; if (mode === currentMode) option.selected = true; modeSelect.appendChild(option); });
-        modeWrap.appendChild(modeLabel);
-        modeWrap.appendChild(modeSelect);
-        topbar.appendChild(modeWrap);
-        const viewButton = document.createElement('button'); viewButton.type = 'button'; viewButton.className = 'lr-btn lr-btn--primary'; viewButton.textContent = 'View'; topbar.appendChild(viewButton);
+        const toggle = document.createElement('button'); toggle.id = 'lr-config-toggle'; toggle.type = 'button'; toggle.textContent = 'CFG';
+        const panel = document.createElement('aside'); panel.id = 'lr-config-panel';
+        const topbar = document.createElement('div'); topbar.className = 'lr-panel-topbar';
+        const viewButton = document.createElement('button'); viewButton.type = 'button'; viewButton.className = 'lr-btn'; viewButton.textContent = 'Print'; topbar.appendChild(viewButton);
         const editButton = document.createElement('button'); editButton.type = 'button'; editButton.className = 'lr-btn'; editButton.textContent = 'Edit'; topbar.appendChild(editButton);
-        const selectedChip = document.createElement('div'); selectedChip.className = 'lr-selected-chip lr-selected-chip--empty'; selectedChip.textContent = 'No block selected'; topbar.appendChild(selectedChip);
         panel.appendChild(topbar);
-        const globalCard = buildGlobalCard();
-        panel.appendChild(globalCard);
+        const selectedChip = document.createElement('div'); selectedChip.className = 'lr-selected-chip lr-selected-chip--empty'; selectedChip.textContent = 'No block selected'; panel.appendChild(selectedChip);
+        const globalCard = buildGlobalCard(); panel.appendChild(globalCard);
         ZONE_DEFINITIONS.forEach((definition) => { panel.appendChild(buildBlockCard(definition)); });
-        const footer = document.createElement('div'); footer.className = 'lr-panel-footer'; footer.textContent = 'Shortcut: Ctrl+Shift+E otvori alebo skryje editor.'; panel.appendChild(footer);
-        document.body.appendChild(toggle);
-        document.body.appendChild(panel);
-        panelElements = { toggle, panel, modeSelect, resetButton, closeButton, viewButton, editButton, selectedChip, globalCard };
-        toggle.addEventListener('click', () => setPanelOpen(!panelOpen));
-        closeButton.addEventListener('click', () => setPanelOpen(false));
-        modeSelect.addEventListener('change', () => { setStoredMode(modeSelect.value); renderOverlayZones(); });
-        viewButton.addEventListener('click', () => { setStoredMode('view'); renderOverlayZones(); });
+        const footer = document.createElement('div'); footer.className = 'lr-panel-footer'; footer.textContent = 'Ctrl+Shift+E prepina Print/Edit rezim.'; panel.appendChild(footer);
+        const modeSelect = document.createElement('select'); modeSelect.hidden = true; ['view', 'edit'].forEach((mode) => { const option = document.createElement('option'); option.value = mode; option.textContent = mode; if (mode === currentMode) option.selected = true; modeSelect.appendChild(option); });
+        panel.appendChild(modeSelect);
+        document.body.appendChild(toggle); document.body.appendChild(panel);
+        panelElements = { toggle, panel, modeSelect, viewButton, editButton, selectedChip, globalCard };
+        viewButton.addEventListener('click', () => setPanelOpen(false));
         editButton.addEventListener('click', () => setPanelOpen(true));
-        resetButton.addEventListener('click', () => { layoutConfig = buildDefaultLayoutConfig(); saveLayoutConfig(); renderOverlayZones(); updateEditorInputValues(); });
         panel.addEventListener('click', (event) => { const button = event.target.closest('[data-select-block]'); if (!button) return; setSelectedBlock(button.dataset.selectBlock); setPanelOpen(true); });
-        panel.addEventListener('input', handleConfigInput);
-        panel.addEventListener('change', handleConfigInput);
-        applyPanelOpenState();
-        setStoredMode(currentMode);
-        refreshPanelSelectionState();
-        requestAnimationFrame(updateConfiguratorPosition);
+        panel.addEventListener('input', handleConfigInput); panel.addEventListener('change', handleConfigInput);
+        applyPanelOpenState(); refreshPanelSelectionState(); requestAnimationFrame(updateConfiguratorPosition);
     }
 
-    function exposeOverlayApi() {
-        window.labelRegeneratorSetZone = (zoneName, value) => { const definition = findZoneDefinition(zoneName); if (!definition) return; persistZoneValue(definition, value); renderOverlayZones(); };
-        window.labelRegeneratorRefresh = renderOverlayZones;
-        window.labelRegeneratorGetConfig = () => deepClone(layoutConfig);
-        window.labelRegeneratorSetBlockConfig = (blockKey, patch) => { const definition = findZoneDefinition(blockKey); if (!definition || !patch || typeof patch !== 'object') return; const current = layoutConfig.blocks[definition.key]; const next = normalizeBlockConfig({ container: Object.assign({}, current.container, patch.container || {}), text: Object.assign({}, current.text, patch.text || {}) }, ZONE_DEFINITIONS.find((item) => item.key === definition.key).defaults); layoutConfig.blocks[definition.key] = next; saveLayoutConfig(); renderOverlayZones(); updateEditorInputValues(); };
-        window.labelRegeneratorToggleEditor = () => setPanelOpen(!panelOpen);
-        window.labelRegeneratorSetMode = (mode) => { setStoredMode(mode); renderOverlayZones(); };
-        window.labelRegeneratorSelectBlock = (blockKey) => { setSelectedBlock(blockKey); };
-    }
-
+    function exposeOverlayApi() { window.labelRegeneratorSetZone = (zoneName, value) => { const definition = findZoneDefinition(zoneName); if (!definition) return; persistZoneValue(definition, value); renderOverlayZones(); }; window.labelRegeneratorRefresh = renderOverlayZones; window.labelRegeneratorGetConfig = () => deepClone(layoutConfig); window.labelRegeneratorSetBlockConfig = (blockKey, patch) => { const definition = findZoneDefinition(blockKey); if (!definition || !patch || typeof patch !== 'object') return; const current = layoutConfig.blocks[definition.key]; const next = normalizeBlockConfig({ container: Object.assign({}, current.container, patch.container || {}), text: Object.assign({}, current.text, patch.text || {}) }, ZONE_DEFINITIONS.find((item) => item.key === definition.key).defaults); layoutConfig.blocks[definition.key] = next; saveLayoutConfig(); renderOverlayZones(); updateEditorInputValues(); }; window.labelRegeneratorToggleEditor = () => setPanelOpen(currentMode !== 'edit'); window.labelRegeneratorSetMode = (mode) => { setPanelOpen(mode === 'edit'); }; window.labelRegeneratorSelectBlock = (blockKey) => { setSelectedBlock(blockKey); }; }
     function markPrintReady() { if (!isPrintLabelPage()) return; window.__labelRegeneratorReady = false; const finalize = () => { requestAnimationFrame(() => { requestAnimationFrame(() => { renderOverlayZones(); window.__labelRegeneratorReady = true; window.dispatchEvent(new Event('labelRegeneratorReady')); }); }); }; if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(finalize, 50)).catch(() => setTimeout(finalize, 120)); else setTimeout(finalize, 120); }
     function getVpNumber() { const strong = document.querySelector('strong.red'); return strong ? strong.textContent.trim() : null; }
     function syncLabelValuesFromDetailPage() { if (isPrintLabelPage()) return; const leftBadge = document.querySelector('#shortcut-info-label'); const rightBadge = document.querySelector('#shortcut-info-date'); const leftValue = leftBadge ? (leftBadge.textContent || '').trim() : getStoredZoneValue('TM_testoLeft'); const rightValue = rightBadge ? (rightBadge.textContent || '').trim() : getStoredZoneValue('TM_testoRight'); persistZoneValue(findZoneDefinition('TM_testoLeft'), leftValue); persistZoneValue(findZoneDefinition('TM_testoRight'), rightValue); }
@@ -480,33 +172,8 @@
     function pressLAction() { if (!document.activeElement) return; if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return; const vpNumber = getVpNumber(); if (!vpNumber) return; syncLabelValuesFromDetailPage(); const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`; const popup = window.open(url, '_blank'); if (!popup) return; popup.addEventListener('load', () => { triggerPrintWhenReady(popup); }, { once: true }); }
     function initializeWindowValues() { ZONE_DEFINITIONS.forEach((definition) => { const value = resolveZoneValue(definition); window[definition.key] = value; definition.aliases.forEach((alias) => { window[alias] = value; }); }); }
     function initializePrintPage() { applyLabelCanvas(); ensureBaseLayer(); ensureOverlayLayer(); syncBaseScale(); ensureConfigPanel(); bindBlockSelection(); renderOverlayZones(); updateEditorInputValues(); updateConfiguratorPosition(); markPrintReady(); }
+    function bindBlockSelection() { ZONE_DEFINITIONS.forEach((definition) => { const elements = getZoneElements(definition); if (!elements || elements.zone.dataset.boundSelection === '1') return; const handler = (event) => { if (currentMode !== 'edit') return; event.preventDefault(); event.stopPropagation(); setSelectedBlock(definition.key); setPanelOpen(true); }; elements.zone.addEventListener('click', handler); elements.zone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') handler(event); }); elements.zone.dataset.boundSelection = '1'; }); document.addEventListener('click', (event) => { if (currentMode !== 'edit') return; if (event.target.closest('#lr-config-panel')) return; if (event.target.closest('.lr-block')) return; setSelectedBlock(''); }); }
+    function bindEvents() { window.addEventListener('resize', () => { renderOverlayZones(); updateConfiguratorPosition(); }); window.addEventListener('keydown', (event) => { if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'e') { event.preventDefault(); setPanelOpen(currentMode !== 'edit'); return; } if (event.key.toLowerCase() === 'l' && !event.repeat) pressLAction(); }); window.addEventListener('unload', () => { if (!isPrintLabelPage()) return; const leftDefinition = findZoneDefinition('TM_testoLeft'); const rightDefinition = findZoneDefinition('TM_testoRight'); [leftDefinition, rightDefinition].forEach((definition) => { if (!definition) return; localStorage.removeItem(definition.key); definition.aliases.forEach((alias) => localStorage.removeItem(alias)); }); }); }
 
-    function bindBlockSelection() {
-        ZONE_DEFINITIONS.forEach((definition) => {
-            const elements = getZoneElements(definition);
-            if (!elements || elements.zone.dataset.boundSelection === '1') return;
-            const handler = (event) => { if (currentMode !== 'edit') return; event.preventDefault(); event.stopPropagation(); setSelectedBlock(definition.key); setPanelOpen(true); };
-            elements.zone.addEventListener('click', handler);
-            elements.zone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') handler(event); });
-            elements.zone.dataset.boundSelection = '1';
-        });
-        document.addEventListener('click', (event) => { if (currentMode !== 'edit') return; if (event.target.closest('#lr-config-panel')) return; if (event.target.closest('.lr-block')) return; setSelectedBlock(''); });
-    }
-
-    function bindEvents() {
-        window.addEventListener('resize', () => { renderOverlayZones(); updateConfiguratorPosition(); });
-        window.addEventListener('keydown', (event) => {
-            if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'e') { event.preventDefault(); setPanelOpen(!panelOpen); return; }
-            if (event.key.toLowerCase() === 'l' && !event.repeat) pressLAction();
-        });
-        window.addEventListener('unload', () => { if (!isPrintLabelPage()) return; const leftDefinition = findZoneDefinition('TM_testoLeft'); const rightDefinition = findZoneDefinition('TM_testoRight'); [leftDefinition, rightDefinition].forEach((definition) => { if (!definition) return; localStorage.removeItem(definition.key); definition.aliases.forEach((alias) => localStorage.removeItem(alias)); }); });
-    }
-
-    ensureRobotoCondensedFont();
-    injectBaseStyles();
-    initializeWindowValues();
-    exposeOverlayApi();
-    bindEvents();
-
-    if (isPrintLabelPage()) initializePrintPage();
+    ensureRobotoCondensedFont(); injectBaseStyles(); initializeWindowValues(); exposeOverlayApi(); bindEvents(); if (isPrintLabelPage()) initializePrintPage();
 })();
