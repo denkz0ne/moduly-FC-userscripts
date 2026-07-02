@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      3.0
+// @version      3.1
 // @description  DO GRAFIKY -> oznaci ZaPoGRAF a zaradi VP do CG_Grafik - Grafika bez modalov a klikania
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -62,16 +62,6 @@
         }, true);
     }
 
-    async function warmUpQueueForm(vpId) {
-        try {
-            await postForm(`/vyrobne_prikazy/industrialQueue/industrialQueueAddVpForm/${vpId}`, {
-                data: ''
-            }, true);
-        } catch (error) {
-            console.warn('[DO GRAFIKY] Nepodarilo sa nacitat queue formular, pokracujem dalej.', error);
-        }
-    }
-
     async function assignToGrafikaQueue(vpId) {
         await postForm('/vyrobne_prikazy/industrialQueue', {
             'VF[]': GRAFIKA_VF_ID,
@@ -90,23 +80,27 @@
         button.style.opacity = busy ? '0.6' : '1';
     }
 
-    function createButton() {
-        const vfButton = [...document.querySelectorAll('a.button.green.small')]
-            .find((button) => button.textContent.trim().toLowerCase() === 'do vf');
-
-        if (!vfButton || document.getElementById(BUTTON_ID)) {
+    function createButton(vfButton) {
+        if (document.getElementById(BUTTON_ID)) {
             return;
         }
 
-        const button = vfButton.cloneNode(true);
+        const button = document.createElement('a');
         button.id = BUTTON_ID;
+        button.href = '#';
+        button.className = vfButton.className;
         button.textContent = 'DO GRAFIKY';
+        button.style.position = vfButton.style.position;
+        button.style.top = vfButton.style.top;
         button.style.right = '-95px';
         button.style.background = '#7b1fa2';
         button.style.borderColor = '#6a1b9a';
+        button.style.cursor = 'pointer';
 
         button.addEventListener('click', async (event) => {
             event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
 
             const originalLabel = 'DO GRAFIKY';
 
@@ -117,7 +111,6 @@
                 console.log('[DO GRAFIKY] Startujem request-based flow pre VP', vpId);
 
                 await setGrafikaTag(vpId);
-                await warmUpQueueForm(vpId);
                 await assignToGrafikaQueue(vpId);
 
                 setButtonState(button, 'HOTOVO', true);
@@ -129,10 +122,10 @@
                 setButtonState(button, originalLabel, false);
                 alert(`DO GRAFIKY zlyhalo: ${error.message}`);
             }
-        });
+        }, true);
 
         vfButton.parentNode.insertBefore(button, vfButton.nextSibling);
-        console.log('[DO GRAFIKY] Button pridany.');
+        console.log('[DO GRAFIKY] Button pridany bez zdedeneho onclicku.');
     }
 
     function init() {
@@ -146,7 +139,7 @@
 
             if (vfButton) {
                 clearInterval(interval);
-                createButton();
+                createButton(vfButton);
                 return;
             }
 
