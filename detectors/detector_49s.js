@@ -114,6 +114,7 @@
     function foilMaterialAlias(material, code) {
         const normalized = api.normalizeKey(`${material || ''} ${code || ''}`);
         if (normalized.includes('vf163') || normalized.includes('strukturovana')) return 'geko';
+        if (normalized.includes('fv169') || normalized.includes('lahko odstranitelna')) return 'lesk easy';
         if (normalized.includes('fv027') || normalized.includes('biela polymericka')) return 'poly';
         return '';
     }
