@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.19
+// @version      2.0.20
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
@@ -17,18 +17,77 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.19';
+    window.labelRegeneratorV2Version = '2.0.20';
 
     const CONFIG_KEYS = [
         'labelRegeneratorLayoutConfigV201'
     ];
     const EXPORT_TYPE = 'labelRegeneratorV2.editorConfig';
 
-    function ensureExportImportStyles() {
-        if (document.getElementById('lr-export-import-style-v219')) return;
+    function isPrintLabelPage() {
+        return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
+    }
+
+    function ensureNonPrintCleanupStyles() {
+        if (isPrintLabelPage()) return;
+        if (document.getElementById('lr-non-print-cleanup-style-v220')) return;
 
         const style = document.createElement('style');
-        style.id = 'lr-export-import-style-v219';
+        style.id = 'lr-non-print-cleanup-style-v220';
+        style.textContent = `
+            #lr-detached-overrides,
+            #lr-config-panel,
+            #lr-config-toggle,
+            .lr-override-card,
+            input[data-override-zone] {
+                display: none !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function removeLabelEditorUiOutsidePrint() {
+        if (isPrintLabelPage()) return;
+        ensureNonPrintCleanupStyles();
+
+        [
+            '#lr-detached-overrides',
+            '#lr-config-panel',
+            '#lr-config-toggle',
+            '.lr-override-card'
+        ].forEach((selector) => {
+            document.querySelectorAll(selector).forEach((node) => node.remove());
+        });
+
+        document.querySelectorAll('input[data-override-zone]').forEach((input) => {
+            const wrapper = input.closest('.lr-detached-field, .lr-override-field') || input;
+            wrapper.remove();
+        });
+    }
+
+    function keepEditorUiOutOfDetailPage() {
+        if (isPrintLabelPage()) return;
+        removeLabelEditorUiOutsidePrint();
+        requestAnimationFrame(removeLabelEditorUiOutsidePrint);
+        setTimeout(removeLabelEditorUiOutsidePrint, 80);
+        setTimeout(removeLabelEditorUiOutsidePrint, 250);
+        setTimeout(removeLabelEditorUiOutsidePrint, 800);
+        setTimeout(removeLabelEditorUiOutsidePrint, 1600);
+
+        if (!document.body || document.body.dataset.lrNonPrintObserver === '1') return;
+        const observer = new MutationObserver(removeLabelEditorUiOutsidePrint);
+        observer.observe(document.body, { childList: true, subtree: true });
+        document.body.dataset.lrNonPrintObserver = '1';
+    }
+
+    function ensureExportImportStyles() {
+        if (!isPrintLabelPage()) return;
+        if (document.getElementById('lr-export-import-style-v220')) return;
+
+        const style = document.createElement('style');
+        style.id = 'lr-export-import-style-v220';
         style.textContent = `
             #lr-config-panel .lr-export-import-card {
                 border: 1px solid #c9c9c9 !important;
@@ -98,7 +157,7 @@
         return {
             type: EXPORT_TYPE,
             script: 'labelRegeneratorV2',
-            version: window.labelRegeneratorV2Version || '2.0.19',
+            version: window.labelRegeneratorV2Version || '2.0.20',
             exportedAt: new Date().toISOString(),
             keys
         };
@@ -206,6 +265,11 @@
     }
 
     function ensureExportImportPanel() {
+        if (!isPrintLabelPage()) {
+            keepEditorUiOutOfDetailPage();
+            return;
+        }
+
         ensureExportImportStyles();
         const panel = document.getElementById('lr-config-panel');
         if (!panel || panel.querySelector('[data-lr-export-import="true"]')) return;
@@ -220,11 +284,24 @@
     }
 
     function scheduleEnsureExportImportPanel() {
+        keepEditorUiOutOfDetailPage();
         ensureExportImportPanel();
-        requestAnimationFrame(ensureExportImportPanel);
-        setTimeout(ensureExportImportPanel, 150);
-        setTimeout(ensureExportImportPanel, 600);
-        setTimeout(ensureExportImportPanel, 1500);
+        requestAnimationFrame(() => {
+            keepEditorUiOutOfDetailPage();
+            ensureExportImportPanel();
+        });
+        setTimeout(() => {
+            keepEditorUiOutOfDetailPage();
+            ensureExportImportPanel();
+        }, 150);
+        setTimeout(() => {
+            keepEditorUiOutOfDetailPage();
+            ensureExportImportPanel();
+        }, 600);
+        setTimeout(() => {
+            keepEditorUiOutOfDetailPage();
+            ensureExportImportPanel();
+        }, 1500);
     }
 
     window.labelRegeneratorExportEditorConfig = readConfigExport;
@@ -241,6 +318,7 @@
 
     window.addEventListener('labelRegeneratorReady', scheduleEnsureExportImportPanel);
     window.addEventListener('resize', scheduleEnsureExportImportPanel);
+    window.addEventListener('scroll', scheduleEnsureExportImportPanel, true);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', scheduleEnsureExportImportPanel);
