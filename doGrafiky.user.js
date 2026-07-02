@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      3.2
+// @version      3.3
 // @description  DO GRAFIKY -> oznaci ZaPoGRAF a zaradi VP do CG_Grafik - Grafika bez modalov a klikania
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -107,7 +107,13 @@
     }
 
     function setButtonState(button, label, busy) {
-        button.textContent = label;
+        const textNode = button.querySelector('.do-grafiky-label');
+        if (textNode) {
+            textNode.textContent = label;
+        } else {
+            button.textContent = label;
+        }
+
         button.style.pointerEvents = busy ? 'none' : 'auto';
         button.style.opacity = busy ? '0.6' : '1';
     }
@@ -121,10 +127,14 @@
         button.id = BUTTON_ID;
         button.href = '#';
         button.className = vfButton.className;
-        button.textContent = 'DO GRAFIKY';
-        button.style.position = vfButton.style.position;
-        button.style.top = vfButton.style.top;
-        button.style.right = '-95px';
+        button.innerHTML = '<img src="/assets/img/icons/checkbox-white.png" alt=""><span class="do-grafiky-label"> do GRAFIKY</span>';
+        button.title = 'do GRAFIKY';
+        button.style.position = 'static';
+        button.style.right = 'auto';
+        button.style.top = 'auto';
+        button.style.marginLeft = '6px';
+        button.style.display = 'inline-block';
+        button.style.verticalAlign = 'top';
         button.style.background = '#7b1fa2';
         button.style.borderColor = '#6a1b9a';
         button.style.cursor = 'pointer';
@@ -134,7 +144,7 @@
             event.stopPropagation();
             event.stopImmediatePropagation();
 
-            const originalLabel = 'DO GRAFIKY';
+            const originalLabel = ' do GRAFIKY';
 
             try {
                 const vpId = getVpId();
@@ -158,8 +168,8 @@
             }
         }, true);
 
-        vfButton.parentNode.insertBefore(button, vfButton.nextSibling);
-        console.log('[DO GRAFIKY] Button pridany bez zdedeneho onclicku.');
+        vfButton.insertAdjacentElement('afterend', button);
+        console.log('[DO GRAFIKY] Button pridany za povodne front tlacidla.');
     }
 
     function init() {
