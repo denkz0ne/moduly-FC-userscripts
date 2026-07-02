@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      3.5
+// @version      3.6
 // @description  DO GRAFIKY -> oznaci ZaPoGRAF a zaradi VP do CG_Grafik - Grafika bez modalov a klikania
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -17,6 +17,7 @@
     const ZAPOGRAF_TAG_ID = '602';
     const BUTTON_ID = 'doGrafikyBtn';
     const GRAFIKA_RIGHT_OFFSET = '235px';
+    const DEFAULT_LABEL = ' do GRAFIKY 3.6';
 
     function getVpId() {
         const match = window.location.pathname.match(/\/detail\/index\/(\d+)/);
@@ -126,8 +127,8 @@
         button.id = BUTTON_ID;
         button.href = '#';
         button.className = vfButton.className;
-        button.innerHTML = '<img src="/assets/img/icons/checkbox-white.png" alt=""><span class="do-grafiky-label"> do GRAFIKY</span>';
-        button.title = 'do GRAFIKY';
+        button.innerHTML = `<img src="/assets/img/icons/checkbox-white.png" alt=""><span class="do-grafiky-label">${DEFAULT_LABEL}</span>`;
+        button.title = 'do GRAFIKY 3.6';
         button.style.right = GRAFIKA_RIGHT_OFFSET;
         button.style.background = '#7b1fa2';
         button.style.borderColor = '#6a1b9a';
@@ -137,8 +138,6 @@
             event.preventDefault();
             event.stopPropagation();
             event.stopImmediatePropagation();
-
-            const originalLabel = ' do GRAFIKY';
 
             try {
                 const vpId = getVpId();
@@ -157,7 +156,7 @@
                 window.location.reload();
             } catch (error) {
                 console.error('[DO GRAFIKY] Chyba:', error);
-                setButtonState(button, originalLabel, false);
+                setButtonState(button, DEFAULT_LABEL, false);
                 showToast(`DO GRAFIKY zlyhalo: ${error.message}`, 'error');
             }
         }, true);
