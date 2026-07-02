@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.16
+// @version      2.0.17
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
@@ -16,7 +16,7 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.16';
+    window.labelRegeneratorV2Version = '2.0.17';
 
     const ZONES = [
         { key: 'TM_top', aliases: [], pos: 'top1', label: 'pravy horny 1' },
@@ -27,9 +27,13 @@
 
     const overrides = Object.create(null);
     const baselines = Object.create(null);
+    const DELAYED_PRINT_MS = 3000;
     let mmPxCache = null;
     let refreshing = false;
     let panelControlBound = false;
+    let visualSelectionBound = false;
+    let keyboardOverrideBound = false;
+    let delayedPrintState = null;
 
     function zoneKeys(zone) {
         return [zone.key].concat(zone.aliases || []);
@@ -142,12 +146,35 @@
     }
 
     function ensurePanelControlStyles() {
-        if (document.getElementById('lr-panel-control-style-v216')) return;
+        if (document.getElementById('lr-panel-control-style-v217')) return;
         const style = document.createElement('style');
-        style.id = 'lr-panel-control-style-v216';
+        style.id = 'lr-panel-control-style-v217';
         style.textContent = `
             #lr-config-toggle {
                 display: none !important;
+            }
+
+            #label {
+                transform: scale(1.45) !important;
+                transform-origin: top left !important;
+            }
+
+            #label-regenerator-overlay {
+                pointer-events: auto !important;
+            }
+
+            html.lr-edit-mode .lr-block {
+                pointer-events: auto !important;
+                cursor: pointer !important;
+            }
+
+            html:not(.lr-edit-mode) .lr-block {
+                pointer-events: none !important;
+            }
+
+            html.lr-edit-mode .lr-block.is-selected {
+                outline: 2px solid #111 !important;
+                outline-offset: -2px !important;
             }
 
             #lr-config-panel {
@@ -246,6 +273,14 @@
             }
 
             @media print {
+                #label {
+                    transform: none !important;
+                }
+
+                #label-regenerator-overlay {
+                    pointer-events: none !important;
+                }
+
                 #lr-config-panel { display: none !important; }
             }
         `;
@@ -432,8 +467,8 @@
         scheduleStabilize();
     }
 
-    function printCurrentLabel() {
-        if (getPanelMode() === 'edit') return;
+    function printCurrentLabel(allowFromEdit) {
+        if (getPanelMode() === 'edit' && !allowFromEdit) return;
         setPanelMode('view');
         requestAnimationFrame(() => window.print());
     }
@@ -462,7 +497,7 @@
         controls.printButton.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopImmediatePropagation();
-            printCurrentLabel();
+            printCurrentLabel(false);
         }, true);
 
         controls.editButton.addEventListener('click', (event) => {
@@ -475,6 +510,175 @@
         syncPanelPrintEditState();
     }
 
+    function bindVisualBlockSelection() {
+        ensurePanelControlStyles();
+        if (visualSelectionBound) return;
+
+        document.addEventListener('click', (event) => {
+            if (getPanelMode() !== 'edit') return;
+            if (event.target.closest('#lr-config-panel')) return;
+            if (event.target.closest('#lr-detached-overrides')) return;
+
+            const block = event.target.closest('.lr-block');
+            if (!block) return;
+
+            const zone = block.dataset.zone;
+            if (!zone) return;
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (typeof window.labelRegeneratorSelectBlock === 'function') {
+                window.labelRegeneratorSelectBlock(zone);
+            }
+            syncPanelPrintEditState();
+            scheduleStabilize();
+        }, true);
+
+        visualSelectionBound = true;
+    }
+
+    function isPrintLabelPage() {
+        return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
+    }
+
+    function isDetailPage() {
+        return /\/vyrobne_prikazy\/detail\/index\//.test(location.pathname);
+    }
+
+    function isTypingTarget(target) {
+        if (!target) return false;
+        const tagName = target.tagName;
+        return tagName === 'INPUT' || tagName === 'SELECT' || tagName === 'TEXTAREA' || target.isContentEditable;
+    }
+
+    function getVpNumber() {
+        const strong = document.querySelector('strong.red');
+        return strong ? strong.textContent.trim() : null;
+    }
+
+    function persistPrintZone(zoneName, value) {
+        const zone = findZone(zoneName);
+        if (!zone) return;
+        const normalized = value == null ? '' : String(value).trim();
+        zoneKeys(zone).forEach((key) => {
+            window[key] = normalized;
+            if (normalized) {
+                localStorage.setItem(key, normalized);
+            } else {
+                localStorage.removeItem(key);
+            }
+        });
+    }
+
+    function syncLabelValuesFromDetailPage() {
+        const leftBadge = document.querySelector('#shortcut-info-label');
+        const rightBadge = document.querySelector('#shortcut-info-date');
+        const leftValue = leftBadge ? (leftBadge.textContent || '').trim() : localStorage.getItem('TM_testoLeft') || '';
+        const rightValue = rightBadge ? (rightBadge.textContent || '').trim() : localStorage.getItem('TM_testoRight') || '';
+        persistPrintZone('TM_testoLeft', leftValue);
+        persistPrintZone('TM_testoRight', rightValue);
+    }
+
+    function cancelDelayedPrint() {
+        if (!delayedPrintState) return;
+        delayedPrintState.cancelled = true;
+        clearInterval(delayedPrintState.readyTimer);
+        clearTimeout(delayedPrintState.printTimer);
+        delayedPrintState = null;
+    }
+
+    function triggerDelayedPrintWhenReady(printWindow) {
+        cancelDelayedPrint();
+        const state = {
+            cancelled: false,
+            printWindow,
+            readyTimer: null,
+            printTimer: null,
+            startedAt: Date.now()
+        };
+        delayedPrintState = state;
+
+        const cancelOnEsc = (event) => {
+            if (event.key !== 'Escape') return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            cancelDelayedPrint();
+        };
+
+        window.addEventListener('keydown', cancelOnEsc, { capture: true, once: true });
+        try {
+            printWindow.addEventListener('keydown', cancelOnEsc, { capture: true, once: true });
+        } catch (error) {
+            // Same-origin popup should allow this; ignore if browser blocks it.
+        }
+
+        state.readyTimer = setInterval(() => {
+            const timedOut = Date.now() - state.startedAt > 15000;
+            const closed = printWindow.closed;
+            const ready = !closed && !!printWindow.__labelRegeneratorReady;
+
+            if (closed || state.cancelled) {
+                cancelDelayedPrint();
+                return;
+            }
+
+            if (!ready && !timedOut) return;
+
+            clearInterval(state.readyTimer);
+            state.printTimer = setTimeout(() => {
+                if (state.cancelled || printWindow.closed) return;
+                printWindow.print();
+                setTimeout(() => {
+                    if (!printWindow.closed) printWindow.close();
+                }, 1200);
+                delayedPrintState = null;
+            }, DELAYED_PRINT_MS);
+        }, 120);
+    }
+
+    function openPrintLabelWithDelay() {
+        const vpNumber = getVpNumber();
+        if (!vpNumber) return;
+
+        syncLabelValuesFromDetailPage();
+        const url = `https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/${vpNumber}`;
+        const popup = window.open(url, '_blank');
+        if (!popup) return;
+
+        popup.addEventListener('load', () => {
+            triggerDelayedPrintWhenReady(popup);
+        }, { once: true });
+    }
+
+    function bindKeyboardOverrides() {
+        if (keyboardOverrideBound) return;
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                cancelDelayedPrint();
+                return;
+            }
+
+            if (isTypingTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
+
+            const key = event.key.toLowerCase();
+            if (key === 'p' && isPrintLabelPage() && !event.repeat) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                printCurrentLabel(true);
+                return;
+            }
+
+            if (key === 'l' && isDetailPage() && !event.repeat) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                openPrintLabelWithDelay();
+            }
+        }, true);
+
+        keyboardOverrideBound = true;
+    }
+
     function refreshAll() {
         removeLegacyInputs();
         ensureInputs();
@@ -483,6 +687,8 @@
         positionInputs();
         stabilizeOrderNumberBlock();
         bindPanelPrintEditControls();
+        bindVisualBlockSelection();
+        bindKeyboardOverrides();
         syncPanelPrintEditState();
     }
 
