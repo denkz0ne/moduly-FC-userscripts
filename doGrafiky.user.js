@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      3.1
+// @version      3.2
 // @description  DO GRAFIKY -> oznaci ZaPoGRAF a zaradi VP do CG_Grafik - Grafika bez modalov a klikania
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -28,6 +28,38 @@
 
     function buildSerializedVp(vpId) {
         return `a:1:{i:0;s:${vpId.length}:"${vpId}";}`;
+    }
+
+    function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function showToast(message, type = 'success') {
+        const existingToast = document.getElementById('doGrafikyToast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        const toast = document.createElement('div');
+        toast.id = 'doGrafikyToast';
+        toast.textContent = message;
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '99999';
+        toast.style.padding = '12px 16px';
+        toast.style.borderRadius = '8px';
+        toast.style.color = '#fff';
+        toast.style.fontSize = '14px';
+        toast.style.fontWeight = '600';
+        toast.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.25)';
+        toast.style.background = type === 'success' ? '#2e7d32' : '#c62828';
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3500);
     }
 
     async function postForm(url, params, ajax = false) {
@@ -114,13 +146,15 @@
                 await assignToGrafikaQueue(vpId);
 
                 setButtonState(button, 'HOTOVO', true);
+                showToast('VP bolo uspesne zaradene do grafiky.');
                 console.log('[DO GRAFIKY] VP uspesne zaradene do grafiky.');
 
+                await sleep(1400);
                 window.location.reload();
             } catch (error) {
                 console.error('[DO GRAFIKY] Chyba:', error);
                 setButtonState(button, originalLabel, false);
-                alert(`DO GRAFIKY zlyhalo: ${error.message}`);
+                showToast(`DO GRAFIKY zlyhalo: ${error.message}`, 'error');
             }
         }, true);
 
