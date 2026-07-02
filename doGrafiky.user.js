@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      3.7
+// @version      3.8
 // @description  DO GRAFIKY -> oznaci ZaPoGRAF a zaradi VP do CG_Grafik - Grafika bez modalov a klikania
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -16,7 +16,7 @@
     const GRAFIKA_VF_ID = '301';
     const ZAPOGRAF_TAG_ID = '602';
     const BUTTON_ID = 'doGrafikyBtn';
-    const GRAFIKA_RIGHT_OFFSET = '235px';
+    const ACTION_ROW_ID = 'doGrafikyActionRow';
     const DEFAULT_LABEL = ' do GRAFIKY';
 
     function getVpId() {
@@ -118,8 +118,56 @@
         button.style.opacity = busy ? '0.6' : '1';
     }
 
+    function makeButtonFlowInRow(button) {
+        button.style.setProperty('position', 'static', 'important');
+        button.style.setProperty('right', 'auto', 'important');
+        button.style.setProperty('left', 'auto', 'important');
+        button.style.setProperty('top', 'auto', 'important');
+        button.style.setProperty('float', 'none', 'important');
+        button.style.setProperty('display', 'inline-flex', 'important');
+        button.style.setProperty('align-items', 'center', 'important');
+        button.style.setProperty('justify-content', 'center', 'important');
+        button.style.setProperty('gap', '4px', 'important');
+        button.style.setProperty('margin', '0', 'important');
+        button.style.setProperty('white-space', 'nowrap', 'important');
+        button.style.setProperty('box-sizing', 'border-box', 'important');
+    }
+
+    function findButtonByAction(actionName) {
+        return [...document.querySelectorAll('a.datatable-add.button.green.small')]
+            .find((button) => (button.getAttribute('onclick') || '').includes(`${actionName}(`));
+    }
+
+    function createActionRow(actionBox, toolbar) {
+        const row = document.createElement('div');
+        row.id = ACTION_ROW_ID;
+        row.style.setProperty('display', 'flex', 'important');
+        row.style.setProperty('align-items', 'center', 'important');
+        row.style.setProperty('justify-content', 'flex-end', 'important');
+        row.style.setProperty('gap', '8px', 'important');
+        row.style.setProperty('padding', '8px 10px 0 10px', 'important');
+        row.style.setProperty('min-height', '28px', 'important');
+        row.style.setProperty('clear', 'both', 'important');
+
+        toolbar.insertAdjacentElement('afterend', row);
+        actionBox.style.setProperty('position', 'relative', 'important');
+
+        return row;
+    }
+
     function createButton(vfButton) {
         if (document.getElementById(BUTTON_ID)) {
+            return;
+        }
+
+        const actionBox = vfButton.closest('.box-content');
+        const toolbar = actionBox && actionBox.querySelector('.table-toolbar');
+        const checkedButton = actionBox && actionBox.querySelector('a.checked-button[title="Skontrolované"], a.checked-button');
+        const hfButton = findButtonByAction('showHfSingleForm');
+        const edButton = findButtonByAction('showEdSingleForm');
+
+        if (!actionBox || !toolbar || !checkedButton || !hfButton || !edButton || !vfButton) {
+            console.warn('[DO GRAFIKY] Nepodarilo sa najst cely blok akcii.');
             return;
         }
 
@@ -129,15 +177,10 @@
         button.className = vfButton.className;
         button.innerHTML = `<img src="/assets/img/icons/checkbox-white.png" alt=""><span class="do-grafiky-label">${DEFAULT_LABEL}</span>`;
         button.title = 'do GRAFIKY';
-        button.style.right = GRAFIKA_RIGHT_OFFSET;
         button.style.background = '#7b1fa2';
         button.style.borderColor = '#6a1b9a';
         button.style.cursor = 'pointer';
-        button.style.whiteSpace = 'nowrap';
-        button.style.width = 'auto';
         button.style.minWidth = '118px';
-        button.style.textAlign = 'center';
-        button.style.boxSizing = 'border-box';
 
         button.addEventListener('click', async (event) => {
             event.preventDefault();
@@ -166,8 +209,13 @@
             }
         }, true);
 
-        vfButton.parentNode.insertBefore(button, vfButton);
-        console.log('[DO GRAFIKY] Button pridany do povodneho radu akcii bez zasahu do layoutu webu.');
+        const row = document.getElementById(ACTION_ROW_ID) || createActionRow(actionBox, toolbar);
+        [checkedButton, hfButton, edButton, vfButton, button].forEach((actionButton) => {
+            makeButtonFlowInRow(actionButton);
+            row.appendChild(actionButton);
+        });
+
+        console.log('[DO GRAFIKY] Button pridany priamo do bloku akcii.');
     }
 
     function init() {
@@ -176,8 +224,7 @@
         const interval = setInterval(() => {
             tries += 1;
 
-            const vfButton = [...document.querySelectorAll('a.datatable-add.button.green.small')]
-                .find((button) => (button.getAttribute('onclick') || '').includes('showVpSingleForm('));
+            const vfButton = findButtonByAction('showVpSingleForm');
 
             if (vfButton) {
                 clearInterval(interval);
