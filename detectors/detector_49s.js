@@ -148,8 +148,9 @@
         const foilMaterial = valueOf(selectedFoilRow);
         const foilMaterialCode = codeOf(selectedFoilRow);
         const cutting = valueOf(exactRow(rows, ['rezanie']));
+        const aliasSource = [foilMaterial, foilType, selectedFoilRow && selectedFoilRow.label].filter(Boolean).join(' ');
         const alias = foilMaterialAlias(foilMaterial, foilMaterialCode)
-            || foilAlias(foilType || foilMaterial || (selectedFoilRow && selectedFoilRow.label));
+            || foilAlias(aliasSource);
         const details = {
             stickerKind: valueOf(firstRow(rows, ['druh samolepiek'])),
             note: valueOf(exactRow(rows, ['poznamka'])),
