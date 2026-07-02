@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.17
+// @version      2.0.18
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
@@ -16,7 +16,7 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.17';
+    window.labelRegeneratorV2Version = '2.0.18';
 
     const ZONES = [
         { key: 'TM_top', aliases: [], pos: 'top1', label: 'pravy horny 1' },
@@ -579,25 +579,57 @@
         persistPrintZone('TM_testoRight', rightValue);
     }
 
-    function cancelDelayedPrint() {
+    function clearDelayedPrintState() {
         if (!delayedPrintState) return;
-        delayedPrintState.cancelled = true;
         clearInterval(delayedPrintState.readyTimer);
-        clearTimeout(delayedPrintState.printTimer);
+        clearTimeout(delayedPrintState.delayTimer);
+        if (delayedPrintState.cancelOnEsc) {
+            window.removeEventListener('keydown', delayedPrintState.cancelOnEsc, true);
+            try {
+                delayedPrintState.printWindow.removeEventListener('keydown', delayedPrintState.cancelOnEsc, true);
+            } catch (error) {
+                // Ignore cross-window cleanup edge cases.
+            }
+        }
         delayedPrintState = null;
     }
 
-    function triggerDelayedPrintWhenReady(printWindow) {
-        cancelDelayedPrint();
-        const state = {
-            cancelled: false,
-            printWindow,
-            readyTimer: null,
-            printTimer: null,
-            startedAt: Date.now()
-        };
-        delayedPrintState = state;
+    function cancelDelayedPrint() {
+        if (!delayedPrintState) return;
+        delayedPrintState.cancelled = true;
+        clearDelayedPrintState();
+    }
 
+    function finishDelayedPrint(printWindow) {
+        if (!delayedPrintState || delayedPrintState.cancelled || printWindow.closed) return;
+        clearDelayedPrintState();
+        printWindow.print();
+        setTimeout(() => {
+            if (!printWindow.closed) printWindow.close();
+        }, 1200);
+    }
+
+    function triggerDelayedPrintWhenReady(printWindow) {
+        if (!delayedPrintState || delayedPrintState.cancelled || printWindow.closed) return;
+
+        delayedPrintState.readyTimer = setInterval(() => {
+            if (!delayedPrintState || delayedPrintState.cancelled || printWindow.closed) {
+                clearDelayedPrintState();
+                return;
+            }
+
+            const timedOut = Date.now() - delayedPrintState.startedAt > 15000;
+            const ready = !!printWindow.__labelRegeneratorReady;
+            if (!ready && !timedOut) return;
+
+            clearInterval(delayedPrintState.readyTimer);
+            delayedPrintState.readyTimer = null;
+            finishDelayedPrint(printWindow);
+        }, 120);
+    }
+
+    function startCancellableDelayedPrint(printWindow) {
+        cancelDelayedPrint();
         const cancelOnEsc = (event) => {
             if (event.key !== 'Escape') return;
             event.preventDefault();
@@ -605,35 +637,29 @@
             cancelDelayedPrint();
         };
 
-        window.addEventListener('keydown', cancelOnEsc, { capture: true, once: true });
+        delayedPrintState = {
+            cancelled: false,
+            printWindow,
+            readyTimer: null,
+            delayTimer: null,
+            cancelOnEsc,
+            startedAt: Date.now()
+        };
+
+        window.addEventListener('keydown', cancelOnEsc, true);
         try {
-            printWindow.addEventListener('keydown', cancelOnEsc, { capture: true, once: true });
+            printWindow.addEventListener('keydown', cancelOnEsc, true);
         } catch (error) {
             // Same-origin popup should allow this; ignore if browser blocks it.
         }
 
-        state.readyTimer = setInterval(() => {
-            const timedOut = Date.now() - state.startedAt > 15000;
-            const closed = printWindow.closed;
-            const ready = !closed && !!printWindow.__labelRegeneratorReady;
-
-            if (closed || state.cancelled) {
-                cancelDelayedPrint();
+        delayedPrintState.delayTimer = setTimeout(() => {
+            if (!delayedPrintState || delayedPrintState.cancelled || printWindow.closed) {
+                clearDelayedPrintState();
                 return;
             }
-
-            if (!ready && !timedOut) return;
-
-            clearInterval(state.readyTimer);
-            state.printTimer = setTimeout(() => {
-                if (state.cancelled || printWindow.closed) return;
-                printWindow.print();
-                setTimeout(() => {
-                    if (!printWindow.closed) printWindow.close();
-                }, 1200);
-                delayedPrintState = null;
-            }, DELAYED_PRINT_MS);
-        }, 120);
+            triggerDelayedPrintWhenReady(printWindow);
+        }, DELAYED_PRINT_MS);
     }
 
     function openPrintLabelWithDelay() {
@@ -645,9 +671,7 @@
         const popup = window.open(url, '_blank');
         if (!popup) return;
 
-        popup.addEventListener('load', () => {
-            triggerDelayedPrintWhenReady(popup);
-        }, { once: true });
+        startCancellableDelayedPrint(popup);
     }
 
     function bindKeyboardOverrides() {
