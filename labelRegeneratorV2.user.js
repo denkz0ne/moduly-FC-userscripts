@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.15
+// @version      2.0.16
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
@@ -16,7 +16,7 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.15';
+    window.labelRegeneratorV2Version = '2.0.16';
 
     const ZONES = [
         { key: 'TM_top', aliases: [], pos: 'top1', label: 'pravy horny 1' },
@@ -29,6 +29,7 @@
     const baselines = Object.create(null);
     let mmPxCache = null;
     let refreshing = false;
+    let panelControlBound = false;
 
     function zoneKeys(zone) {
         return [zone.key].concat(zone.aliases || []);
@@ -135,6 +136,117 @@
 
             @media print {
                 #lr-detached-overrides { display: none !important; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function ensurePanelControlStyles() {
+        if (document.getElementById('lr-panel-control-style-v216')) return;
+        const style = document.createElement('style');
+        style.id = 'lr-panel-control-style-v216';
+        style.textContent = `
+            #lr-config-toggle {
+                display: none !important;
+            }
+
+            #lr-config-panel {
+                border-radius: 0 !important;
+                border: 1px solid #b8b8b8 !important;
+                background: #eeeeee !important;
+                box-shadow: none !important;
+                color: #222 !important;
+                padding: 10px !important;
+                font-family: Arial, sans-serif !important;
+            }
+
+            #lr-config-panel .lr-panel-header,
+            #lr-config-panel .lr-panel-title,
+            #lr-config-panel .lr-panel-actions,
+            #lr-config-panel label[for],
+            #lr-config-panel .lr-panel-topbar label {
+                display: none !important;
+            }
+
+            #lr-config-panel .lr-panel-topbar {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+                align-items: stretch !important;
+                margin: 0 0 8px !important;
+            }
+
+            #lr-config-panel .lr-panel-topbar > div:first-child,
+            #lr-config-panel .lr-panel-topbar .lr-selected-chip {
+                display: none !important;
+            }
+
+            #lr-config-panel .lr-btn,
+            #lr-config-panel button {
+                border-radius: 0 !important;
+                border: 1px solid #bcbcbc !important;
+                background: #f8f8f8 !important;
+                color: #222 !important;
+                box-shadow: none !important;
+                padding: 8px 10px !important;
+                font: 700 12px/1 Arial, sans-serif !important;
+                letter-spacing: 0 !important;
+            }
+
+            #lr-config-panel button.lr-mode-edit.is-active,
+            html.lr-edit-mode #lr-config-panel button.lr-mode-edit {
+                background: #111 !important;
+                border-color: #111 !important;
+                color: #fff !important;
+            }
+
+            #lr-config-panel button.lr-mode-print.is-active,
+            html:not(.lr-edit-mode) #lr-config-panel button.lr-mode-print {
+                background: #d6d6d6 !important;
+                border-color: #9f9f9f !important;
+                color: #111 !important;
+            }
+
+            html.lr-edit-mode #lr-config-panel button.lr-mode-print,
+            #lr-config-panel button.lr-mode-print:disabled {
+                background: #dedede !important;
+                border-color: #c8c8c8 !important;
+                color: #888 !important;
+                cursor: not-allowed !important;
+                opacity: 1 !important;
+            }
+
+            #lr-config-panel .lr-global-card,
+            #lr-config-panel .lr-block-card {
+                border-radius: 0 !important;
+                border: 1px solid #c9c9c9 !important;
+                background: #f4f4f4 !important;
+                box-shadow: none !important;
+            }
+
+            #lr-config-panel .lr-block-card h3,
+            #lr-config-panel .lr-global-card h3,
+            #lr-config-panel .lr-section-title {
+                color: #333 !important;
+                letter-spacing: 0.03em !important;
+            }
+
+            #lr-config-panel input,
+            #lr-config-panel select {
+                border-radius: 0 !important;
+                border: 1px solid #bdbdbd !important;
+                background: #fff !important;
+                color: #111 !important;
+                box-shadow: none !important;
+            }
+
+            #lr-config-panel .lr-select-block-btn.is-active {
+                background: #333 !important;
+                color: #fff !important;
+            }
+
+            @media print {
+                #lr-config-panel { display: none !important; }
             }
         `;
         document.head.appendChild(style);
@@ -289,6 +401,80 @@
         obj.dataset.lrAnchoredObj = compressed ? 'compressed' : 'normal';
     }
 
+    function getPanelMode() {
+        return document.documentElement.classList.contains('lr-edit-mode') ? 'edit' : 'view';
+    }
+
+    function getPanelControlButtons() {
+        const panel = document.getElementById('lr-config-panel');
+        if (!panel) return null;
+
+        const buttons = Array.from(panel.querySelectorAll('button'));
+        const printButton = buttons.find((button) => /^(print|view|tlacit|tlačiť)$/i.test(button.textContent.trim())) || null;
+        const editButton = buttons.find((button) => /^edit$/i.test(button.textContent.trim())) || null;
+        if (!printButton || !editButton) return null;
+
+        printButton.textContent = 'Print';
+        editButton.textContent = 'Edit';
+        printButton.classList.add('lr-mode-print');
+        editButton.classList.add('lr-mode-edit');
+        return { panel, printButton, editButton };
+    }
+
+    function setPanelMode(mode) {
+        const nextMode = mode === 'edit' ? 'edit' : 'view';
+        if (typeof window.labelRegeneratorSetMode === 'function') {
+            window.labelRegeneratorSetMode(nextMode);
+        } else {
+            document.documentElement.classList.toggle('lr-edit-mode', nextMode === 'edit');
+        }
+        syncPanelPrintEditState();
+        scheduleStabilize();
+    }
+
+    function printCurrentLabel() {
+        if (getPanelMode() === 'edit') return;
+        setPanelMode('view');
+        requestAnimationFrame(() => window.print());
+    }
+
+    function syncPanelPrintEditState() {
+        ensurePanelControlStyles();
+        const controls = getPanelControlButtons();
+        if (!controls) return;
+
+        const editMode = getPanelMode() === 'edit';
+        controls.printButton.disabled = editMode;
+        controls.printButton.setAttribute('aria-disabled', editMode ? 'true' : 'false');
+        controls.printButton.classList.toggle('is-active', !editMode);
+        controls.editButton.classList.toggle('is-active', editMode);
+        controls.editButton.setAttribute('aria-pressed', editMode ? 'true' : 'false');
+    }
+
+    function bindPanelPrintEditControls() {
+        ensurePanelControlStyles();
+        const controls = getPanelControlButtons();
+        if (!controls || panelControlBound) {
+            syncPanelPrintEditState();
+            return;
+        }
+
+        controls.printButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            printCurrentLabel();
+        }, true);
+
+        controls.editButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            setPanelMode(getPanelMode() === 'edit' ? 'view' : 'edit');
+        }, true);
+
+        panelControlBound = true;
+        syncPanelPrintEditState();
+    }
+
     function refreshAll() {
         removeLegacyInputs();
         ensureInputs();
@@ -296,6 +482,8 @@
         applyOverrideValues();
         positionInputs();
         stabilizeOrderNumberBlock();
+        bindPanelPrintEditControls();
+        syncPanelPrintEditState();
     }
 
     function scheduleStabilize() {
