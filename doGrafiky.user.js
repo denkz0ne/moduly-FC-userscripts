@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      3.3
+// @version      3.4
 // @description  DO GRAFIKY -> oznaci ZaPoGRAF a zaradi VP do CG_Grafik - Grafika bez modalov a klikania
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -16,6 +16,7 @@
     const GRAFIKA_VF_ID = '301';
     const ZAPOGRAF_TAG_ID = '602';
     const BUTTON_ID = 'doGrafikyBtn';
+    const BUTTON_ROW_ID = 'doGrafikyButtonRow';
 
     function getVpId() {
         const match = window.location.pathname.match(/\/detail\/index\/(\d+)/);
@@ -118,10 +119,54 @@
         button.style.opacity = busy ? '0.6' : '1';
     }
 
+    function normalizeActionButton(button) {
+        button.style.position = 'static';
+        button.style.right = 'auto';
+        button.style.top = 'auto';
+        button.style.margin = '0';
+        button.style.display = 'inline-block';
+        button.style.verticalAlign = 'top';
+    }
+
+    function ensureButtonRow(buttons) {
+        let row = document.getElementById(BUTTON_ROW_ID);
+        if (row) {
+            return row;
+        }
+
+        const firstButton = buttons[0];
+        const parent = firstButton.parentNode;
+
+        row = document.createElement('div');
+        row.id = BUTTON_ROW_ID;
+        row.style.position = 'absolute';
+        row.style.right = '10px';
+        row.style.top = `${firstButton.offsetTop}px`;
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.gap = '6px';
+        row.style.flexWrap = 'nowrap';
+        row.style.zIndex = '5';
+
+        parent.insertBefore(row, firstButton);
+
+        buttons.forEach((button) => {
+            normalizeActionButton(button);
+            row.appendChild(button);
+        });
+
+        return row;
+    }
+
     function createButton(vfButton) {
         if (document.getElementById(BUTTON_ID)) {
             return;
         }
+
+        const actionButtons = [...document.querySelectorAll('a.datatable-add.button.green.small')]
+            .filter((button) => /show(Hf|Ed|Vp)SingleForm\(/.test(button.getAttribute('onclick') || ''));
+
+        const buttonRow = ensureButtonRow(actionButtons);
 
         const button = document.createElement('a');
         button.id = BUTTON_ID;
@@ -129,15 +174,11 @@
         button.className = vfButton.className;
         button.innerHTML = '<img src="/assets/img/icons/checkbox-white.png" alt=""><span class="do-grafiky-label"> do GRAFIKY</span>';
         button.title = 'do GRAFIKY';
-        button.style.position = 'static';
-        button.style.right = 'auto';
-        button.style.top = 'auto';
-        button.style.marginLeft = '6px';
-        button.style.display = 'inline-block';
-        button.style.verticalAlign = 'top';
         button.style.background = '#7b1fa2';
         button.style.borderColor = '#6a1b9a';
         button.style.cursor = 'pointer';
+
+        normalizeActionButton(button);
 
         button.addEventListener('click', async (event) => {
             event.preventDefault();
@@ -168,8 +209,8 @@
             }
         }, true);
 
-        vfButton.insertAdjacentElement('afterend', button);
-        console.log('[DO GRAFIKY] Button pridany za povodne front tlacidla.');
+        buttonRow.appendChild(button);
+        console.log('[DO GRAFIKY] Button pridany do spolocneho radu front tlacidiel.');
     }
 
     function init() {
