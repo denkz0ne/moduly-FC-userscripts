@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.20
+// @version      2.0.21
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
@@ -17,15 +17,72 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.20';
+    window.labelRegeneratorV2Version = '2.0.21';
 
     const CONFIG_KEYS = [
         'labelRegeneratorLayoutConfigV201'
     ];
     const EXPORT_TYPE = 'labelRegeneratorV2.editorConfig';
+    const L_PRINT_DELAY_OVERRIDE_MS = 1000;
+    const AUTO_CLOSE_AFTER_PRINT_MS = 1200;
 
     function isPrintLabelPage() {
         return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
+    }
+
+    function isDetailPage() {
+        return /\/vyrobne_prikazy\/detail\/index\//.test(location.pathname);
+    }
+
+    function patchDelayedPrintTimeout() {
+        if (!isDetailPage() || window.__lrDelayPatchV221) return;
+
+        const originalSetTimeout = window.setTimeout.bind(window);
+        window.setTimeout = function (callback, delay) {
+            const args = Array.prototype.slice.call(arguments, 2);
+            let nextDelay = delay;
+            if (delay === 3000 && typeof callback === 'function' && String(callback).includes('triggerDelayedPrintWhenReady')) {
+                nextDelay = L_PRINT_DELAY_OVERRIDE_MS;
+            }
+            return originalSetTimeout(callback, nextDelay, ...args);
+        };
+        window.__lrDelayPatchV221 = true;
+    }
+
+    function patchPrintAutoClose() {
+        if (!isPrintLabelPage() || window.__lrPrintAutoClosePatchV221) return;
+
+        const originalPrint = window.print.bind(window);
+        window.print = function () {
+            const result = originalPrint();
+            setTimeout(() => {
+                try {
+                    if (!window.closed) window.close();
+                } catch (error) {
+                    // Browser may block closing non-popup tabs; ignore.
+                }
+            }, AUTO_CLOSE_AFTER_PRINT_MS);
+            return result;
+        };
+        window.__lrPrintAutoClosePatchV221 = true;
+    }
+
+    function bindEnterPrintFromOverrideInputs() {
+        if (!isPrintLabelPage() || window.__lrEnterPrintPatchV221) return;
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement)) return;
+            if (!target.matches('#lr-detached-overrides input[data-override-zone]')) return;
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            target.blur();
+            window.print();
+        }, true);
+
+        window.__lrEnterPrintPatchV221 = true;
     }
 
     function ensureNonPrintCleanupStyles() {
@@ -157,7 +214,7 @@
         return {
             type: EXPORT_TYPE,
             script: 'labelRegeneratorV2',
-            version: window.labelRegeneratorV2Version || '2.0.20',
+            version: window.labelRegeneratorV2Version || '2.0.21',
             exportedAt: new Date().toISOString(),
             keys
         };
@@ -284,6 +341,9 @@
     }
 
     function scheduleEnsureExportImportPanel() {
+        patchDelayedPrintTimeout();
+        patchPrintAutoClose();
+        bindEnterPrintFromOverrideInputs();
         keepEditorUiOutOfDetailPage();
         ensureExportImportPanel();
         requestAnimationFrame(() => {
