@@ -83,11 +83,15 @@
     }
 
     function parseRope(rows) {
-        const raw = firstValue(rows, ['napinacie lano']);
-        const normalized = api.normalizeKey(raw);
-        if (!raw || normalized.includes('bez')) return { rope: raw, ropeMeters: '', ropeMark: '' };
-        const meters = (String(raw).replace(',', '.').match(/(\d+(?:\.\d+)?)\s*m\b/i) || [])[1]
-            || (String(raw).match(/\b(\d+)\b/) || [])[1]
+        const values = allValues(rows, ['napinacie lano']);
+        const raw = values.join(' | ');
+        const normalizedValues = values.map(api.normalizeKey);
+        const enabled = normalizedValues.some(value => value.includes('chcem') && value.includes('lano'));
+        const disabled = normalizedValues.some(value => value.includes('bez'));
+        if (!raw || disabled || !enabled) return { rope: raw, ropeMeters: '', ropeMark: '' };
+        const numericRaw = values.find(value => /\d/.test(value)) || '';
+        const meters = (String(numericRaw).replace(',', '.').match(/(\d+(?:\.\d+)?)\s*m\b/i) || [])[1]
+            || (String(numericRaw).replace(',', '.').match(/\b(\d+(?:\.\d+)?)\b/) || [])[1]
             || '';
         const cleanMeters = meters ? String(Number(meters)).replace('.', ',') : '';
         return { rope: raw, ropeMeters: cleanMeters, ropeMark: cleanMeters ? `${cleanMeters}m` : '' };
