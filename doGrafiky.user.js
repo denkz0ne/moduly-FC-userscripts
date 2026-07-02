@@ -2,7 +2,7 @@
 // @name         Do grafiky
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      3.6
+// @version      3.7
 // @description  DO GRAFIKY -> oznaci ZaPoGRAF a zaradi VP do CG_Grafik - Grafika bez modalov a klikania
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/doGrafiky.user.js
@@ -17,7 +17,7 @@
     const ZAPOGRAF_TAG_ID = '602';
     const BUTTON_ID = 'doGrafikyBtn';
     const GRAFIKA_RIGHT_OFFSET = '235px';
-    const DEFAULT_LABEL = ' do GRAFIKY 3.6';
+    const DEFAULT_LABEL = ' do GRAFIKY';
 
     function getVpId() {
         const match = window.location.pathname.match(/\/detail\/index\/(\d+)/);
@@ -128,11 +128,16 @@
         button.href = '#';
         button.className = vfButton.className;
         button.innerHTML = `<img src="/assets/img/icons/checkbox-white.png" alt=""><span class="do-grafiky-label">${DEFAULT_LABEL}</span>`;
-        button.title = 'do GRAFIKY 3.6';
+        button.title = 'do GRAFIKY';
         button.style.right = GRAFIKA_RIGHT_OFFSET;
         button.style.background = '#7b1fa2';
         button.style.borderColor = '#6a1b9a';
         button.style.cursor = 'pointer';
+        button.style.whiteSpace = 'nowrap';
+        button.style.width = 'auto';
+        button.style.minWidth = '118px';
+        button.style.textAlign = 'center';
+        button.style.boxSizing = 'border-box';
 
         button.addEventListener('click', async (event) => {
             event.preventDefault();
