@@ -21,6 +21,38 @@
         return String(select.value || '').trim() !== '';
     }
 
+    function getZdRows(root) {
+        const scope = (root && root.querySelector && root.querySelector('#VPZDParams'))
+            || document.querySelector('#zd-form-container #VPZDParams');
+        if (!scope) return [];
+        return Array.from(scope.querySelectorAll(':scope > div.flex')).map(row => {
+            const cells = row.querySelectorAll(':scope > div');
+            if (cells.length < 2) return null;
+            const label = api.clean(cells[0].textContent || '');
+            const values = Array.from(cells[1].querySelectorAll('.whitespace-pre-line'))
+                .map(el => api.clean(el.textContent || ''))
+                .filter(Boolean);
+            return { label, key: api.normalizeKey(label), value: values.join(' | ') || api.clean(cells[1].textContent || '') };
+        }).filter(Boolean);
+    }
+
+    function getZdValue(root, labels) {
+        const keys = labels.map(api.normalizeKey);
+        const row = getZdRows(root).find(item => keys.some(key => item.key.includes(key)));
+        return row ? row.value : '';
+    }
+
+    function parseClockFromDetail(code, detailInfo) {
+        const format = getZdValue(detailInfo, ['format platna']);
+        const match = String(format || '').replace(',', '.').match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+        if (!match) return null;
+        const left = String(Number(match[1])).replace('.', ',');
+        const right = String(Number(match[2])).replace('.', ',');
+        const displaySize = left + ' ' + right;
+        const sizeAlias = (left + 'x' + right + '_cm').replace(',', '.');
+        return { kind: 'hod', code: String(code || '48fh').toLowerCase(), displayAlias: displaySize + ' + hod', sizeAlias };
+    }
+
     function detectExpressToken() {
         const badges = Array.from(document.querySelectorAll('.badge'));
         return badges.some(badge => api.clean(badge.textContent).toUpperCase() === 'EXPR') ? 'EXPR' : '';
@@ -45,7 +77,7 @@
         if (/^48fh\d{4,6}$/.test(lower)) {
             const split = splitDigits(lower.replace(/^48fh/, ''));
             if (!split) return null;
-            return { kind: 'hod', code: lower, displayAlias: `${split.displaySize} HOD`, sizeAlias: split.sizeAlias };
+            return { kind: 'hod', code: lower, displayAlias: `${split.displaySize} + hod`, sizeAlias: split.sizeAlias };
         }
         const match = lower.match(/^48r(p?)(\d{4,6})$/);
         if (!match) return null;
@@ -68,7 +100,10 @@
             return /^48(?:r|rp|fh|x)/i.test(String(internalCode || ''));
         },
         detect(context) {
-            const parsed = parseCode(context.internalCode);
+            let parsed = parseCode(context.internalCode);
+            if (!parsed && /^48fh/i.test(String(context.internalCode || ''))) {
+                parsed = parseClockFromDetail(context.internalCode, context.detailInfo);
+            }
             if (!parsed) return null;
             const canvas = parsed.kind === 'regular' && api.hasCanvasSelected(context.detailInfo);
             const giftPack = api.hasGiftPack(context.detailInfo);
