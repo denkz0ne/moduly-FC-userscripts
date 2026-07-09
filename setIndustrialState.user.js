@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.5
+// @version      2.6
 // @description  Rychla zmena stavu VP na Rozrobena a background spracovanie VP bez refreshu.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -76,32 +76,22 @@
 
     function styleInlineLink(link) {
         Object.assign(link.style, {
-            color: '#0f3ea8',
+            color: '#1f5fd1',
             fontWeight: '700',
             fontSize: '15px',
-            lineHeight: 'inherit',
+            lineHeight: '1.1',
             textDecoration: 'none',
             cursor: 'pointer',
             display: 'inline-block',
-            marginLeft: '10px',
-            padding: '1px 7px',
+            marginLeft: '0',
+            padding: '1px 10px 2px',
             borderRadius: '4px',
-            border: '1px solid #93c5fd',
-            background: '#eff6ff',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85)'
+            border: '1px solid #8bb3ff',
+            background: 'transparent',
+            boxShadow: 'none'
         });
-        link.onmouseenter = () => {
-            link.style.color = '#0b2f7d';
-            link.style.textDecoration = 'underline';
-            link.style.background = '#dbeafe';
-            link.style.borderColor = '#60a5fa';
-        };
-        link.onmouseleave = () => {
-            link.style.color = '#0f3ea8';
-            link.style.textDecoration = 'none';
-            link.style.background = '#eff6ff';
-            link.style.borderColor = '#93c5fd';
-        };
+        link.onmouseenter = null;
+        link.onmouseleave = null;
         return link;
     }
 
@@ -117,11 +107,13 @@
         actions = document.createElement('span');
         actions.id = ACTIONS_ID;
         Object.assign(actions.style, {
-            marginLeft: '2px',
+            marginLeft: '0',
+            marginTop: '6px',
             fontSize: 'inherit',
             whiteSpace: 'nowrap',
-            display: 'inline-flex',
-            alignItems: 'center'
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
         });
 
         host.appendChild(actions);
