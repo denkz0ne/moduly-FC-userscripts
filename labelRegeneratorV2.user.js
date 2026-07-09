@@ -2,7 +2,7 @@
 // @name         labelRegeneratorV2
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      2.0.23
+// @version      2.0.24
 // @description  Uprava print stitku, overlay zony, konfigurator layoutu a klavesa L pre otvorenie, tlac a zatvorenie stitku.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelRegeneratorV2.user.js
@@ -10,6 +10,7 @@
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/d2c3c4c1009d6c08a5de189bbdd777fc53fccbe6/labelRegeneratorV2.user.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/769b84c6bc6fdde85ace956714a25b983e879ab1/labelRegeneratorV2.user.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/b88007236d583fb7fa692ec59fc0c671dad52c9b/labelRegeneratorV2.user.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/labelInstantPrint.beta.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/printLabel/*
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
@@ -19,7 +20,7 @@
 (function () {
     'use strict';
 
-    window.labelRegeneratorV2Version = '2.0.23';
+    window.labelRegeneratorV2Version = '2.0.24';
 
     function isPrintLabelPage() {
         return /\/vyrobne_prikazy\/detail\/printLabel\//.test(location.pathname);
