@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.1
+// @version      2.2
 // @description  Rychla zmena stavu VP na Rozrobena a otvorenie prislusenstva bez refreshu.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -13,12 +13,12 @@
 (function () {
     'use strict';
 
-    const PANEL_ID = 'fc-userscripts-action-panel';
     const STATE_VALUE_IN_PROGRESS = '1';
     const STATE_LABEL_IN_PROGRESS = 'rozrobena';
-    const STATUS_TEXT_ID = 'set-industrial-state-status';
     const BUTTON_ROZROBENA_ID = 'setIndustrialStateQuickButton';
     const BUTTON_ACCESSORY_ID = 'setIndustrialStateAccessoryButton';
+    const ACTIONS_ID = 'setIndustrialStateInlineActions';
+    const STATUS_TEXT_ID = 'set-industrial-state-status';
 
     let isBusy = false;
 
@@ -33,60 +33,6 @@
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
-    }
-
-    function ensureActionPanel() {
-        if (window.FCUserscripts && typeof window.FCUserscripts.ensureActionPanel === 'function') {
-            return window.FCUserscripts.ensureActionPanel();
-        }
-
-        let panel = document.getElementById(PANEL_ID);
-        if (panel) return panel;
-
-        panel = document.createElement('div');
-        panel.id = PANEL_ID;
-        Object.assign(panel.style, {
-            position: 'fixed',
-            right: '20px',
-            bottom: '20px',
-            zIndex: '999997',
-            width: '118px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'stretch',
-            gap: '6px'
-        });
-        document.body.appendChild(panel);
-        return panel;
-    }
-
-    function styleActionButton(button, options = {}) {
-        if (window.FCUserscripts && typeof window.FCUserscripts.styleActionButton === 'function') {
-            window.FCUserscripts.styleActionButton(button, options);
-            return button;
-        }
-
-        const background = options.background || '#4a5568';
-        const borderColor = options.borderColor || background;
-        Object.assign(button.style, {
-            position: 'static',
-            display: 'block',
-            width: '100%',
-            boxSizing: 'border-box',
-            margin: '0',
-            padding: '10px 12px',
-            textAlign: 'center',
-            lineHeight: '16px',
-            fontWeight: '700',
-            color: '#fff',
-            background,
-            border: `1px solid ${borderColor}`,
-            borderRadius: '6px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-            textDecoration: 'none'
-        });
-        return button;
     }
 
     function getSettingsForm() {
@@ -109,25 +55,45 @@
         return document.getElementById(STATUS_TEXT_ID);
     }
 
+    function getInlineActionsHost() {
+        return document.querySelector('#frm-settings .actual');
+    }
+
+    function getInlineActionsNode() {
+        return document.getElementById(ACTIONS_ID);
+    }
+
+    function styleInlineLink(link) {
+        Object.assign(link.style, {
+            color: '#1d4ed8',
+            fontWeight: '700',
+            textDecoration: 'none',
+            cursor: 'pointer'
+        });
+        link.onmouseenter = () => {
+            link.style.textDecoration = 'underline';
+        };
+        link.onmouseleave = () => {
+            link.style.textDecoration = 'none';
+        };
+        return link;
+    }
+
     function ensureStatusNode() {
-        const panel = ensureActionPanel();
         let node = getStatusNode();
         if (node) return node;
 
-        node = document.createElement('div');
+        const actions = ensureInlineActionsNode();
+        node = document.createElement('span');
         node.id = STATUS_TEXT_ID;
         Object.assign(node.style, {
             fontSize: '11px',
             lineHeight: '1.35',
-            color: '#e2e8f0',
-            background: '#1f2937',
-            border: '1px solid #111827',
-            borderRadius: '6px',
-            padding: '8px 10px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.18)'
+            marginLeft: '8px',
+            color: '#6b7280'
         });
-        node.textContent = 'Pripravene';
-        panel.appendChild(node);
+        node.textContent = '';
+        actions.appendChild(node);
         return node;
     }
 
@@ -143,8 +109,6 @@
         };
 
         const theme = themes[tone] || themes.idle;
-        node.style.background = theme.background;
-        node.style.borderColor = theme.border;
         node.style.color = theme.color;
     }
 
@@ -154,7 +118,7 @@
             const button = document.getElementById(id);
             if (!button) return;
             button.style.pointerEvents = nextBusy ? 'none' : '';
-            button.style.opacity = nextBusy ? '0.7' : '1';
+            button.style.opacity = nextBusy ? '0.65' : '1';
         });
     }
 
@@ -268,7 +232,7 @@
     }
 
     function ensureButton(id, text, title, options, handler) {
-        const panel = ensureActionPanel();
+        const actions = ensureInlineActionsNode();
         let button = document.getElementById(id);
 
         if (!button) {
@@ -280,13 +244,47 @@
             button.addEventListener('click', handler);
         }
 
-        styleActionButton(button, options);
+        styleInlineLink(button);
 
-        if (button.parentNode !== panel) {
-            panel.appendChild(button);
+        if (button.parentNode !== actions) {
+            actions.appendChild(button);
         }
 
         return button;
+    }
+
+    function ensureSeparator(id, text) {
+        const actions = ensureInlineActionsNode();
+        let node = document.getElementById(id);
+        if (!node) {
+            node = document.createElement('span');
+            node.id = id;
+            node.textContent = text;
+            node.style.color = '#6b7280';
+            actions.appendChild(node);
+        }
+        return node;
+    }
+
+    function ensureInlineActionsNode() {
+        const host = getInlineActionsHost();
+        if (!host) {
+            throw new Error('Inline host pre akcie sa nenasiel.');
+        }
+
+        let actions = getInlineActionsNode();
+        if (actions) return actions;
+
+        actions = document.createElement('span');
+        actions.id = ACTIONS_ID;
+        Object.assign(actions.style, {
+            marginLeft: '8px',
+            fontSize: '13px',
+            whiteSpace: 'nowrap'
+        });
+
+        host.appendChild(actions);
+        return actions;
     }
 
     function canBoot() {
@@ -298,17 +296,19 @@
 
         ensureButton(
             BUTTON_ROZROBENA_ID,
-            'Rozrobena',
+            '[Rozrobena]',
             'Zmeni stav VP na Rozrobena bez potvrdzovacieho dialogu',
-            { background: '#2e7d32', borderColor: '#1b5e20' },
+            {},
             runQuickRozrobena
         );
 
+        ensureSeparator('setIndustrialStateSep', ' | ');
+
         ensureButton(
             BUTTON_ACCESSORY_ID,
-            'Prislusenstvo',
+            '[Prislusenstvo]',
             'Otvori prislusenstvo a na pozadi zmeni stav na Rozrobena',
-            { background: '#1565c0', borderColor: '#0d47a1' },
+            {},
             runAccessoryFlow
         );
 
