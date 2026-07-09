@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.3
-// @description  Rychla zmena stavu VP na Rozrobena a otvorenie prislusenstva bez refreshu.
+// @version      2.4
+// @description  Rychla zmena stavu VP na Rozrobena a background spracovanie VP bez refreshu.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
@@ -19,8 +19,10 @@
     const BUTTON_ACCESSORY_ID = 'setIndustrialStateAccessoryButton';
     const ACTIONS_ID = 'setIndustrialStateInlineActions';
     const STATUS_TEXT_ID = 'set-industrial-state-status';
+    const FRONTS_CONTAINER_ID = 'vf-ed-hf';
+    const PROCESSING_FLAG = 'data-fc-processing-bound';
 
-    let isBusy = false;
+    let stateBusy = false;
 
     function log(...args) {
         console.log('[setIndustrialState]', ...args);
@@ -33,6 +35,11 @@
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function getVpId() {
+        const match = window.location.pathname.match(/\/index\/(\d+)/);
+        return match ? match[1] : '';
     }
 
     function getSettingsForm() {
@@ -63,31 +70,51 @@
         return document.getElementById(ACTIONS_ID);
     }
 
+    function getFrontsContainer() {
+        return document.getElementById(FRONTS_CONTAINER_ID);
+    }
+
     function styleInlineLink(link) {
         Object.assign(link.style, {
             color: '#0f3ea8',
             fontWeight: '700',
-            fontSize: '15px',
-            textDecoration: 'none',
+            fontSize: 'inherit',
+            lineHeight: 'inherit',
+            textDecoration: 'underline',
             cursor: 'pointer',
             display: 'inline-block',
-            padding: '1px 6px',
-            borderRadius: '4px',
-            border: '1px solid #93c5fd',
-            background: '#eff6ff',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85)'
+            marginLeft: '10px'
         });
         link.onmouseenter = () => {
-            link.style.textDecoration = 'underline';
-            link.style.background = '#dbeafe';
-            link.style.borderColor = '#60a5fa';
+            link.style.color = '#0b2f7d';
         };
         link.onmouseleave = () => {
-            link.style.textDecoration = 'none';
-            link.style.background = '#eff6ff';
-            link.style.borderColor = '#93c5fd';
+            link.style.color = '#0f3ea8';
         };
         return link;
+    }
+
+    function ensureInlineActionsNode() {
+        const host = getInlineActionsHost();
+        if (!host) {
+            throw new Error('Inline host pre akcie sa nenasiel.');
+        }
+
+        let actions = getInlineActionsNode();
+        if (actions) return actions;
+
+        actions = document.createElement('span');
+        actions.id = ACTIONS_ID;
+        Object.assign(actions.style, {
+            marginLeft: '2px',
+            fontSize: 'inherit',
+            whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center'
+        });
+
+        host.appendChild(actions);
+        return actions;
     }
 
     function ensureStatusNode() {
@@ -100,7 +127,7 @@
         Object.assign(node.style, {
             fontSize: '11px',
             lineHeight: '1.35',
-            marginLeft: '8px',
+            marginLeft: '10px',
             color: '#6b7280'
         });
         node.textContent = '';
@@ -110,26 +137,25 @@
 
     function setStatus(text, tone) {
         const node = ensureStatusNode();
-        node.textContent = text;
+        node.textContent = text || '';
 
-        const themes = {
-            idle: { background: '#1f2937', border: '#111827', color: '#e5e7eb' },
-            busy: { background: '#1d4ed8', border: '#1e40af', color: '#eff6ff' },
-            success: { background: '#166534', border: '#14532d', color: '#ecfdf5' },
-            error: { background: '#991b1b', border: '#7f1d1d', color: '#fef2f2' }
+        const colors = {
+            idle: '#6b7280',
+            busy: '#1d4ed8',
+            success: '#166534',
+            error: '#991b1b'
         };
 
-        const theme = themes[tone] || themes.idle;
-        node.style.color = theme.color;
+        node.style.color = colors[tone] || colors.idle;
     }
 
-    function setBusy(nextBusy) {
-        isBusy = nextBusy;
+    function setStateBusy(nextBusy) {
+        stateBusy = nextBusy;
         [BUTTON_ROZROBENA_ID, BUTTON_ACCESSORY_ID].forEach(id => {
             const button = document.getElementById(id);
             if (!button) return;
             button.style.pointerEvents = nextBusy ? 'none' : '';
-            button.style.opacity = nextBusy ? '0.65' : '1';
+            button.style.opacity = nextBusy ? '0.6' : '1';
         });
     }
 
@@ -143,16 +169,24 @@
         return normalizeText(label && label.textContent).includes(STATE_LABEL_IN_PROGRESS);
     }
 
+    function updateInlineActionsVisibility() {
+        const actions = getInlineActionsNode();
+        if (!actions) return;
+        actions.style.display = isAlreadyRozrobena() ? 'none' : 'inline-flex';
+    }
+
     function updateUiToRozrobena() {
         const label = getStateLabel();
         if (label) {
-            label.textContent = 'Rozrobena';
+            label.textContent = 'Rozrobená';
         }
 
         const select = getStateSelect();
         if (select) {
             select.value = STATE_VALUE_IN_PROGRESS;
         }
+
+        updateInlineActionsVisibility();
     }
 
     function buildSettingsPayload() {
@@ -163,7 +197,7 @@
 
         const formData = new FormData(form);
         formData.set('new_state', STATE_VALUE_IN_PROGRESS);
-        formData.set('save', 'Potvrdit');
+        formData.set('save', 'Potvrdiť');
 
         return new URLSearchParams(formData);
     }
@@ -198,51 +232,51 @@
     }
 
     async function runQuickRozrobena() {
-        if (isBusy) return;
+        if (stateBusy) return;
 
         if (isAlreadyRozrobena()) {
-            setStatus('VP uz je Rozrobena', 'idle');
+            updateInlineActionsVisibility();
             return;
         }
 
-        setBusy(true);
+        setStateBusy(true);
         setStatus('Prepinam stav na Rozrobena...', 'busy');
 
         try {
             await submitRozrobenaInBackground();
-            setStatus('Stav bol zmeneny na Rozrobena', 'success');
+            setStatus('Stav zmeneny na Rozrobena', 'success');
         } catch (error) {
             console.error(error);
             setStatus(`Chyba pri zmene stavu: ${error.message}`, 'error');
         } finally {
-            setBusy(false);
+            setStateBusy(false);
         }
     }
 
     async function runAccessoryFlow() {
-        if (isBusy) return;
+        if (stateBusy) return;
 
-        setBusy(true);
+        setStateBusy(true);
         setStatus('Otvaram prislusenstvo...', 'busy');
 
         try {
             openAccessoryPanel();
             if (isAlreadyRozrobena()) {
-                setStatus('Prislusenstvo otvorene, stav uz bol Rozrobena', 'success');
+                setStatus('Prislusenstvo otvorene', 'success');
             } else {
-                setStatus('Prislusenstvo otvorene, menim stav na Rozrobena...', 'busy');
+                setStatus('Prislusenstvo otvorene, menim stav...', 'busy');
                 await submitRozrobenaInBackground();
-                setStatus('Prislusenstvo otvorene, stav je uz Rozrobena', 'success');
+                setStatus('Prislusenstvo otvorene, stav je Rozrobena', 'success');
             }
         } catch (error) {
             console.error(error);
             setStatus(`Chyba: ${error.message}`, 'error');
         } finally {
-            setBusy(false);
+            setStateBusy(false);
         }
     }
 
-    function ensureButton(id, text, title, options, handler) {
+    function ensureButton(id, text, title, handler) {
         const actions = ensureInlineActionsNode();
         let button = document.getElementById(id);
 
@@ -264,41 +298,79 @@
         return button;
     }
 
-    function ensureSeparator(id, text) {
-        const actions = ensureInlineActionsNode();
-        let node = document.getElementById(id);
-        if (!node) {
-            node = document.createElement('span');
-            node.id = id;
-            node.textContent = text;
-            node.style.color = '#6b7280';
-            actions.appendChild(node);
-        }
-        return node;
-    }
+    async function refreshFrontsSection() {
+        const vpId = getVpId();
+        const container = getFrontsContainer();
+        if (!vpId || !container) return;
 
-    function ensureInlineActionsNode() {
-        const host = getInlineActionsHost();
-        if (!host) {
-            throw new Error('Inline host pre akcie sa nenasiel.');
-        }
-
-        let actions = getInlineActionsNode();
-        if (actions) return actions;
-
-        actions = document.createElement('span');
-        actions.id = ACTIONS_ID;
-        Object.assign(actions.style, {
-            marginLeft: '8px',
-            fontSize: '15px',
-            whiteSpace: 'nowrap',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px'
+        const response = await fetch(`/vyrobne_prikazy/ajaxData/getFronts/${vpId}`, {
+            method: 'POST',
+            credentials: 'same-origin'
         });
 
-        host.appendChild(actions);
-        return actions;
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        container.innerHTML = await response.text();
+        bindProcessingLinks();
+    }
+
+    function markProcessingLinkBusy(link, busy) {
+        link.style.pointerEvents = busy ? 'none' : '';
+        link.style.opacity = busy ? '0.45' : '1';
+    }
+
+    function styleProcessingLink(link) {
+        Object.assign(link.style, {
+            transform: 'scale(1.28)',
+            transformOrigin: 'center',
+            display: 'inline-block',
+            padding: '4px',
+            margin: '0 4px',
+            cursor: 'pointer'
+        });
+    }
+
+    async function processQueueItem(link) {
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        markProcessingLinkBusy(link, true);
+        setStatus('Spracovavam VP...', 'busy');
+
+        try {
+            const response = await fetch(href, {
+                method: 'GET',
+                credentials: 'same-origin',
+                redirect: 'follow'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            await refreshFrontsSection();
+            setStatus('VP spracovana', 'success');
+        } catch (error) {
+            console.error(error);
+            markProcessingLinkBusy(link, false);
+            setStatus(`Chyba pri spracovani: ${error.message}`, 'error');
+        }
+    }
+
+    function bindProcessingLinks() {
+        document.querySelectorAll("a.action.silk.accept[href*='/vyrobne_prikazy/detail/acceptVP/']").forEach(link => {
+            styleProcessingLink(link);
+            if (link.getAttribute(PROCESSING_FLAG) === '1') return;
+
+            link.setAttribute(PROCESSING_FLAG, '1');
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                processQueueItem(link);
+            });
+        });
     }
 
     function canBoot() {
@@ -310,42 +382,43 @@
 
         ensureButton(
             BUTTON_ROZROBENA_ID,
-            '[Rozrobena]',
+            'Rozrobená',
             'Zmeni stav VP na Rozrobena bez potvrdzovacieho dialogu',
-            {},
             runQuickRozrobena
         );
 
-        ensureSeparator('setIndustrialStateSep', ' | ');
-
         ensureButton(
             BUTTON_ACCESSORY_ID,
-            '[Prislusenstvo]',
+            'Príslušenstvo',
             'Otvori prislusenstvo a na pozadi zmeni stav na Rozrobena',
-            {},
             runAccessoryFlow
         );
 
         ensureStatusNode();
+        updateInlineActionsVisibility();
         return true;
     }
 
     function init() {
+        bindProcessingLinks();
+
         if (renderButtons()) {
             log('ready');
-            return;
         }
 
         let tries = 0;
         const interval = setInterval(() => {
             tries += 1;
-            if (renderButtons() || tries > 60) {
+            renderButtons();
+            bindProcessingLinks();
+            if (tries > 60) {
                 clearInterval(interval);
             }
         }, 500);
 
         const observer = new MutationObserver(() => {
             renderButtons();
+            bindProcessingLinks();
         });
 
         if (document.body) {
