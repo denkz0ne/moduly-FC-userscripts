@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.4
+// @version      2.5
 // @description  Rychla zmena stavu VP na Rozrobena a background spracovanie VP bez refreshu.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -78,18 +78,29 @@
         Object.assign(link.style, {
             color: '#0f3ea8',
             fontWeight: '700',
-            fontSize: 'inherit',
+            fontSize: '15px',
             lineHeight: 'inherit',
-            textDecoration: 'underline',
+            textDecoration: 'none',
             cursor: 'pointer',
             display: 'inline-block',
-            marginLeft: '10px'
+            marginLeft: '10px',
+            padding: '1px 7px',
+            borderRadius: '4px',
+            border: '1px solid #93c5fd',
+            background: '#eff6ff',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85)'
         });
         link.onmouseenter = () => {
             link.style.color = '#0b2f7d';
+            link.style.textDecoration = 'underline';
+            link.style.background = '#dbeafe';
+            link.style.borderColor = '#60a5fa';
         };
         link.onmouseleave = () => {
             link.style.color = '#0f3ea8';
+            link.style.textDecoration = 'none';
+            link.style.background = '#eff6ff';
+            link.style.borderColor = '#93c5fd';
         };
         return link;
     }
@@ -323,12 +334,16 @@
 
     function styleProcessingLink(link) {
         Object.assign(link.style, {
-            transform: 'scale(1.28)',
+            width: '16px',
+            height: '16px',
+            overflow: 'hidden',
+            transform: 'scale(1.45)',
             transformOrigin: 'center',
             display: 'inline-block',
-            padding: '4px',
-            margin: '0 4px',
-            cursor: 'pointer'
+            padding: '0',
+            margin: '0 8px',
+            cursor: 'pointer',
+            backgroundRepeat: 'no-repeat'
         });
     }
 
