@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.7
+// @version      2.8
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
+// @match        https://admin.faxcopy.sk/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
@@ -24,6 +25,8 @@
     const ACCESSORY_CONTAINER_ID = 'accTable';
     const AUTO_CONFIRM_WINDOW_MS = 3000;
     const ZERO_OUT_URL_FRAGMENT = '/admin/accessory/zeroOutOfStock';
+    const ZERO_OUT_DONE_MESSAGE = 'fc-accessory-zero-out-done';
+    const ACCESSORY_POPUP_SELECTOR = '.fixed.inset-0.bg-backdrop, .zd-popup-content, [role="dialog"], .modal';
 
     let stateBusy = false;
     let autoConfirmUntil = 0;
@@ -393,13 +396,28 @@
     function isZeroOutAccessoryAction(target) {
         const clickable = target && target.closest ? target.closest('button, a, [role="button"]') : null;
         if (!clickable) return false;
-        const text = normalizeText(clickable.textContent || clickable.innerText || clickable.title || clickable.getAttribute('aria-label') || '');
-        return text.includes('vynulovat') && text.includes('prislusen');
+        const text = normalizeText([
+            clickable.textContent,
+            clickable.innerText,
+            clickable.title,
+            clickable.getAttribute('aria-label')
+        ].filter(Boolean).join(' '));
+
+        return (
+            text.includes('vynulovat nenaskladnene') ||
+            text.includes('realne vynulovat') ||
+            text === 'vynulovat' ||
+            text.includes(' vynulovat ')
+        );
     }
 
     function isZeroOutConfirmMessage(message) {
         const text = normalizeText(message);
-        return text.includes('vynulovat') && text.includes('prislusen');
+        return (
+            text.includes('vynulovat') ||
+            text.includes('nenaskladnene') ||
+            text.includes('realne vynulovat')
+        );
     }
 
     function armAutoAccessoryConfirm() {
@@ -411,15 +429,65 @@
         return Date.now() <= autoConfirmUntil;
     }
 
+    function isPositiveConfirmAction(target) {
+        const clickable = target && target.closest ? target.closest('button, a, [role="button"]') : null;
+        if (!clickable) return false;
+
+        const text = normalizeText([
+            clickable.textContent,
+            clickable.innerText,
+            clickable.title,
+            clickable.getAttribute('aria-label')
+        ].filter(Boolean).join(' '));
+
+        return text === 'ano' || text === 'áno' || text.includes('potvrdit');
+    }
+
+    function findPositiveConfirmButton() {
+        const candidates = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+        return candidates.find(node => {
+            const popup = node.closest(ACCESSORY_POPUP_SELECTOR);
+            return popup && isPositiveConfirmAction(node);
+        }) || null;
+    }
+
+    function maybeConfirmZeroOutDialog() {
+        if (!shouldAutoConfirmNow()) return false;
+
+        const confirmButton = findPositiveConfirmButton();
+        if (!confirmButton) return false;
+
+        log('auto-click confirm zero out');
+        confirmButton.click();
+        return true;
+    }
+
     function closeAccessoryPanel() {
         const accTable = getAccessoryContainer();
         if (accTable) {
             accTable.innerHTML = '';
         }
 
+        const closeButton = document.querySelector('.zd-popup-content button');
+        if (closeButton) {
+            closeButton.click();
+        }
+
+        document.querySelectorAll(ACCESSORY_POPUP_SELECTOR).forEach(node => {
+            if (node && node.remove) node.remove();
+        });
+
         document.querySelectorAll('#accTable .ui-dialog-content, #accTable .ui-dialog, #accTable [data-modal], #accTable .modal').forEach(node => {
             if (node && node.remove) node.remove();
         });
+    }
+
+    function notifyParentZeroOutDone() {
+        try {
+            window.parent.postMessage({ type: ZERO_OUT_DONE_MESSAGE }, '*');
+        } catch (error) {
+            log('parent postMessage failed', error);
+        }
     }
 
     function installAutoConfirmOverride() {
@@ -440,7 +508,26 @@
         document.addEventListener('click', event => {
             if (!isZeroOutAccessoryAction(event.target)) return;
             armAutoAccessoryConfirm();
+            window.setTimeout(() => {
+                maybeConfirmZeroOutDialog();
+            }, 25);
+            window.setTimeout(() => {
+                maybeConfirmZeroOutDialog();
+            }, 150);
         }, true);
+    }
+
+    function installZeroOutDialogWatcher() {
+        if (window.__fcZeroOutDialogWatcherInstalled) return;
+        window.__fcZeroOutDialogWatcherInstalled = true;
+
+        const observer = new MutationObserver(() => {
+            maybeConfirmZeroOutDialog();
+        });
+
+        if (document.body) {
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
     }
 
     function installZeroOutRequestWatcher() {
@@ -465,6 +552,7 @@
                     if (this.status >= 200 && this.status < 300) {
                         setStatus('Prislusenstvo vynulovane, zatvaram okno...', 'success');
                         autoConfirmUntil = 0;
+                        notifyParentZeroOutDone();
                         if (autoCloseAccessoryAfterZeroOut) {
                             window.setTimeout(() => {
                                 closeAccessoryPanel();
@@ -481,6 +569,26 @@
 
             return originalSend.call(this, body);
         };
+    }
+
+    function installParentZeroOutMessageListener() {
+        if (window.__fcParentZeroOutListenerInstalled) return;
+        window.__fcParentZeroOutListenerInstalled = true;
+
+        window.addEventListener('message', event => {
+            const data = event && event.data;
+            if (!data || data.type !== ZERO_OUT_DONE_MESSAGE) return;
+
+            closeAccessoryPanel();
+            setStatus('Prislusenstvo vynulovane a okno zavrete', 'success');
+        });
+    }
+
+    function initAdminAccessoryContext() {
+        installAutoConfirmOverride();
+        installZeroOutClickWatcher();
+        installZeroOutDialogWatcher();
+        installZeroOutRequestWatcher();
     }
 
     function canBoot() {
@@ -509,9 +617,11 @@
         return true;
     }
 
-    function init() {
+    function initModulyDetailContext() {
+        installParentZeroOutMessageListener();
         installAutoConfirmOverride();
         installZeroOutClickWatcher();
+        installZeroOutDialogWatcher();
         installZeroOutRequestWatcher();
         bindProcessingLinks();
 
@@ -537,6 +647,15 @@
         if (document.body) {
             observer.observe(document.body, { childList: true, subtree: true });
         }
+    }
+
+    function init() {
+        if (window.location.hostname === 'admin.faxcopy.sk') {
+            initAdminAccessoryContext();
+            return;
+        }
+
+        initModulyDetailContext();
     }
 
     init();
