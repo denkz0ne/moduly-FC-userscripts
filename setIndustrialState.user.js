@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.6
-// @description  Rychla zmena stavu VP na Rozrobena a background spracovanie VP bez refreshu.
+// @version      2.7
+// @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
@@ -21,8 +21,14 @@
     const STATUS_TEXT_ID = 'set-industrial-state-status';
     const FRONTS_CONTAINER_ID = 'vf-ed-hf';
     const PROCESSING_FLAG = 'data-fc-processing-bound';
+    const ACCESSORY_CONTAINER_ID = 'accTable';
+    const AUTO_CONFIRM_WINDOW_MS = 3000;
+    const ZERO_OUT_URL_FRAGMENT = '/admin/accessory/zeroOutOfStock';
 
     let stateBusy = false;
+    let autoConfirmUntil = 0;
+    let autoCloseAccessoryAfterZeroOut = false;
+    const nativeConfirm = window.confirm ? window.confirm.bind(window) : null;
 
     function log(...args) {
         console.log('[setIndustrialState]', ...args);
@@ -72,6 +78,10 @@
 
     function getFrontsContainer() {
         return document.getElementById(FRONTS_CONTAINER_ID);
+    }
+
+    function getAccessoryContainer() {
+        return document.getElementById(ACCESSORY_CONTAINER_ID);
     }
 
     function styleInlineLink(link) {
@@ -195,7 +205,7 @@
     function buildSettingsPayload() {
         const form = getSettingsForm();
         if (!form) {
-            throw new Error('Formular #frm-settings sa nenasiel.');
+            throw new Error('Formular #frm-settings sa nenašiel.');
         }
 
         const formData = new FormData(form);
@@ -228,7 +238,7 @@
     function openAccessoryPanel() {
         const trigger = getAccessoryTrigger();
         if (!trigger) {
-            throw new Error('Tlacitko Prislusenstvo sa nenaslo.');
+            throw new Error('Tlacitko Príslušenstvo sa nenašlo.');
         }
 
         trigger.click();
@@ -260,16 +270,16 @@
         if (stateBusy) return;
 
         setStateBusy(true);
-        setStatus('Otvaram prislusenstvo...', 'busy');
+        setStatus('Otvaram príslušenstvo...', 'busy');
 
         try {
             openAccessoryPanel();
             if (isAlreadyRozrobena()) {
-                setStatus('Prislusenstvo otvorene', 'success');
+                setStatus('Príslušenstvo otvorene', 'success');
             } else {
-                setStatus('Prislusenstvo otvorene, menim stav...', 'busy');
+                setStatus('Príslušenstvo otvorene, menim stav...', 'busy');
                 await submitRozrobenaInBackground();
-                setStatus('Prislusenstvo otvorene, stav je Rozrobena', 'success');
+                setStatus('Príslušenstvo otvorene, stav je Rozrobena', 'success');
             }
         } catch (error) {
             console.error(error);
@@ -380,6 +390,99 @@
         });
     }
 
+    function isZeroOutAccessoryAction(target) {
+        const clickable = target && target.closest ? target.closest('button, a, [role="button"]') : null;
+        if (!clickable) return false;
+        const text = normalizeText(clickable.textContent || clickable.innerText || clickable.title || clickable.getAttribute('aria-label') || '');
+        return text.includes('vynulovat') && text.includes('prislusen');
+    }
+
+    function isZeroOutConfirmMessage(message) {
+        const text = normalizeText(message);
+        return text.includes('vynulovat') && text.includes('prislusen');
+    }
+
+    function armAutoAccessoryConfirm() {
+        autoConfirmUntil = Date.now() + AUTO_CONFIRM_WINDOW_MS;
+        autoCloseAccessoryAfterZeroOut = true;
+    }
+
+    function shouldAutoConfirmNow() {
+        return Date.now() <= autoConfirmUntil;
+    }
+
+    function closeAccessoryPanel() {
+        const accTable = getAccessoryContainer();
+        if (accTable) {
+            accTable.innerHTML = '';
+        }
+
+        document.querySelectorAll('#accTable .ui-dialog-content, #accTable .ui-dialog, #accTable [data-modal], #accTable .modal').forEach(node => {
+            if (node && node.remove) node.remove();
+        });
+    }
+
+    function installAutoConfirmOverride() {
+        if (typeof nativeConfirm !== 'function') return;
+
+        window.confirm = function (message) {
+            if (shouldAutoConfirmNow() && isZeroOutConfirmMessage(message)) {
+                log('auto-confirm zero out accessory');
+                setStatus('Vynulovavam prislusenstvo...', 'busy');
+                return true;
+            }
+
+            return nativeConfirm(message);
+        };
+    }
+
+    function installZeroOutClickWatcher() {
+        document.addEventListener('click', event => {
+            if (!isZeroOutAccessoryAction(event.target)) return;
+            armAutoAccessoryConfirm();
+        }, true);
+    }
+
+    function installZeroOutRequestWatcher() {
+        if (window.__fcZeroOutWatcherInstalled) return;
+        window.__fcZeroOutWatcherInstalled = true;
+
+        const originalOpen = XMLHttpRequest.prototype.open;
+        const originalSend = XMLHttpRequest.prototype.send;
+
+        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+            this.__fcMethod = method;
+            this.__fcUrl = typeof url === 'string' ? url : '';
+            return originalOpen.call(this, method, url, ...rest);
+        };
+
+        XMLHttpRequest.prototype.send = function (body) {
+            const url = this.__fcUrl || '';
+            const method = String(this.__fcMethod || '').toUpperCase();
+
+            if (method === 'POST' && url.includes(ZERO_OUT_URL_FRAGMENT)) {
+                this.addEventListener('loadend', () => {
+                    if (this.status >= 200 && this.status < 300) {
+                        setStatus('Prislusenstvo vynulovane, zatvaram okno...', 'success');
+                        autoConfirmUntil = 0;
+                        if (autoCloseAccessoryAfterZeroOut) {
+                            window.setTimeout(() => {
+                                closeAccessoryPanel();
+                                autoCloseAccessoryAfterZeroOut = false;
+                                setStatus('Prislusenstvo vynulovane a okno zavrete', 'success');
+                            }, 500);
+                        }
+                    } else {
+                        autoCloseAccessoryAfterZeroOut = false;
+                        setStatus(`Chyba pri vynulovani: HTTP ${this.status}`, 'error');
+                    }
+                }, { once: true });
+            }
+
+            return originalSend.call(this, body);
+        };
+    }
+
     function canBoot() {
         return !!(getSettingsForm() && getStateSelect());
     }
@@ -407,6 +510,9 @@
     }
 
     function init() {
+        installAutoConfirmOverride();
+        installZeroOutClickWatcher();
+        installZeroOutRequestWatcher();
         bindProcessingLinks();
 
         if (renderButtons()) {
