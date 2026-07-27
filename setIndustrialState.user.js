@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.13
+// @version      2.14
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -113,14 +113,6 @@
         if (!heading) return null;
 
         return heading.closest('div.rounded-b') || heading.closest('div');
-    }
-
-    function getAccessoryPaginationContainer(section) {
-        if (!section) return null;
-
-        return Array.from(section.querySelectorAll('div')).find(node => {
-            return normalizeText(node.textContent).includes('zobrazenych') && normalizeText(node.textContent).includes('zaznamov');
-        }) || null;
     }
 
     function styleInlineLink(link) {
@@ -522,15 +514,6 @@
         return text.includes('preklopit do poctu');
     }
 
-    function isAccessoryFilterButton(button) {
-        const text = normalizeText(button.textContent);
-        return text.includes('iba upravitelne') || text.includes('iba skladom') || text.includes('iba nenulove');
-    }
-
-    function isFilterButtonActive(button) {
-        return button.className.includes('bg-green') || button.querySelector("img[src*='check-white']");
-    }
-
     function findAccessorySaveButton(row) {
         if (!row) return null;
 
@@ -678,64 +661,7 @@
         return new Promise(resolve => window.setTimeout(resolve, ms));
     }
 
-    async function waitForTableRefresh() {
-        await wait(260);
-    }
-
-    async function deactivateAccessoryFilters(section) {
-        if (!section) return;
-
-        const filterButtons = Array.from(section.querySelectorAll('button')).filter(button => {
-            return isAccessoryFilterButton(button) && isFilterButtonActive(button);
-        });
-
-        for (const button of filterButtons) {
-            button.click();
-            await waitForTableRefresh();
-        }
-    }
-
-    async function setAccessoryPerPage(section, limit) {
-        const pagination = getAccessoryPaginationContainer(section);
-        if (!pagination) return;
-
-        const select = pagination.querySelector('select');
-        if (!select || String(select.value) === String(limit)) return;
-
-        select.value = String(limit);
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-        await waitForTableRefresh();
-    }
-
-    function getAccessoryPageCount(section) {
-        const pagination = getAccessoryPaginationContainer(section);
-        if (!pagination) return 1;
-
-        const input = Array.from(pagination.querySelectorAll("input[type='number']")).find(node => {
-            return node.hasAttribute('max') && node.getAttribute('min') === '1';
-        });
-
-        return input ? Math.max(1, Number(input.getAttribute('max')) || 1) : 1;
-    }
-
-    async function goToAccessoryPage(section, page) {
-        const pagination = getAccessoryPaginationContainer(section);
-        if (!pagination) return;
-
-        const input = Array.from(pagination.querySelectorAll("input[type='number']")).find(node => {
-            return node.hasAttribute('max') && node.getAttribute('min') === '1';
-        });
-
-        if (!input) return;
-        if (String(input.value) === String(page)) return;
-
-        input.value = String(page);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        await waitForTableRefresh();
-    }
-
-    function collectTubeRowsFromSection(section, page) {
+    function collectTubeRowsFromSection(section) {
         const rows = Array.from(section.querySelectorAll('tbody tr'));
 
         rows.forEach(row => {
@@ -746,7 +672,7 @@
             });
             if (!match) return;
 
-            tubeInventory.set(match.code, { page: page, label: match.label });
+            tubeInventory.set(match.code, { label: match.label });
         });
     }
 
@@ -756,19 +682,13 @@
 
         setStatus('Hladam tubusy v prislusenstve...', 'busy');
         tubeInventory = new Map();
-
-        await deactivateAccessoryFilters(section);
-        await setAccessoryPerPage(section, 100);
-
-        const pageCount = getAccessoryPageCount(section);
-        for (let page = 1; page <= pageCount; page += 1) {
-            await goToAccessoryPage(section, page);
-            collectTubeRowsFromSection(section, page);
-        }
-
-        await goToAccessoryPage(section, 1);
+        collectTubeRowsFromSection(section);
         updateTubeButtonsAvailability();
-        setStatus('Tubus buttony pripravene', 'success');
+        if (tubeInventory.size) {
+            setStatus('Tubus buttony pripravene', 'success');
+        } else {
+            setStatus('Tubusy v aktualnom zobrazeni nenasiel', 'idle');
+        }
     }
 
     function ensureTubeInventoryScanned() {
@@ -820,10 +740,6 @@
             }));
 
         for (const action of actions) {
-            const tubeMeta = tubeInventory.get(action.code);
-            if (!tubeMeta) continue;
-
-            await goToAccessoryPage(section, tubeMeta.page);
             const row = Array.from(section.querySelectorAll('tbody tr')).find(node => {
                 const rowCode = parseAccessoryRowCode(node);
                 const rowShortcut = parseAccessoryRowShortcut(node);
@@ -835,7 +751,6 @@
             await wait(220);
         }
 
-        await goToAccessoryPage(section, 1);
         const button = ensureTubeButtons() ? getTubeButtonsNode().querySelector(`button[data-tube-code="${code}"]`) : null;
         flashNode(button, 'rgba(22, 101, 52, 0.20)');
         setStatus(`Tubus ${label} nastaveny`, 'success');
