@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.8
+// @version      2.10
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -85,6 +85,10 @@
 
     function getAccessoryContainer() {
         return document.getElementById(ACCESSORY_CONTAINER_ID);
+    }
+
+    function getAccessoryRow(target) {
+        return target && target.closest ? target.closest('tr') : null;
     }
 
     function styleInlineLink(link) {
@@ -443,6 +447,78 @@
         return text === 'ano' || text === 'áno' || text.includes('potvrdit');
     }
 
+    function isAccessorySaveButton(target) {
+        const clickable = target && target.closest ? target.closest('button, a, [role="button"]') : null;
+        if (!clickable) return false;
+
+        const text = normalizeText([
+            clickable.textContent,
+            clickable.innerText,
+            clickable.title,
+            clickable.getAttribute('aria-label')
+        ].filter(Boolean).join(' '));
+
+        return text.includes('ulozit zmeny');
+    }
+
+    function isAccessoryConvertButton(target) {
+        const clickable = target && target.closest ? target.closest('button, a, [role="button"]') : null;
+        if (!clickable) return false;
+
+        const text = normalizeText([
+            clickable.textContent,
+            clickable.innerText,
+            clickable.title,
+            clickable.getAttribute('aria-label')
+        ].filter(Boolean).join(' '));
+
+        return text.includes('preklopit do poctu');
+    }
+
+    function findAccessorySaveButton(row) {
+        if (!row) return null;
+
+        return Array.from(row.querySelectorAll('button, a, [role="button"]')).find(node => {
+            return isAccessorySaveButton(node);
+        }) || null;
+    }
+
+    function flashAccessorySaveFeedback(row, saveButton) {
+        if (row) {
+            row.style.transition = 'background-color 180ms ease, box-shadow 180ms ease';
+            row.style.backgroundColor = 'rgba(31, 95, 209, 0.06)';
+            row.style.boxShadow = 'inset 0 0 0 1px rgba(31, 95, 209, 0.18)';
+
+            window.setTimeout(() => {
+                row.style.backgroundColor = '';
+                row.style.boxShadow = '';
+            }, 700);
+        }
+
+        if (saveButton) {
+            saveButton.style.transition = 'transform 140ms ease, box-shadow 180ms ease, opacity 180ms ease';
+            saveButton.style.boxShadow = '0 0 0 2px rgba(31, 95, 209, 0.18)';
+            saveButton.style.transform = 'scale(1.06)';
+            saveButton.style.opacity = '0.88';
+
+            window.setTimeout(() => {
+                saveButton.style.boxShadow = '';
+                saveButton.style.transform = '';
+                saveButton.style.opacity = '';
+            }, 700);
+        }
+    }
+
+    function triggerAccessorySave(row, reason) {
+        const saveButton = findAccessorySaveButton(row);
+        if (!saveButton) return false;
+
+        log(`trigger accessory save: ${reason}`);
+        flashAccessorySaveFeedback(row, saveButton);
+        saveButton.click();
+        return true;
+    }
+
     function findPositiveConfirmButton() {
         const candidates = Array.from(document.querySelectorAll('button, a, [role="button"]'));
         return candidates.find(node => {
@@ -530,6 +606,44 @@
         }
     }
 
+    function installAccessoryInlineSaveWatcher() {
+        if (window.__fcAccessoryInlineSaveWatcherInstalled) return;
+        window.__fcAccessoryInlineSaveWatcherInstalled = true;
+
+        document.addEventListener('keydown', event => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement)) return;
+            if (event.key !== 'Enter') return;
+            if (target.type !== 'number') return;
+
+            const row = getAccessoryRow(target);
+            if (!row) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            window.setTimeout(() => {
+                triggerAccessorySave(row, 'enter');
+            }, 0);
+        }, true);
+
+        document.addEventListener('click', event => {
+            const target = event.target;
+            if (!isAccessoryConvertButton(target)) return;
+
+            const row = getAccessoryRow(target);
+            if (!row) return;
+
+            window.setTimeout(() => {
+                triggerAccessorySave(row, 'convert');
+            }, 40);
+
+            window.setTimeout(() => {
+                triggerAccessorySave(row, 'convert-fallback');
+            }, 180);
+        }, true);
+    }
+
     function installZeroOutRequestWatcher() {
         if (window.__fcZeroOutWatcherInstalled) return;
         window.__fcZeroOutWatcherInstalled = true;
@@ -586,6 +700,7 @@
 
     function initAdminAccessoryContext() {
         installAutoConfirmOverride();
+        installAccessoryInlineSaveWatcher();
         installZeroOutClickWatcher();
         installZeroOutDialogWatcher();
         installZeroOutRequestWatcher();
