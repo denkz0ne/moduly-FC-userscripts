@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.15
+// @version      2.16
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -688,22 +688,21 @@
 
     function getTubeCandidateRows() {
         const popup = getAccessoryPopupRoot();
-        const section = getAccessoryMainSection();
-        const scope = section || popup || document;
-        const rows = Array.from(scope.querySelectorAll('tbody tr'));
+        const rows = Array.from((popup || document).querySelectorAll('tbody tr'));
 
         return rows.filter(row => {
-            const cells = row.querySelectorAll('td');
-            if (!cells || cells.length < 4) return false;
-
-            const rowText = normalizeText(row.textContent);
-            if (!rowText) return false;
-
             const code = parseAccessoryRowCode(row);
             const shortcut = parseAccessoryRowShortcut(row);
             if (!code && !shortcut) return false;
 
-            return row.querySelector('button[title="Uložiť zmeny"], button[title="Vynulovať"], button[title="Vymazať"]');
+            return TUBE_OPTIONS.some(option => {
+                const normalizedCode = normalizeText(option.code);
+                const normalizedShortcut = normalizeText(option.shortcut);
+                return code === normalizedCode
+                    || shortcut === normalizedShortcut
+                    || code.includes(normalizedCode)
+                    || shortcut.includes(normalizedShortcut);
+            });
         });
     }
 
@@ -725,6 +724,8 @@
 
             tubeInventory.set(match.code, { label: match.label, row });
         });
+
+        log('tube inventory', Array.from(tubeInventory.keys()));
     }
 
     async function scanTubeInventory() {
