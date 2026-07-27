@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.17
+// @version      2.19
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -41,6 +41,8 @@
     let tubeScanPromise = null;
     let tubeInventory = new Map();
     let tubeScanTimer = 0;
+    let tubeButtonsObserver = null;
+    let lastTubeScanSignature = '';
     const nativeConfirm = window.confirm ? window.confirm.bind(window) : null;
 
     function log(...args) {
@@ -130,6 +132,11 @@
         }
 
         return document.querySelector(ACCESSORY_POPUP_SELECTOR) || null;
+    }
+
+    function isInsideOurAccessoryUi(node) {
+        if (!node || !(node instanceof Element)) return false;
+        return !!node.closest(`#${TUBE_BUTTONS_ID}, #${STATUS_TEXT_ID}`);
     }
 
     function getAccessoryPaginationContainer(section) {
@@ -539,11 +546,33 @@
         return text.includes('preklopit do poctu');
     }
 
+    function isAccessoryRowZeroButton(target) {
+        const clickable = target && target.closest ? target.closest('button, a, [role="button"]') : null;
+        if (!clickable) return false;
+
+        const text = normalizeText([
+            clickable.textContent,
+            clickable.innerText,
+            clickable.title,
+            clickable.getAttribute('aria-label')
+        ].filter(Boolean).join(' '));
+
+        return text === 'vynulovat' && !!getAccessoryRow(clickable);
+    }
+
     function findAccessorySaveButton(row) {
         if (!row) return null;
 
         return Array.from(row.querySelectorAll('button, a, [role="button"]')).find(node => {
             return isAccessorySaveButton(node);
+        }) || null;
+    }
+
+    function findAccessoryRowZeroButton(row) {
+        if (!row) return null;
+
+        return Array.from(row.querySelectorAll('button, a, [role="button"]')).find(node => {
+            return isAccessoryRowZeroButton(node);
         }) || null;
     }
 
@@ -607,6 +636,16 @@
         log(`trigger accessory save: ${reason}`);
         flashAccessorySaveFeedback(row, saveButton);
         saveButton.click();
+        return true;
+    }
+
+    function triggerAccessoryZero(row, reason) {
+        const zeroButton = findAccessoryRowZeroButton(row);
+        if (!zeroButton) return false;
+
+        log(`trigger accessory zero: ${reason}`);
+        flashAccessorySaveFeedback(row, zeroButton);
+        zeroButton.click();
         return true;
     }
 
@@ -728,6 +767,12 @@
         log('tube inventory', Array.from(tubeInventory.keys()));
     }
 
+    function buildTubeScanSignature() {
+        return getTubeCandidateRows().map(row => {
+            return `${parseAccessoryRowCode(row)}|${parseAccessoryRowShortcut(row)}`;
+        }).join(';;');
+    }
+
     function findCurrentTubeRow(code) {
         const normalizedCode = normalizeText(code);
         const normalizedShortcut = normalizeText(
@@ -748,7 +793,13 @@
         const popup = getAccessoryPopupRoot();
         if (!popup) return;
 
-        setStatus('Hladam tubusy v prislusenstve...', 'busy');
+        const nextSignature = buildTubeScanSignature();
+        if (nextSignature === lastTubeScanSignature && tubeInventory.size) {
+            updateTubeButtonsAvailability();
+            return;
+        }
+
+        lastTubeScanSignature = nextSignature;
         tubeInventory = new Map();
         collectTubeRowsFromSection();
         updateTubeButtonsAvailability();
@@ -773,7 +824,7 @@
         window.clearTimeout(tubeScanTimer);
         tubeScanTimer = window.setTimeout(() => {
             ensureTubeInventoryScanned();
-        }, 120);
+        }, 180);
     }
 
     async function setAccessoryRowQuantity(row, quantity, reason) {
@@ -792,6 +843,15 @@
         return triggerAccessorySave(row, reason);
     }
 
+    async function zeroAccessoryRow(row, reason) {
+        const input = findAccessoryQuantityInput(row);
+        if (input && Number(input.value || 0) === 0) {
+            return true;
+        }
+
+        return triggerAccessoryZero(row, reason);
+    }
+
     async function applyTubeSelection(code, label) {
         await ensureTubeInventoryScanned();
 
@@ -803,19 +863,20 @@
 
         setStatus(`Nastavujem tubus ${label}...`, 'busy');
 
-        const actions = TUBE_OPTIONS
-            .filter(option => tubeInventory.has(option.code))
-            .map(option => ({
-                code: option.code,
-                label: option.label,
-                quantity: option.code === code ? 1 : 0
-            }));
+        const otherActions = TUBE_OPTIONS
+            .filter(option => option.code !== code && tubeInventory.has(option.code));
 
-        for (const action of actions) {
+        for (const action of otherActions) {
             const row = findCurrentTubeRow(action.code);
             if (!row) continue;
 
-            await setAccessoryRowQuantity(row, action.quantity, `tube-${action.label}`);
+            await zeroAccessoryRow(row, `tube-zero-${action.label}`);
+            await wait(420);
+        }
+
+        const selectedRow = findCurrentTubeRow(code);
+        if (selectedRow) {
+            await setAccessoryRowQuantity(selectedRow, 1, `tube-${label}`);
             await wait(280);
         }
 
@@ -848,6 +909,12 @@
         if (accTable) {
             accTable.innerHTML = '';
         }
+
+        if (tubeButtonsObserver) {
+            tubeButtonsObserver.disconnect();
+            tubeButtonsObserver = null;
+        }
+        lastTubeScanSignature = '';
 
         const closeButton = document.querySelector('.zd-popup-content button');
         if (closeButton) {
@@ -964,14 +1031,36 @@
         updateTubeButtonsAvailability();
         scheduleTubeInventoryScan();
 
-        const observer = new MutationObserver(() => {
+        const rootObserver = new MutationObserver(() => {
+            const popup = getAccessoryPopupRoot();
             ensureTubeButtons();
-            updateTubeButtonsAvailability();
-            scheduleTubeInventoryScan();
+
+            if (popup && (!tubeButtonsObserver || tubeButtonsObserver.__fcRoot !== popup)) {
+                if (tubeButtonsObserver) {
+                    tubeButtonsObserver.disconnect();
+                }
+
+                tubeButtonsObserver = new MutationObserver(mutations => {
+                    const relevant = mutations.some(mutation => {
+                        if (isInsideOurAccessoryUi(mutation.target)) return false;
+
+                        return Array.from(mutation.addedNodes || []).some(node => !isInsideOurAccessoryUi(node))
+                            || Array.from(mutation.removedNodes || []).some(node => !isInsideOurAccessoryUi(node));
+                    });
+
+                    if (!relevant) return;
+                    scheduleTubeInventoryScan();
+                });
+
+                tubeButtonsObserver.__fcRoot = popup;
+                tubeButtonsObserver.observe(popup, { childList: true, subtree: true });
+                lastTubeScanSignature = '';
+                scheduleTubeInventoryScan();
+            }
         });
 
         if (document.body) {
-            observer.observe(document.body, { childList: true, subtree: true });
+            rootObserver.observe(document.body, { childList: true, subtree: true });
         }
     }
 
