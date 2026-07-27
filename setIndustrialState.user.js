@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.14
+// @version      2.15
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -40,6 +40,7 @@
     let autoCloseAccessoryAfterZeroOut = false;
     let tubeScanPromise = null;
     let tubeInventory = new Map();
+    let tubeScanTimer = 0;
     const nativeConfirm = window.confirm ? window.confirm.bind(window) : null;
 
     function log(...args) {
@@ -113,6 +114,30 @@
         if (!heading) return null;
 
         return heading.closest('div.rounded-b') || heading.closest('div');
+    }
+
+    function getAccessoryPopupRoot() {
+        const host = getAccessoryGlobalActionsHost();
+        if (host) {
+            const popup = host.closest(ACCESSORY_POPUP_SELECTOR);
+            if (popup) return popup;
+        }
+
+        const section = getAccessoryMainSection();
+        if (section) {
+            const popup = section.closest(ACCESSORY_POPUP_SELECTOR);
+            if (popup) return popup;
+        }
+
+        return document.querySelector(ACCESSORY_POPUP_SELECTOR) || null;
+    }
+
+    function getAccessoryPaginationContainer(section) {
+        if (!section) return null;
+
+        return Array.from(section.querySelectorAll('div')).find(node => {
+            return normalizeText(node.textContent).includes('zobrazenych') && normalizeText(node.textContent).includes('zaznamov');
+        }) || null;
     }
 
     function styleInlineLink(link) {
@@ -661,28 +686,54 @@
         return new Promise(resolve => window.setTimeout(resolve, ms));
     }
 
-    function collectTubeRowsFromSection(section) {
-        const rows = Array.from(section.querySelectorAll('tbody tr'));
+    function getTubeCandidateRows() {
+        const popup = getAccessoryPopupRoot();
+        const section = getAccessoryMainSection();
+        const scope = section || popup || document;
+        const rows = Array.from(scope.querySelectorAll('tbody tr'));
+
+        return rows.filter(row => {
+            const cells = row.querySelectorAll('td');
+            if (!cells || cells.length < 4) return false;
+
+            const rowText = normalizeText(row.textContent);
+            if (!rowText) return false;
+
+            const code = parseAccessoryRowCode(row);
+            const shortcut = parseAccessoryRowShortcut(row);
+            if (!code && !shortcut) return false;
+
+            return row.querySelector('button[title="Uložiť zmeny"], button[title="Vynulovať"], button[title="Vymazať"]');
+        });
+    }
+
+    function collectTubeRowsFromSection() {
+        const rows = getTubeCandidateRows();
 
         rows.forEach(row => {
             const code = parseAccessoryRowCode(row);
             const shortcut = parseAccessoryRowShortcut(row);
             const match = TUBE_OPTIONS.find(option => {
-                return normalizeText(option.code) === code || normalizeText(option.shortcut) === shortcut;
+                const normalizedCode = normalizeText(option.code);
+                const normalizedShortcut = normalizeText(option.shortcut);
+                return normalizedCode === code
+                    || normalizedShortcut === shortcut
+                    || code.includes(normalizedCode)
+                    || shortcut.includes(normalizedShortcut);
             });
             if (!match) return;
 
-            tubeInventory.set(match.code, { label: match.label });
+            tubeInventory.set(match.code, { label: match.label, row });
         });
     }
 
     async function scanTubeInventory() {
-        const section = getAccessoryMainSection();
-        if (!section) return;
+        const popup = getAccessoryPopupRoot();
+        if (!popup) return;
 
         setStatus('Hladam tubusy v prislusenstve...', 'busy');
         tubeInventory = new Map();
-        collectTubeRowsFromSection(section);
+        collectTubeRowsFromSection();
         updateTubeButtonsAvailability();
         if (tubeInventory.size) {
             setStatus('Tubus buttony pripravene', 'success');
@@ -699,6 +750,13 @@
         });
 
         return tubeScanPromise;
+    }
+
+    function scheduleTubeInventoryScan() {
+        window.clearTimeout(tubeScanTimer);
+        tubeScanTimer = window.setTimeout(() => {
+            ensureTubeInventoryScanned();
+        }, 120);
     }
 
     async function setAccessoryRowQuantity(row, quantity, reason) {
@@ -726,9 +784,6 @@
             return;
         }
 
-        const section = getAccessoryMainSection();
-        if (!section) return;
-
         setStatus(`Nastavujem tubus ${label}...`, 'busy');
 
         const actions = TUBE_OPTIONS
@@ -740,11 +795,7 @@
             }));
 
         for (const action of actions) {
-            const row = Array.from(section.querySelectorAll('tbody tr')).find(node => {
-                const rowCode = parseAccessoryRowCode(node);
-                const rowShortcut = parseAccessoryRowShortcut(node);
-                return rowCode === normalizeText(action.code) || rowShortcut === normalizeText(TUBE_OPTIONS.find(option => option.code === action.code)?.shortcut);
-            });
+            const row = tubeInventory.get(action.code)?.row || null;
             if (!row) continue;
 
             await setAccessoryRowQuantity(row, action.quantity, `tube-${action.label}`);
@@ -894,15 +945,12 @@
 
         ensureTubeButtons();
         updateTubeButtonsAvailability();
-        ensureTubeInventoryScanned();
+        scheduleTubeInventoryScan();
 
         const observer = new MutationObserver(() => {
             ensureTubeButtons();
-            if (!tubeInventory.size) {
-                ensureTubeInventoryScanned();
-            } else {
-                updateTubeButtonsAvailability();
-            }
+            updateTubeButtonsAvailability();
+            scheduleTubeInventoryScan();
         });
 
         if (document.body) {
