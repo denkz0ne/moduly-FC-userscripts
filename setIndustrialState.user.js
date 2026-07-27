@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.12
+// @version      2.13
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -29,10 +29,10 @@
     const ACCESSORY_POPUP_SELECTOR = '.fixed.inset-0.bg-backdrop, .zd-popup-content, [role="dialog"], .modal';
     const TUBE_BUTTONS_ID = 'fc-accessory-tube-actions';
     const TUBE_OPTIONS = [
-        { code: 'he00798769', label: 'T75' },
-        { code: 'he00798637', label: 'T63' },
-        { code: 'he00798454', label: 'T45' },
-        { code: 'tubus122', label: 'T120' }
+        { code: 'he00798769', shortcut: 'fg078', label: 'T75' },
+        { code: 'he00798637', shortcut: 'fg077', label: 'T63' },
+        { code: 'he00798454', shortcut: 'fg076', label: 'T45' },
+        { code: 'tubus122', shortcut: 'fg335', label: 'T120' }
     ];
 
     let stateBusy = false;
@@ -553,8 +553,17 @@
         return parts[2] || '';
     }
 
+    function parseAccessoryRowShortcut(row) {
+        if (!row) return '';
+
+        const cells = row.querySelectorAll('td');
+        if (!cells || cells.length < 3) return '';
+        return normalizeText(cells[2].textContent);
+    }
+
     function isTubeRow(row, code) {
-        return parseAccessoryRowCode(row) === normalizeText(code);
+        const normalizedCode = normalizeText(code);
+        return parseAccessoryRowCode(row) === normalizedCode;
     }
 
     function flashAccessorySaveFeedback(row, saveButton) {
@@ -731,7 +740,10 @@
 
         rows.forEach(row => {
             const code = parseAccessoryRowCode(row);
-            const match = TUBE_OPTIONS.find(option => normalizeText(option.code) === code);
+            const shortcut = parseAccessoryRowShortcut(row);
+            const match = TUBE_OPTIONS.find(option => {
+                return normalizeText(option.code) === code || normalizeText(option.shortcut) === shortcut;
+            });
             if (!match) return;
 
             tubeInventory.set(match.code, { page: page, label: match.label });
@@ -780,6 +792,8 @@
         input.value = String(quantity);
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.blur();
+        await wait(80);
         return triggerAccessorySave(row, reason);
     }
 
@@ -810,11 +824,15 @@
             if (!tubeMeta) continue;
 
             await goToAccessoryPage(section, tubeMeta.page);
-            const row = Array.from(section.querySelectorAll('tbody tr')).find(node => isTubeRow(node, action.code));
+            const row = Array.from(section.querySelectorAll('tbody tr')).find(node => {
+                const rowCode = parseAccessoryRowCode(node);
+                const rowShortcut = parseAccessoryRowShortcut(node);
+                return rowCode === normalizeText(action.code) || rowShortcut === normalizeText(TUBE_OPTIONS.find(option => option.code === action.code)?.shortcut);
+            });
             if (!row) continue;
 
             await setAccessoryRowQuantity(row, action.quantity, `tube-${action.label}`);
-            await wait(160);
+            await wait(220);
         }
 
         await goToAccessoryPage(section, 1);
@@ -925,10 +943,17 @@
 
             event.preventDefault();
             event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') {
+                event.stopImmediatePropagation();
+            }
+
+            target.blur();
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            target.dispatchEvent(new Event('change', { bubbles: true }));
 
             window.setTimeout(() => {
                 triggerAccessorySave(row, 'enter');
-            }, 0);
+            }, 90);
         }, true);
 
         document.addEventListener('click', event => {
@@ -958,7 +983,11 @@
 
         const observer = new MutationObserver(() => {
             ensureTubeButtons();
-            updateTubeButtonsAvailability();
+            if (!tubeInventory.size) {
+                ensureTubeInventoryScanned();
+            } else {
+                updateTubeButtonsAvailability();
+            }
         });
 
         if (document.body) {
