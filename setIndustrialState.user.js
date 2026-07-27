@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.16
+// @version      2.17
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -728,6 +728,22 @@
         log('tube inventory', Array.from(tubeInventory.keys()));
     }
 
+    function findCurrentTubeRow(code) {
+        const normalizedCode = normalizeText(code);
+        const normalizedShortcut = normalizeText(
+            TUBE_OPTIONS.find(option => option.code === code)?.shortcut || ''
+        );
+
+        return getTubeCandidateRows().find(row => {
+            const rowCode = parseAccessoryRowCode(row);
+            const rowShortcut = parseAccessoryRowShortcut(row);
+            return rowCode === normalizedCode
+                || rowShortcut === normalizedShortcut
+                || rowCode.includes(normalizedCode)
+                || rowShortcut.includes(normalizedShortcut);
+        }) || null;
+    }
+
     async function scanTubeInventory() {
         const popup = getAccessoryPopupRoot();
         if (!popup) return;
@@ -796,11 +812,11 @@
             }));
 
         for (const action of actions) {
-            const row = tubeInventory.get(action.code)?.row || null;
+            const row = findCurrentTubeRow(action.code);
             if (!row) continue;
 
             await setAccessoryRowQuantity(row, action.quantity, `tube-${action.label}`);
-            await wait(220);
+            await wait(280);
         }
 
         const button = ensureTubeButtons() ? getTubeButtonsNode().querySelector(`button[data-tube-code="${code}"]`) : null;
