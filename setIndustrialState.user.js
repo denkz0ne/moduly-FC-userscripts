@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         setIndustrialState
 // @namespace    faxcopy-userscripts
-// @version      2.10
+// @version      2.12
 // @description  Rychla zmena stavu VP na Rozrobena, background spracovanie VP a auto-flow pre prislusenstvo.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/setIndustrialState.user.js
@@ -27,10 +27,19 @@
     const ZERO_OUT_URL_FRAGMENT = '/admin/accessory/zeroOutOfStock';
     const ZERO_OUT_DONE_MESSAGE = 'fc-accessory-zero-out-done';
     const ACCESSORY_POPUP_SELECTOR = '.fixed.inset-0.bg-backdrop, .zd-popup-content, [role="dialog"], .modal';
+    const TUBE_BUTTONS_ID = 'fc-accessory-tube-actions';
+    const TUBE_OPTIONS = [
+        { code: 'he00798769', label: 'T75' },
+        { code: 'he00798637', label: 'T63' },
+        { code: 'he00798454', label: 'T45' },
+        { code: 'tubus122', label: 'T120' }
+    ];
 
     let stateBusy = false;
     let autoConfirmUntil = 0;
     let autoCloseAccessoryAfterZeroOut = false;
+    let tubeScanPromise = null;
+    let tubeInventory = new Map();
     const nativeConfirm = window.confirm ? window.confirm.bind(window) : null;
 
     function log(...args) {
@@ -89,6 +98,29 @@
 
     function getAccessoryRow(target) {
         return target && target.closest ? target.closest('tr') : null;
+    }
+
+    function getAccessoryGlobalActionsHost() {
+        const containers = Array.from(document.querySelectorAll('div.flex.items-center.col-span-1'));
+        return containers.find(node => normalizeText(node.textContent).includes('globalne akcie')) || null;
+    }
+
+    function getAccessoryMainSection() {
+        const heading = Array.from(document.querySelectorAll('h3')).find(node => {
+            return normalizeText(node.textContent).includes('aktualne priradene prislusenstvo');
+        });
+
+        if (!heading) return null;
+
+        return heading.closest('div.rounded-b') || heading.closest('div');
+    }
+
+    function getAccessoryPaginationContainer(section) {
+        if (!section) return null;
+
+        return Array.from(section.querySelectorAll('div')).find(node => {
+            return normalizeText(node.textContent).includes('zobrazenych') && normalizeText(node.textContent).includes('zaznamov');
+        }) || null;
     }
 
     function styleInlineLink(link) {
@@ -153,6 +185,21 @@
         node.textContent = '';
         actions.appendChild(node);
         return node;
+    }
+
+    function flashNode(node, color) {
+        if (!node) return;
+
+        node.style.transition = 'box-shadow 180ms ease, transform 140ms ease, opacity 180ms ease';
+        node.style.boxShadow = `0 0 0 2px ${color}`;
+        node.style.transform = 'scale(1.04)';
+        node.style.opacity = '0.92';
+
+        window.setTimeout(() => {
+            node.style.boxShadow = '';
+            node.style.transform = '';
+            node.style.opacity = '';
+        }, 700);
     }
 
     function setStatus(text, tone) {
@@ -475,12 +522,39 @@
         return text.includes('preklopit do poctu');
     }
 
+    function isAccessoryFilterButton(button) {
+        const text = normalizeText(button.textContent);
+        return text.includes('iba upravitelne') || text.includes('iba skladom') || text.includes('iba nenulove');
+    }
+
+    function isFilterButtonActive(button) {
+        return button.className.includes('bg-green') || button.querySelector("img[src*='check-white']");
+    }
+
     function findAccessorySaveButton(row) {
         if (!row) return null;
 
         return Array.from(row.querySelectorAll('button, a, [role="button"]')).find(node => {
             return isAccessorySaveButton(node);
         }) || null;
+    }
+
+    function findAccessoryQuantityInput(row) {
+        if (!row) return null;
+        return row.querySelector("input[type='number']");
+    }
+
+    function parseAccessoryRowCode(row) {
+        if (!row) return '';
+
+        const firstCell = row.querySelector('td');
+        const text = normalizeText(firstCell ? firstCell.textContent : row.textContent);
+        const parts = text.split('/').map(part => normalizeText(part));
+        return parts[2] || '';
+    }
+
+    function isTubeRow(row, code) {
+        return parseAccessoryRowCode(row) === normalizeText(code);
     }
 
     function flashAccessorySaveFeedback(row, saveButton) {
@@ -517,6 +591,236 @@
         flashAccessorySaveFeedback(row, saveButton);
         saveButton.click();
         return true;
+    }
+
+    function getTubeButtonsNode() {
+        return document.getElementById(TUBE_BUTTONS_ID);
+    }
+
+    function styleTubeButton(button) {
+        Object.assign(button.style, {
+            marginLeft: '8px',
+            minWidth: '44px',
+            height: '30px',
+            padding: '0 10px',
+            borderRadius: '6px',
+            border: '1px solid #c7d2e0',
+            background: '#ffffff',
+            color: '#2f3b4c',
+            fontSize: '12px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            opacity: '1'
+        });
+    }
+
+    function setTubeButtonState(button, enabled) {
+        button.disabled = !enabled;
+        button.style.opacity = enabled ? '1' : '0.35';
+        button.style.cursor = enabled ? 'pointer' : 'default';
+    }
+
+    function ensureTubeButtons() {
+        const host = getAccessoryGlobalActionsHost();
+        if (!host) return null;
+
+        let wrapper = getTubeButtonsNode();
+        if (!wrapper) {
+            wrapper = document.createElement('span');
+            wrapper.id = TUBE_BUTTONS_ID;
+            Object.assign(wrapper.style, {
+                display: 'inline-flex',
+                alignItems: 'center',
+                marginLeft: '10px'
+            });
+
+            TUBE_OPTIONS.forEach(option => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = option.label;
+                button.dataset.tubeCode = option.code;
+                button.dataset.tubeLabel = option.label;
+                styleTubeButton(button);
+                setTubeButtonState(button, false);
+                button.addEventListener('click', () => {
+                    applyTubeSelection(option.code, option.label);
+                });
+                wrapper.appendChild(button);
+            });
+        }
+
+        if (wrapper.parentNode !== host) {
+            host.appendChild(wrapper);
+        }
+
+        return wrapper;
+    }
+
+    function updateTubeButtonsAvailability() {
+        const wrapper = ensureTubeButtons();
+        if (!wrapper) return;
+
+        Array.from(wrapper.querySelectorAll('button')).forEach(button => {
+            setTubeButtonState(button, tubeInventory.has(button.dataset.tubeCode || ''));
+        });
+    }
+
+    function wait(ms) {
+        return new Promise(resolve => window.setTimeout(resolve, ms));
+    }
+
+    async function waitForTableRefresh() {
+        await wait(260);
+    }
+
+    async function deactivateAccessoryFilters(section) {
+        if (!section) return;
+
+        const filterButtons = Array.from(section.querySelectorAll('button')).filter(button => {
+            return isAccessoryFilterButton(button) && isFilterButtonActive(button);
+        });
+
+        for (const button of filterButtons) {
+            button.click();
+            await waitForTableRefresh();
+        }
+    }
+
+    async function setAccessoryPerPage(section, limit) {
+        const pagination = getAccessoryPaginationContainer(section);
+        if (!pagination) return;
+
+        const select = pagination.querySelector('select');
+        if (!select || String(select.value) === String(limit)) return;
+
+        select.value = String(limit);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        await waitForTableRefresh();
+    }
+
+    function getAccessoryPageCount(section) {
+        const pagination = getAccessoryPaginationContainer(section);
+        if (!pagination) return 1;
+
+        const input = Array.from(pagination.querySelectorAll("input[type='number']")).find(node => {
+            return node.hasAttribute('max') && node.getAttribute('min') === '1';
+        });
+
+        return input ? Math.max(1, Number(input.getAttribute('max')) || 1) : 1;
+    }
+
+    async function goToAccessoryPage(section, page) {
+        const pagination = getAccessoryPaginationContainer(section);
+        if (!pagination) return;
+
+        const input = Array.from(pagination.querySelectorAll("input[type='number']")).find(node => {
+            return node.hasAttribute('max') && node.getAttribute('min') === '1';
+        });
+
+        if (!input) return;
+        if (String(input.value) === String(page)) return;
+
+        input.value = String(page);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await waitForTableRefresh();
+    }
+
+    function collectTubeRowsFromSection(section, page) {
+        const rows = Array.from(section.querySelectorAll('tbody tr'));
+
+        rows.forEach(row => {
+            const code = parseAccessoryRowCode(row);
+            const match = TUBE_OPTIONS.find(option => normalizeText(option.code) === code);
+            if (!match) return;
+
+            tubeInventory.set(match.code, { page: page, label: match.label });
+        });
+    }
+
+    async function scanTubeInventory() {
+        const section = getAccessoryMainSection();
+        if (!section) return;
+
+        setStatus('Hladam tubusy v prislusenstve...', 'busy');
+        tubeInventory = new Map();
+
+        await deactivateAccessoryFilters(section);
+        await setAccessoryPerPage(section, 100);
+
+        const pageCount = getAccessoryPageCount(section);
+        for (let page = 1; page <= pageCount; page += 1) {
+            await goToAccessoryPage(section, page);
+            collectTubeRowsFromSection(section, page);
+        }
+
+        await goToAccessoryPage(section, 1);
+        updateTubeButtonsAvailability();
+        setStatus('Tubus buttony pripravene', 'success');
+    }
+
+    function ensureTubeInventoryScanned() {
+        if (tubeScanPromise) return tubeScanPromise;
+
+        tubeScanPromise = scanTubeInventory().finally(() => {
+            tubeScanPromise = null;
+        });
+
+        return tubeScanPromise;
+    }
+
+    async function setAccessoryRowQuantity(row, quantity, reason) {
+        const input = findAccessoryQuantityInput(row);
+        if (!input) return false;
+
+        if (Number(input.value || 0) === Number(quantity)) {
+            return true;
+        }
+
+        input.value = String(quantity);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        return triggerAccessorySave(row, reason);
+    }
+
+    async function applyTubeSelection(code, label) {
+        await ensureTubeInventoryScanned();
+
+        if (!tubeInventory.has(code)) {
+            setStatus(`Tubus ${label} nie je v prislusenstve`, 'error');
+            updateTubeButtonsAvailability();
+            return;
+        }
+
+        const section = getAccessoryMainSection();
+        if (!section) return;
+
+        setStatus(`Nastavujem tubus ${label}...`, 'busy');
+
+        const actions = TUBE_OPTIONS
+            .filter(option => tubeInventory.has(option.code))
+            .map(option => ({
+                code: option.code,
+                label: option.label,
+                quantity: option.code === code ? 1 : 0
+            }));
+
+        for (const action of actions) {
+            const tubeMeta = tubeInventory.get(action.code);
+            if (!tubeMeta) continue;
+
+            await goToAccessoryPage(section, tubeMeta.page);
+            const row = Array.from(section.querySelectorAll('tbody tr')).find(node => isTubeRow(node, action.code));
+            if (!row) continue;
+
+            await setAccessoryRowQuantity(row, action.quantity, `tube-${action.label}`);
+            await wait(160);
+        }
+
+        await goToAccessoryPage(section, 1);
+        const button = ensureTubeButtons() ? getTubeButtonsNode().querySelector(`button[data-tube-code="${code}"]`) : null;
+        flashNode(button, 'rgba(22, 101, 52, 0.20)');
+        setStatus(`Tubus ${label} nastaveny`, 'success');
     }
 
     function findPositiveConfirmButton() {
@@ -644,6 +948,24 @@
         }, true);
     }
 
+    function installTubeButtonsWatcher() {
+        if (window.__fcTubeButtonsWatcherInstalled) return;
+        window.__fcTubeButtonsWatcherInstalled = true;
+
+        ensureTubeButtons();
+        updateTubeButtonsAvailability();
+        ensureTubeInventoryScanned();
+
+        const observer = new MutationObserver(() => {
+            ensureTubeButtons();
+            updateTubeButtonsAvailability();
+        });
+
+        if (document.body) {
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+    }
+
     function installZeroOutRequestWatcher() {
         if (window.__fcZeroOutWatcherInstalled) return;
         window.__fcZeroOutWatcherInstalled = true;
@@ -701,6 +1023,7 @@
     function initAdminAccessoryContext() {
         installAutoConfirmOverride();
         installAccessoryInlineSaveWatcher();
+        installTubeButtonsWatcher();
         installZeroOutClickWatcher();
         installZeroOutDialogWatcher();
         installZeroOutRequestWatcher();
@@ -735,6 +1058,8 @@
     function initModulyDetailContext() {
         installParentZeroOutMessageListener();
         installAutoConfirmOverride();
+        installAccessoryInlineSaveWatcher();
+        installTubeButtonsWatcher();
         installZeroOutClickWatcher();
         installZeroOutDialogWatcher();
         installZeroOutRequestWatcher();
