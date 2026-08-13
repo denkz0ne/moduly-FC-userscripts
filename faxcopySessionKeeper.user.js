@@ -13,45 +13,32 @@
 (function () {
     'use strict';
 
-    const KEEPALIVE_INTERVAL_MS = 4 * 60 * 1000;
+    const KEEPALIVE_BASE_INTERVAL_MS = 4 * 60 * 1000;
+    const KEEPALIVE_JITTER_MS = 75 * 1000;
     const ACTIVITY_DEBOUNCE_MS = 45 * 1000;
     const REQUEST_TIMEOUT_MS = 20 * 1000;
-    const STATUS_ID = 'fc-session-keeper-status';
+    const MODAL_SELECTORS = [
+        '[role="dialog"]',
+        '.ui-dialog',
+        '.modal',
+        '.modal-dialog',
+        '.fixed.inset-0',
+        '.popup',
+        '.lightbox'
+    ];
 
     let keepAliveTimer = 0;
     let lastActivityPingAt = 0;
     let lastSuccessfulPingAt = 0;
+    let modalObserver = null;
+    let modalPingCooldownUntil = 0;
 
     function log(...args) {
         console.log('[FaxCopy Session Keeper]', ...args);
     }
 
-    function createStatusBadge() {
-        if (document.getElementById(STATUS_ID)) return document.getElementById(STATUS_ID);
-
-        const badge = document.createElement('div');
-        badge.id = STATUS_ID;
-        badge.style.position = 'fixed';
-        badge.style.right = '12px';
-        badge.style.bottom = '12px';
-        badge.style.zIndex = '2147483647';
-        badge.style.padding = '6px 10px';
-        badge.style.borderRadius = '999px';
-        badge.style.background = 'rgba(15, 23, 42, 0.82)';
-        badge.style.color = '#fff';
-        badge.style.font = '12px/1.2 Arial, sans-serif';
-        badge.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.22)';
-        badge.style.pointerEvents = 'none';
-        badge.style.transition = 'opacity 0.2s ease';
-        badge.textContent = 'Relacia: startujem...';
-        document.body.appendChild(badge);
-        return badge;
-    }
-
-    function updateStatus(text, background) {
-        const badge = createStatusBadge();
-        badge.textContent = text;
-        if (background) badge.style.background = background;
+    function updateStatus(text) {
+        log(text);
     }
 
     function formatTime(timestamp) {
@@ -116,32 +103,35 @@
     }
 
     async function runKeepAlive(reason) {
-        updateStatus(`Relacia: obnovujem... (${reason})`, 'rgba(30, 64, 175, 0.88)');
+        updateStatus(`Relacia: obnovujem... (${reason})`);
 
         try {
             await pingSameOrigin();
             await pingSso();
 
             lastSuccessfulPingAt = Date.now();
-            updateStatus(
-                `Relacia: OK ${formatTime(lastSuccessfulPingAt)} (${reason})`,
-                'rgba(22, 101, 52, 0.88)'
-            );
+            updateStatus(`Relacia: OK ${formatTime(lastSuccessfulPingAt)} (${reason})`);
             log('Keepalive OK', reason, new Date(lastSuccessfulPingAt).toISOString());
         } catch (error) {
-            updateStatus('Relacia: problem, skusim znova', 'rgba(153, 27, 27, 0.9)');
+            updateStatus('Relacia: problem, skusim znova');
             log('Keepalive failed', reason, error);
         }
     }
 
+    function getNextIntervalMs() {
+        const jitter = Math.floor((Math.random() * 2 - 1) * KEEPALIVE_JITTER_MS);
+        return Math.max(90 * 1000, KEEPALIVE_BASE_INTERVAL_MS + jitter);
+    }
+
     function scheduleKeepAlive() {
         if (keepAliveTimer) {
-            window.clearInterval(keepAliveTimer);
+            window.clearTimeout(keepAliveTimer);
         }
 
-        keepAliveTimer = window.setInterval(() => {
-            runKeepAlive('interval');
-        }, KEEPALIVE_INTERVAL_MS);
+        keepAliveTimer = window.setTimeout(async () => {
+            await runKeepAlive('nahodny interval');
+            scheduleKeepAlive();
+        }, getNextIntervalMs());
     }
 
     function pingOnUserActivity() {
@@ -172,11 +162,47 @@
         });
     }
 
+    function isVisibleModal(node) {
+        if (!(node instanceof Element)) return false;
+
+        const modal = node.matches(MODAL_SELECTORS.join(','))
+            ? node
+            : node.querySelector(MODAL_SELECTORS.join(','));
+
+        if (!modal) return false;
+
+        const style = window.getComputedStyle(modal);
+        return style.display !== 'none' && style.visibility !== 'hidden' && modal.getClientRects().length > 0;
+    }
+
+    function bindModalObserver() {
+        if (modalObserver) return;
+
+        modalObserver = new MutationObserver(mutations => {
+            const now = Date.now();
+            if (now < modalPingCooldownUntil) return;
+
+            const modalAppeared = mutations.some(mutation => {
+                return Array.from(mutation.addedNodes).some(isVisibleModal);
+            });
+
+            if (!modalAppeared) return;
+
+            modalPingCooldownUntil = now + 20 * 1000;
+            runKeepAlive('modal');
+        });
+
+        modalObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
     function init() {
-        createStatusBadge();
-        updateStatus('Relacia: inicializacia...', 'rgba(15, 23, 42, 0.82)');
+        updateStatus('Relacia: inicializacia...');
         scheduleKeepAlive();
         bindActivityListeners();
+        bindModalObserver();
         runKeepAlive('start');
     }
 
