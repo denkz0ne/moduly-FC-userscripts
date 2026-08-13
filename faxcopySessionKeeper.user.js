@@ -32,6 +32,7 @@
     let lastSuccessfulPingAt = 0;
     let modalObserver = null;
     let modalPingCooldownUntil = 0;
+    let lastScheduledIntervalMs = 0;
 
     function log(...args) {
         console.log('[FaxCopy Session Keeper]', ...args);
@@ -39,6 +40,10 @@
 
     function updateStatus(text) {
         log(text);
+    }
+
+    function seconds(ms) {
+        return Math.round(ms / 1000);
     }
 
     function formatTime(timestamp) {
@@ -111,7 +116,9 @@
 
             lastSuccessfulPingAt = Date.now();
             updateStatus(`Relacia: OK ${formatTime(lastSuccessfulPingAt)} (${reason})`);
-            log('Keepalive OK', reason, new Date(lastSuccessfulPingAt).toISOString());
+            log(
+                `Session obnovena uspesne. dovod=${reason}, cas=${new Date(lastSuccessfulPingAt).toISOString()}`
+            );
         } catch (error) {
             updateStatus('Relacia: problem, skusim znova');
             log('Keepalive failed', reason, error);
@@ -128,10 +135,13 @@
             window.clearTimeout(keepAliveTimer);
         }
 
+        lastScheduledIntervalMs = getNextIntervalMs();
+        log(`Dalsi keepalive naplanovany o ${seconds(lastScheduledIntervalMs)} s`);
+
         keepAliveTimer = window.setTimeout(async () => {
             await runKeepAlive('nahodny interval');
             scheduleKeepAlive();
-        }, getNextIntervalMs());
+        }, lastScheduledIntervalMs);
     }
 
     function pingOnUserActivity() {
@@ -189,6 +199,7 @@
             if (!modalAppeared) return;
 
             modalPingCooldownUntil = now + 20 * 1000;
+            log('Detegovany modal, spustam okamzity keepalive');
             runKeepAlive('modal');
         });
 
@@ -200,6 +211,7 @@
 
     function init() {
         updateStatus('Relacia: inicializacia...');
+        log('Script startuje na URL:', window.location.href);
         scheduleKeepAlive();
         bindActivityListeners();
         bindModalObserver();
