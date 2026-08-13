@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FaxCopy Session Keeper
 // @namespace    faxcopy-userscripts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Udrziava relaciu na moduly.faxcopy.sk aktivnu pravidelnym keep-alive requestom a upozorni pri probleme.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/faxcopySessionKeeper.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/faxcopySessionKeeper.user.js
