@@ -213,14 +213,22 @@
         window.__setMaterialDetectorPanelConfig = function (config) { return savePanelConfig(config); };
     }
 
+    function extractKnownProductCode(text) {
+        const normalized = normalizeKey(text);
+        const zd = normalized.match(/\b(49ban|68bs|67mf|49s)\b/i);
+        if (zd) return zd[1].toLowerCase();
+        const photo = normalized.match(/\b(48fh\d{4,6}|48rp\d{4,6}|48r\d{4,6}|48xk|48x[146])\b/i);
+        if (photo) return photo[1].toLowerCase();
+        if (normalized.includes('42foto/web') || normalized.includes('48foto/web')) return '42foto/web';
+        if (normalized.includes('41tv')) return '41tv';
+        return '';
+    }
+
     function getProductCodeFromPriceRows() {
         const rows = document.querySelectorAll("tr[title='ceny bez DPH']");
         for (const row of rows) {
-            const text = normalizeKey(row.textContent || row.innerText || '');
-            if (text.includes('42foto/web') || text.includes('48foto/web')) return '42foto/web';
-            if (text.includes('41tv')) return '41tv';
-            const photo = text.match(/\b(48fh\d{4,6}|48rp\d{4,6}|48r\d{4,6}|48xk|48x[146])\b/i);
-            if (photo) return photo[1].toLowerCase();
+            const code = extractKnownProductCode(row.textContent || row.innerText || '');
+            if (code) return code;
         }
         return '';
     }
@@ -233,8 +241,8 @@
             .filter(Boolean);
         const productText = [document.querySelector('h1, h2')?.textContent || '', ...rowTexts, ...formTexts].join(' ');
         const priceCode = getProductCodeFromPriceRows();
-        const photoMatch = productText.match(/\b(48fh\d{4,6}|48rp\d{4,6}|48r\d{4,6}|48xk|48x[146])\b/i);
-        const internalCode = photoMatch ? photoMatch[1].toLowerCase() : priceCode;
+        const productCode = extractKnownProductCode(productText);
+        const internalCode = productCode || priceCode;
         return { detailInfo, rowTexts, formTexts, productText, internalCode, priceCode };
     }
 
