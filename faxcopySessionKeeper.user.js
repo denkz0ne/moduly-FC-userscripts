@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         FaxCopy Session Keeper
 // @namespace    faxcopy-userscripts
-// @version      1.2.0
-// @description  Nenapadne pomaha oficialnemu FaxCopy SSO SDK obnovovat relaciu a zobrazuje jemny odpoctovy stav.
+// @version      1.2.1
+// @description  Nenapadne pomaha oficialnemu FaxCopy SSO SDK obnovovat relaciu a dava stav do tooltipu mena.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/faxcopySessionKeeper.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/faxcopySessionKeeper.user.js
 // @match        https://moduly.faxcopy.sk/*
@@ -22,7 +22,6 @@
     const TOAST_SELECTOR = '.fc-session-toast';
     const TOAST_VISIBLE_SELECTOR = '.fc-session-toast.fc-visible';
     const STAY_BUTTON_SELECTOR = '.fc-session-toast-btn-primary';
-    const INDICATOR_ID = 'fc-session-keeper-mini';
     const TRIGGER_COOLDOWN_MS = 65 * 1000;
     const REFRESH_DETECT_DELTA_SEC = 5 * 60;
 
@@ -36,6 +35,7 @@
     let lastKeepAt = null;
     let lastStatusAt = null;
     let lastStatusError = '';
+    let userLinkOriginalTitle = null;
 
     function log(...args) {
         if (DEBUG) {
@@ -80,71 +80,36 @@
         lastTriggerAt = Date.now();
     }
 
-    function getIndicator() {
-        let node = document.getElementById(INDICATOR_ID);
-        if (node) return node;
-
-        node = document.createElement('span');
-        node.id = INDICATOR_ID;
-        node.style.display = 'inline-block';
-        node.style.marginRight = '6px';
-        node.style.color = 'rgba(255, 255, 255, 0.72)';
-        node.style.fontSize = '11px';
-        node.style.fontWeight = '400';
-        node.style.lineHeight = '1';
-        node.style.letterSpacing = '0';
-        node.style.pointerEvents = 'none';
-        node.style.userSelect = 'none';
-        node.style.opacity = '0.82';
-        node.style.verticalAlign = 'middle';
-
+    function getUserNameLink() {
         const userInfo = document.querySelector('.user-info');
-        const userLink = userInfo ? userInfo.querySelector('a[href*="/landing/detail"]') : null;
+        if (!userInfo) return null;
 
-        if (userInfo && userLink) {
-            userInfo.insertBefore(node, userLink);
-        } else {
-            node.style.position = 'fixed';
-            node.style.left = '8px';
-            node.style.bottom = '6px';
-            node.style.zIndex = '2147483000';
-            node.style.padding = '2px 6px';
-            node.style.borderRadius = '8px';
-            node.style.background = 'rgba(17, 24, 39, 0.34)';
-            document.body.appendChild(node);
-        }
-
-        return node;
+        return Array.from(userInfo.querySelectorAll('a[href]')).find(link => {
+            return !link.classList.contains('menu-icon') && link.textContent.trim();
+        }) || null;
     }
 
     function updateIndicator() {
-        const node = getIndicator();
+        const link = getUserNameLink();
+        if (!link) return;
+
+        if (userLinkOriginalTitle === null) {
+            userLinkOriginalTitle = link.getAttribute('title') || '';
+        }
+
         const remaining = expiresAt ? Math.ceil((expiresAt - Date.now()) / 1000) : NaN;
         const age = lastStatusAt ? Math.round((Date.now() - lastStatusAt) / 1000) : null;
         const ageText = age === null ? '-' : `${age}s`;
         const keepText = lastKeepAt ? formatClock(lastKeepAt) : '-';
 
-        node.textContent = `(SSO ${formatDuration(remaining)} | keep ${keepText})`;
-        node.title = [
+        link.title = [
+            userLinkOriginalTitle,
+            `SSO: ${formatDuration(remaining)}`,
             `Session konci približne za: ${formatDuration(remaining)}`,
             `Posledny status: ${formatClock(lastStatusAt)} (${ageText})`,
             `Posledne potvrdene predlzenie: ${keepText}`,
             lastStatusError ? `Posledna chyba: ${lastStatusError}` : 'Status OK'
-        ].join('\n');
-
-        if (Number.isFinite(remaining) && remaining < 10 * 60) {
-            node.style.background = node.style.position === 'fixed' ? 'rgba(146, 64, 14, 0.48)' : 'transparent';
-            node.style.color = 'rgba(255, 214, 165, 0.95)';
-            node.style.opacity = '0.86';
-        } else if (lastStatusError) {
-            node.style.background = node.style.position === 'fixed' ? 'rgba(127, 29, 29, 0.42)' : 'transparent';
-            node.style.color = 'rgba(255, 190, 190, 0.95)';
-            node.style.opacity = '0.86';
-        } else {
-            node.style.background = node.style.position === 'fixed' ? 'rgba(17, 24, 39, 0.34)' : 'transparent';
-            node.style.color = 'rgba(255, 255, 255, 0.72)';
-            node.style.opacity = '0.82';
-        }
+        ].filter(Boolean).join('\n');
     }
 
     async function fetchStatus(reason) {
@@ -319,7 +284,7 @@
 
     function init() {
         log('Startujem na URL:', window.location.href);
-        getIndicator();
+        updateIndicator();
         bindCountdown();
         bindToastObserver();
         handlePossibleToast('start');
