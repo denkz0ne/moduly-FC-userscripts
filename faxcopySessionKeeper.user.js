@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         FaxCopy Session Keeper
 // @namespace    faxcopy-userscripts
-// @version      1.0.1
-// @description  Udrziava relaciu na moduly.faxcopy.sk aktivnu pravidelnym keep-alive requestom a upozorni pri probleme.
+// @version      1.1.0
+// @description  Nenapadne pomaha oficialnemu FaxCopy SSO SDK obnovovat relaciu cez jeho vlastny activity flow.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/faxcopySessionKeeper.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/faxcopySessionKeeper.user.js
 // @match        https://moduly.faxcopy.sk/*
@@ -13,209 +13,153 @@
 (function () {
     'use strict';
 
-    const KEEPALIVE_BASE_INTERVAL_MS = 4 * 60 * 1000;
-    const KEEPALIVE_JITTER_MS = 75 * 1000;
-    const ACTIVITY_DEBOUNCE_MS = 45 * 1000;
-    const REQUEST_TIMEOUT_MS = 20 * 1000;
-    const MODAL_SELECTORS = [
-        '[role="dialog"]',
-        '.ui-dialog',
-        '.modal',
-        '.modal-dialog',
-        '.fixed.inset-0',
-        '.popup',
-        '.lightbox'
-    ];
+    const DEBUG = true;
+    const RANDOM_INTERVAL_MIN_MS = 2.5 * 60 * 1000;
+    const RANDOM_INTERVAL_MAX_MS = 5.5 * 60 * 1000;
+    const TOAST_SELECTOR = '.fc-session-toast';
+    const TOAST_VISIBLE_SELECTOR = '.fc-session-toast.fc-visible';
+    const STAY_BUTTON_SELECTOR = '.fc-session-toast-btn-primary';
+    const TRIGGER_COOLDOWN_MS = 65 * 1000;
 
-    let keepAliveTimer = 0;
-    let lastActivityPingAt = 0;
-    let lastSuccessfulPingAt = 0;
-    let modalObserver = null;
-    let modalPingCooldownUntil = 0;
-    let lastScheduledIntervalMs = 0;
+    let timer = 0;
+    let observer = null;
+    let lastTriggerAt = 0;
 
     function log(...args) {
-        console.log('[FaxCopy Session Keeper]', ...args);
+        if (DEBUG) {
+            console.log('[FaxCopy Session Keeper]', ...args);
+        }
     }
 
-    function updateStatus(text) {
-        log(text);
+    function randomIntervalMs() {
+        const range = RANDOM_INTERVAL_MAX_MS - RANDOM_INTERVAL_MIN_MS;
+        return Math.round(RANDOM_INTERVAL_MIN_MS + Math.random() * range);
     }
 
     function seconds(ms) {
         return Math.round(ms / 1000);
     }
 
-    function formatTime(timestamp) {
-        if (!timestamp) return 'nikdy';
-
-        try {
-            return new Date(timestamp).toLocaleTimeString('sk-SK', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        } catch (error) {
-            return new Date(timestamp).toLocaleTimeString();
-        }
+    function canTrigger() {
+        return Date.now() - lastTriggerAt >= TRIGGER_COOLDOWN_MS;
     }
 
-    async function fetchWithTimeout(resource, options = {}) {
-        const controller = new AbortController();
-        const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-        try {
-            return await fetch(resource, {
-                ...options,
-                signal: controller.signal
-            });
-        } finally {
-            window.clearTimeout(timeoutId);
-        }
+    function markTrigger() {
+        lastTriggerAt = Date.now();
     }
 
-    async function pingSameOrigin() {
-        const url = new URL('/landing/detail', window.location.origin);
-        url.searchParams.set('tm_keepalive', String(Date.now()));
+    function findVisibleToast() {
+        return document.querySelector(TOAST_VISIBLE_SELECTOR);
+    }
 
-        const response = await fetchWithTimeout(url.toString(), {
-            method: 'GET',
-            credentials: 'include',
-            cache: 'no-store',
-            redirect: 'follow',
-            headers: {
-                'X-Requested-With': 'Tampermonkey'
+    function clickStaySignedIn(reason) {
+        const toast = findVisibleToast();
+        const button = toast ? toast.querySelector(STAY_BUTTON_SELECTOR) : null;
+
+        if (!button || button.disabled) {
+            return false;
+        }
+
+        markTrigger();
+        log(`Vidim SSO toast, klikam oficialne tlacidlo. dovod=${reason}`);
+        button.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        }));
+
+        return true;
+    }
+
+    function nudgeOfficialSsoSdk(reason) {
+        if (!canTrigger()) {
+            log(`Preskakujem, cooldown este bezi. dovod=${reason}`);
+            return;
+        }
+
+        if (clickStaySignedIn(reason)) {
+            return;
+        }
+
+        markTrigger();
+        log(`Posielam nenapadny DOM activity signal pre oficialne SSO SDK. dovod=${reason}`);
+
+        const target = document.body || document.documentElement || document;
+        target.dispatchEvent(new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            clientX: 1 + Math.floor(Math.random() * 4),
+            clientY: 1 + Math.floor(Math.random() * 4)
+        }));
+    }
+
+    function scheduleNext(reason) {
+        if (timer) {
+            window.clearTimeout(timer);
+        }
+
+        const next = randomIntervalMs();
+        log(`Dalsi nahodny activity signal za ${seconds(next)} s. predchadzajuci=${reason}`);
+
+        timer = window.setTimeout(() => {
+            nudgeOfficialSsoSdk('nahodny interval');
+            scheduleNext('nahodny interval');
+        }, next);
+    }
+
+    function handlePossibleToast(reason) {
+        if (!findVisibleToast()) {
+            return;
+        }
+
+        log(`Detegovany SSO toast. dovod=${reason}`);
+        clickStaySignedIn(reason);
+    }
+
+    function bindToastObserver() {
+        if (observer || !document.body) {
+            return;
+        }
+
+        observer = new MutationObserver(mutations => {
+            const hasToastChange = mutations.some(mutation => {
+                if (mutation.type === 'attributes') {
+                    return mutation.target instanceof Element && mutation.target.matches(TOAST_SELECTOR);
+                }
+
+                return Array.from(mutation.addedNodes).some(node => {
+                    return node instanceof Element && (
+                        node.matches(TOAST_SELECTOR) || Boolean(node.querySelector(TOAST_SELECTOR))
+                    );
+                });
+            });
+
+            if (hasToastChange) {
+                handlePossibleToast('toast mutation');
             }
         });
 
-        const finalUrl = response.url || '';
-        const looksLoggedOut = response.redirected && /login|prihlasenie|sso/i.test(finalUrl);
-
-        if (!response.ok || looksLoggedOut) {
-            throw new Error(`Moduly keepalive zlyhal (${response.status || 'n/a'}) ${finalUrl}`);
-        }
-    }
-
-    async function pingSso() {
-        const url = `https://prihlasenie.faxcopy.sk/sdk/faxcopy-sso-session.css?tm_keepalive=${Date.now()}`;
-
-        await fetch(url, {
-            method: 'GET',
-            mode: 'no-cors',
-            credentials: 'include',
-            cache: 'no-store'
-        });
-    }
-
-    async function runKeepAlive(reason) {
-        updateStatus(`Relacia: obnovujem... (${reason})`);
-
-        try {
-            await pingSameOrigin();
-            await pingSso();
-
-            lastSuccessfulPingAt = Date.now();
-            updateStatus(`Relacia: OK ${formatTime(lastSuccessfulPingAt)} (${reason})`);
-            log(
-                `Session obnovena uspesne. dovod=${reason}, cas=${new Date(lastSuccessfulPingAt).toISOString()}`
-            );
-        } catch (error) {
-            updateStatus('Relacia: problem, skusim znova');
-            log('Keepalive failed', reason, error);
-        }
-    }
-
-    function getNextIntervalMs() {
-        const jitter = Math.floor((Math.random() * 2 - 1) * KEEPALIVE_JITTER_MS);
-        return Math.max(90 * 1000, KEEPALIVE_BASE_INTERVAL_MS + jitter);
-    }
-
-    function scheduleKeepAlive() {
-        if (keepAliveTimer) {
-            window.clearTimeout(keepAliveTimer);
-        }
-
-        lastScheduledIntervalMs = getNextIntervalMs();
-        log(`Dalsi keepalive naplanovany o ${seconds(lastScheduledIntervalMs)} s`);
-
-        keepAliveTimer = window.setTimeout(async () => {
-            await runKeepAlive('nahodny interval');
-            scheduleKeepAlive();
-        }, lastScheduledIntervalMs);
-    }
-
-    function pingOnUserActivity() {
-        const now = Date.now();
-        if (now - lastActivityPingAt < ACTIVITY_DEBOUNCE_MS) return;
-
-        lastActivityPingAt = now;
-        runKeepAlive('aktivita');
-    }
-
-    function bindActivityListeners() {
-        ['click', 'keydown', 'mousemove'].forEach(eventName => {
-            window.addEventListener(eventName, pingOnUserActivity, { passive: true });
-        });
-
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                runKeepAlive('navrat do tabu');
-            }
-        });
-
-        window.addEventListener('focus', () => {
-            runKeepAlive('focus');
-        });
-
-        window.addEventListener('online', () => {
-            runKeepAlive('online');
-        });
-    }
-
-    function isVisibleModal(node) {
-        if (!(node instanceof Element)) return false;
-
-        const modal = node.matches(MODAL_SELECTORS.join(','))
-            ? node
-            : node.querySelector(MODAL_SELECTORS.join(','));
-
-        if (!modal) return false;
-
-        const style = window.getComputedStyle(modal);
-        return style.display !== 'none' && style.visibility !== 'hidden' && modal.getClientRects().length > 0;
-    }
-
-    function bindModalObserver() {
-        if (modalObserver) return;
-
-        modalObserver = new MutationObserver(mutations => {
-            const now = Date.now();
-            if (now < modalPingCooldownUntil) return;
-
-            const modalAppeared = mutations.some(mutation => {
-                return Array.from(mutation.addedNodes).some(isVisibleModal);
-            });
-
-            if (!modalAppeared) return;
-
-            modalPingCooldownUntil = now + 20 * 1000;
-            log('Detegovany modal, spustam okamzity keepalive');
-            runKeepAlive('modal');
-        });
-
-        modalObserver.observe(document.body, {
+        observer.observe(document.body, {
             childList: true,
-            subtree: true
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
         });
     }
 
     function init() {
-        updateStatus('Relacia: inicializacia...');
-        log('Script startuje na URL:', window.location.href);
-        scheduleKeepAlive();
-        bindActivityListeners();
-        bindModalObserver();
-        runKeepAlive('start');
+        log('Startujem na URL:', window.location.href);
+        bindToastObserver();
+        handlePossibleToast('start');
+        scheduleNext('start');
+
+        window.addEventListener('focus', () => nudgeOfficialSsoSdk('focus'));
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                nudgeOfficialSsoSdk('navrat do tabu');
+            }
+        });
     }
 
     if (document.readyState === 'loading') {
