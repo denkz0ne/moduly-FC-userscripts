@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         FaxCopy Session Keeper
 // @namespace    faxcopy-userscripts
-// @version      1.2.1
-// @description  Nenapadne pomaha oficialnemu FaxCopy SSO SDK obnovovat relaciu a dava stav do tooltipu mena.
+// @version      1.2.2
+// @description  Nenapadne pomaha oficialnemu FaxCopy SSO SDK obnovovat relaciu v pracovnom case a dava stav do tooltipu mena.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/faxcopySessionKeeper.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/faxcopySessionKeeper.user.js
 // @match        https://moduly.faxcopy.sk/*
@@ -24,6 +24,11 @@
     const STAY_BUTTON_SELECTOR = '.fc-session-toast-btn-primary';
     const TRIGGER_COOLDOWN_MS = 65 * 1000;
     const REFRESH_DETECT_DELTA_SEC = 5 * 60;
+    const WORK_START_HOUR = 6;
+    const WORK_END_HOUR = 16;
+    const WORK_DAYS = [1, 2, 3, 4, 5];
+    const OUT_OF_HOURS_RECHECK_MIN_MS = 15 * 1000;
+    const OUT_OF_HOURS_RECHECK_MAX_MS = 75 * 1000;
 
     let activityTimer = 0;
     let statusTimer = 0;
@@ -72,6 +77,46 @@
         return `${minutes}:${twoDigits(secondsPart)}`;
     }
 
+    function isWorkingTime(date = new Date()) {
+        return WORK_DAYS.includes(date.getDay())
+            && date.getHours() >= WORK_START_HOUR
+            && date.getHours() < WORK_END_HOUR;
+    }
+
+    function getNextWorkStart(from = new Date()) {
+        const next = new Date(from);
+        next.setSeconds(0, 0);
+
+        if (isWorkingTime(next)) {
+            return next;
+        }
+
+        if (next.getHours() >= WORK_END_HOUR) {
+            next.setDate(next.getDate() + 1);
+        }
+
+        next.setHours(WORK_START_HOUR, 0, 0, 0);
+
+        while (!WORK_DAYS.includes(next.getDay())) {
+            next.setDate(next.getDate() + 1);
+            next.setHours(WORK_START_HOUR, 0, 0, 0);
+        }
+
+        return next;
+    }
+
+    function msUntilNextWorkStart() {
+        return Math.max(0, getNextWorkStart().getTime() - Date.now());
+    }
+
+    function getWorkWindowText() {
+        if (isWorkingTime()) {
+            return 'aktivny, pracovne dni 06:00-16:00';
+        }
+
+        return `pozastaveny do ${formatClock(getNextWorkStart().getTime())}, pracovne dni 06:00-16:00`;
+    }
+
     function canTrigger() {
         return Date.now() - lastTriggerAt >= TRIGGER_COOLDOWN_MS;
     }
@@ -106,6 +151,7 @@
             userLinkOriginalTitle,
             `SSO: ${formatDuration(remaining)}`,
             `Session konci približne za: ${formatDuration(remaining)}`,
+            `Keep-alive: ${getWorkWindowText()}`,
             `Posledny status: ${formatClock(lastStatusAt)} (${ageText})`,
             `Posledne potvrdene predlzenie: ${keepText}`,
             lastStatusError ? `Posledna chyba: ${lastStatusError}` : 'Status OK'
@@ -161,6 +207,11 @@
     }
 
     function clickStaySignedIn(reason) {
+        if (!isWorkingTime()) {
+            log(`SSO toast vidim, ale mimo pracovny cas neklikam. dovod=${reason}`);
+            return false;
+        }
+
         const toast = findVisibleToast();
         const button = toast ? toast.querySelector(STAY_BUTTON_SELECTOR) : null;
 
@@ -182,6 +233,11 @@
     }
 
     function nudgeOfficialSsoSdk(reason) {
+        if (!isWorkingTime()) {
+            log(`Mimo pracovny cas neposielam activity signal. dovod=${reason}`);
+            return;
+        }
+
         if (!canTrigger()) {
             log(`Preskakujem, cooldown este bezi. dovod=${reason}`);
             return;
@@ -211,8 +267,11 @@
             window.clearTimeout(activityTimer);
         }
 
-        const next = randomMs(RANDOM_INTERVAL_MIN_MS, RANDOM_INTERVAL_MAX_MS);
-        log(`Dalsi nahodny activity signal za ${seconds(next)} s. predchadzajuci=${reason}`);
+        const next = isWorkingTime()
+            ? randomMs(RANDOM_INTERVAL_MIN_MS, RANDOM_INTERVAL_MAX_MS)
+            : msUntilNextWorkStart() + randomMs(OUT_OF_HOURS_RECHECK_MIN_MS, OUT_OF_HOURS_RECHECK_MAX_MS);
+
+        log(`Dalsi activity pokus za ${seconds(next)} s. keep-alive=${getWorkWindowText()}. predchadzajuci=${reason}`);
 
         activityTimer = window.setTimeout(() => {
             nudgeOfficialSsoSdk('nahodny interval');
