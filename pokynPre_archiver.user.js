@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pokyny Pre - Archiv
 // @namespace    http://faxcopy.sk/
-// @version      1.7
+// @version      1.8
 // @description  Archivacia pokynov a poznamok z VP formulara + interne priznaky pokynov
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
@@ -33,11 +33,11 @@
             border: '#b7cdfc'
         },
         {
-            id: 'poznamka',
+            id: 'poziadavka',
             label: 'Poziadavka',
-            color: '#166534',
-            background: '#e8f7ed',
-            border: '#b9dfc5'
+            color: '#9a3412',
+            background: '#fff0df',
+            border: '#fdc98b'
         },
         {
             id: 'otazka',
