@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Pokyny Pre - Archiv
 // @namespace    http://faxcopy.sk/
-// @version      1.4
-// @description  Archivacia pokynov a poznamok z VP formulara + automaticke nastavenie pobocky
+// @version      1.5
+// @description  Archivacia pokynov a poznamok z VP formulara + interne priznaky pokynov
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
@@ -16,6 +16,51 @@
     const DB_NAME = 'fc_pokyny_archiv';
     const STORE_NAME = 'pokyny';
     const DB_VERSION = 1;
+
+    const POKYN_TAGS = [
+        {
+            id: 'chyba',
+            label: 'Chyba',
+            color: '#b42318',
+            background: '#fde8e6',
+            border: '#f3b8b3'
+        },
+        {
+            id: 'info',
+            label: 'Info',
+            color: '#1d4ed8',
+            background: '#e7f0ff',
+            border: '#b7cdfc'
+        },
+        {
+            id: 'poznamka',
+            label: 'Poznamka',
+            color: '#166534',
+            background: '#e8f7ed',
+            border: '#b9dfc5'
+        },
+        {
+            id: 'otazka',
+            label: 'Otazka',
+            color: '#075985',
+            background: '#e0f2fe',
+            border: '#a5d8f3'
+        },
+        {
+            id: 'upozornenie',
+            label: 'Upozornenie',
+            color: '#9a3412',
+            background: '#fff0df',
+            border: '#fdc98b'
+        },
+        {
+            id: 'hotovo',
+            label: 'Hotovo',
+            color: '#15803d',
+            background: '#dcfce7',
+            border: '#9ddbaf'
+        }
+    ];
 
     let db;
 
@@ -100,6 +145,108 @@
         return (text || '').replace(/\s+/g, ' ').trim();
     }
 
+    function getTagConfig(tagId) {
+        return POKYN_TAGS.find(tag => tag.id === tagId) || null;
+    }
+
+    function getSelectedTags() {
+        return Array.from(document.querySelectorAll('#fc-pokyn-tags .fc-pokyn-tag.is-selected'))
+            .map(button => button.dataset.tag)
+            .filter(Boolean);
+    }
+
+    function getTagLabels(tagIds) {
+        return (tagIds || [])
+            .map(tagId => getTagConfig(tagId))
+            .filter(Boolean)
+            .map(tag => tag.label);
+    }
+
+    function applyTagButtonStyle(button, selected) {
+        const tag = getTagConfig(button.dataset.tag);
+        if (!tag) return;
+
+        Object.assign(button.style, {
+            border: `1px solid ${selected ? tag.border : '#d6d6d6'}`,
+            background: selected ? tag.background : '#fff',
+            color: selected ? tag.color : '#555',
+            borderRadius: '7px',
+            padding: '4px 8px',
+            fontSize: '12px',
+            fontWeight: selected ? '700' : '600',
+            lineHeight: '15px',
+            cursor: 'pointer',
+            userSelect: 'none',
+            transition: '0.12s ease',
+            boxShadow: selected ? 'inset 0 0 0 1px rgba(255,255,255,0.55)' : 'none'
+        });
+    }
+
+    function createTagSelector() {
+        const submitBtn = document.querySelector('#frm-pokyn input[type="submit"]');
+        if (!submitBtn || document.querySelector('#fc-pokyn-tags')) {
+            return;
+        }
+
+        const buttonRow = submitBtn.closest('.form-row') || submitBtn.parentNode;
+        if (!buttonRow) {
+            return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'fc-pokyn-tags';
+        wrapper.dataset.internalOnly = '1';
+
+        Object.assign(wrapper.style, {
+            marginTop: '8px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '5px',
+            alignItems: 'center',
+            maxWidth: '340px'
+        });
+
+        POKYN_TAGS.forEach(tag => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.dataset.tag = tag.id;
+            button.className = 'fc-pokyn-tag';
+            button.textContent = tag.label;
+            button.title = `Interny priznak: ${tag.label}`;
+
+            applyTagButtonStyle(button, false);
+
+            button.addEventListener('click', () => {
+                const selected = !button.classList.contains('is-selected');
+                button.classList.toggle('is-selected', selected);
+                button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+                applyTagButtonStyle(button, selected);
+            });
+
+            wrapper.appendChild(button);
+        });
+
+        buttonRow.insertAdjacentElement('afterend', wrapper);
+    }
+
+    function renderRecordTags(tagIds) {
+        const tags = (tagIds || []).map(tagId => getTagConfig(tagId)).filter(Boolean);
+
+        if (!tags.length) {
+            return '';
+        }
+
+        return `
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+                ${tags.map(tag => `
+                    <span style="background:${tag.background};color:${tag.color};border:1px solid ${tag.border};padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;">
+                        ${escapeHtml(tag.label)}
+                    </span>
+                `).join('')}
+            </div>
+        `;
+    }
+
     function setNativeSelectValue(select, value) {
         if (!select || select.value === value) {
             return;
@@ -170,6 +317,7 @@
                     const typSelect = document.querySelector('#frm-pokyn_typ');
                     const recipientSelect = document.querySelector('#frm-pokyn_pobocka');
                     const textarea = document.querySelector('#frm-pokyn textarea[name="pokyn"]');
+                    const tags = getSelectedTags();
 
                     const data = {
                         timestamp: nowISO(),
@@ -179,6 +327,8 @@
                         recipientValue: recipientSelect ? recipientSelect.value : '',
                         recipientText: getSelectedText(recipientSelect),
                         message: textarea && textarea.value ? textarea.value.trim() : '',
+                        tags,
+                        tagLabels: getTagLabels(tags),
                         pageTitle: document.title
                     };
 
@@ -195,39 +345,40 @@
             const submitBtn = document.querySelector('#frm-pokyn input[type="submit"]');
             if (!submitBtn) return;
 
-            if (document.querySelector('#fc-archive-btn')) {
-                clearInterval(interval);
-                return;
+            if (!document.querySelector('#fc-archive-btn')) {
+                submitBtn.value = 'Potvrdit a archivovat';
+
+                const archiveBtn = document.createElement('span');
+                archiveBtn.id = 'fc-archive-btn';
+                archiveBtn.innerText = 'Archiv';
+                archiveBtn.style.marginLeft = '12px';
+                archiveBtn.style.cursor = 'pointer';
+                archiveBtn.style.color = '#2b6cb0';
+                archiveBtn.style.fontWeight = '600';
+                archiveBtn.style.fontSize = '13px';
+                archiveBtn.style.verticalAlign = 'middle';
+                archiveBtn.style.userSelect = 'none';
+                archiveBtn.style.transition = '0.15s';
+
+                archiveBtn.addEventListener('mouseenter', () => {
+                    archiveBtn.style.opacity = '0.75';
+                    archiveBtn.style.textDecoration = 'underline';
+                });
+
+                archiveBtn.addEventListener('mouseleave', () => {
+                    archiveBtn.style.opacity = '1';
+                    archiveBtn.style.textDecoration = 'none';
+                });
+
+                archiveBtn.addEventListener('click', openViewer);
+                submitBtn.insertAdjacentElement('afterend', archiveBtn);
             }
 
-            submitBtn.value = 'Potvrdit a archivovat';
+            createTagSelector();
 
-            const archiveBtn = document.createElement('span');
-            archiveBtn.id = 'fc-archive-btn';
-            archiveBtn.innerText = 'Archiv';
-            archiveBtn.style.marginLeft = '12px';
-            archiveBtn.style.cursor = 'pointer';
-            archiveBtn.style.color = '#2b6cb0';
-            archiveBtn.style.fontWeight = '600';
-            archiveBtn.style.fontSize = '13px';
-            archiveBtn.style.verticalAlign = 'middle';
-            archiveBtn.style.userSelect = 'none';
-            archiveBtn.style.transition = '0.15s';
-
-            archiveBtn.addEventListener('mouseenter', () => {
-                archiveBtn.style.opacity = '0.75';
-                archiveBtn.style.textDecoration = 'underline';
-            });
-
-            archiveBtn.addEventListener('mouseleave', () => {
-                archiveBtn.style.opacity = '1';
-                archiveBtn.style.textDecoration = 'none';
-            });
-
-            archiveBtn.addEventListener('click', openViewer);
-            submitBtn.insertAdjacentElement('afterend', archiveBtn);
-
-            clearInterval(interval);
+            if (document.querySelector('#fc-archive-btn') && document.querySelector('#fc-pokyn-tags')) {
+                clearInterval(interval);
+            }
         }, 300);
     }
 
@@ -312,20 +463,25 @@
                 </div>
             </div>
             <div style="padding:14px 20px;border-bottom:1px solid #eee;background:white;">
-                <input type="text" id="fc-search" placeholder="Hladat VP, meno alebo text..." style="width:100%;padding:11px 14px;border:1px solid #ddd;border-radius:12px;font-size:14px;outline:none;">
+                <input type="text" id="fc-search" placeholder="Hladat VP, meno, text alebo priznak..." style="width:100%;padding:11px 14px;border:1px solid #ddd;border-radius:12px;font-size:14px;outline:none;">
             </div>
             <div id="fc-records" style="flex:1;overflow:auto;padding:16px;background:#f5f7fb;">
         `;
 
         records.forEach(r => {
+            const tags = Array.isArray(r.tags) ? r.tags : [];
+            const tagSearchText = getTagLabels(tags).join(' ');
+
             html += `
-                <div class="fc-record" style="background:white;border:1px solid #ececec;border-radius:16px;padding:14px;margin-bottom:12px;">
+                <div class="fc-record" data-tags="${escapeHtml(tags.join(' '))}" style="background:white;border:1px solid #ececec;border-radius:16px;padding:14px;margin-bottom:12px;">
                     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
                         <span style="background:#edf2f7;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;">VP ${r.vp}</span>
                         <span style="background:#ebf8ff;color:#2b6cb0;padding:5px 10px;border-radius:999px;font-size:12px;">${escapeHtml(r.typ)}</span>
                         <span style="background:#f0fff4;color:#276749;padding:5px 10px;border-radius:999px;font-size:12px;">${escapeHtml(r.recipientText)}</span>
                     </div>
+                    ${renderRecordTags(tags)}
                     <div style="white-space:pre-wrap;line-height:1.5;color:#222;font-size:14px;margin-bottom:12px;">${escapeHtml(r.message)}</div>
+                    <div style="display:none;">${escapeHtml(tagSearchText)}</div>
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:#777;flex-wrap:wrap;">
                         <div>${new Date(r.timestamp).toLocaleString()}</div>
                         <a href="${r.url}" target="_blank" style="color:#2b6cb0;text-decoration:none;font-weight:600;">Otvorit VP</a>
@@ -347,7 +503,8 @@
 
             document.querySelectorAll('.fc-record').forEach(card => {
                 const text = card.innerText.toLowerCase();
-                card.style.display = text.includes(value) ? '' : 'none';
+                const tags = (card.dataset.tags || '').toLowerCase();
+                card.style.display = text.includes(value) || tags.includes(value) ? '' : 'none';
             });
         });
     }
