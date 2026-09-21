@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pokyny Pre - Archiv
 // @namespace    http://faxcopy.sk/
-// @version      1.5
+// @version      1.6
 // @description  Archivacia pokynov a poznamok z VP formulara + interne priznaky pokynov
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
@@ -155,6 +155,12 @@
             .filter(Boolean);
     }
 
+    function getSelectedArchiveTags() {
+        return Array.from(document.querySelectorAll('#fc-archive-tag-filters .fc-archive-tag-filter.is-selected'))
+            .map(button => button.dataset.tag)
+            .filter(Boolean);
+    }
+
     function getTagLabels(tagIds) {
         return (tagIds || [])
             .map(tagId => getTagConfig(tagId))
@@ -167,19 +173,44 @@
         if (!tag) return;
 
         Object.assign(button.style, {
-            border: `1px solid ${selected ? tag.border : '#d6d6d6'}`,
+            border: selected ? `2px solid ${tag.color}` : '1px solid #d6d6d6',
             background: selected ? tag.background : '#fff',
             color: selected ? tag.color : '#555',
-            borderRadius: '7px',
-            padding: '4px 8px',
-            fontSize: '12px',
+            borderRadius: '6px',
+            padding: selected ? '2px 6px' : '3px 7px',
+            fontSize: '11px',
             fontWeight: selected ? '700' : '600',
-            lineHeight: '15px',
+            lineHeight: '13px',
+            boxSizing: 'border-box',
             cursor: 'pointer',
             userSelect: 'none',
             transition: '0.12s ease',
-            boxShadow: selected ? 'inset 0 0 0 1px rgba(255,255,255,0.55)' : 'none'
+            boxShadow: selected ? `0 0 0 1px ${tag.border}` : 'none'
         });
+    }
+
+    function createTagButton(tag, className, onToggle) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.tag = tag.id;
+        button.className = className;
+        button.textContent = tag.label;
+        button.title = `Interny priznak: ${tag.label}`;
+
+        applyTagButtonStyle(button, false);
+
+        button.addEventListener('click', () => {
+            const selected = !button.classList.contains('is-selected');
+            button.classList.toggle('is-selected', selected);
+            button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            applyTagButtonStyle(button, selected);
+
+            if (onToggle) {
+                onToggle();
+            }
+        });
+
+        return button;
     }
 
     function createTagSelector() {
@@ -201,29 +232,13 @@
             marginTop: '8px',
             display: 'flex',
             flexWrap: 'wrap',
-            gap: '5px',
+            gap: '4px',
             alignItems: 'center',
             maxWidth: '340px'
         });
 
         POKYN_TAGS.forEach(tag => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.dataset.tag = tag.id;
-            button.className = 'fc-pokyn-tag';
-            button.textContent = tag.label;
-            button.title = `Interny priznak: ${tag.label}`;
-
-            applyTagButtonStyle(button, false);
-
-            button.addEventListener('click', () => {
-                const selected = !button.classList.contains('is-selected');
-                button.classList.toggle('is-selected', selected);
-                button.setAttribute('aria-pressed', selected ? 'true' : 'false');
-                applyTagButtonStyle(button, selected);
-            });
-
-            wrapper.appendChild(button);
+            wrapper.appendChild(createTagButton(tag, 'fc-pokyn-tag'));
         });
 
         buttonRow.insertAdjacentElement('afterend', wrapper);
@@ -237,14 +252,33 @@
         }
 
         return `
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
                 ${tags.map(tag => `
-                    <span style="background:${tag.background};color:${tag.color};border:1px solid ${tag.border};padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;">
+                    <span style="background:${tag.background};color:${tag.color};border:1px solid ${tag.border};padding:3px 7px;border-radius:999px;font-size:11px;font-weight:700;">
                         ${escapeHtml(tag.label)}
                     </span>
                 `).join('')}
             </div>
         `;
+    }
+
+    function createArchiveTagFilters(onFilterChange) {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'fc-archive-tag-filters';
+
+        Object.assign(wrapper.style, {
+            marginTop: '10px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '5px',
+            alignItems: 'center'
+        });
+
+        POKYN_TAGS.forEach(tag => {
+            wrapper.appendChild(createTagButton(tag, 'fc-archive-tag-filter', onFilterChange));
+        });
+
+        return wrapper;
     }
 
     function setNativeSelectValue(select, value) {
@@ -462,8 +496,8 @@
                     <button id="fc-close-panel" style="border:none;background:#e2e8f0;padding:9px 13px;border-radius:10px;cursor:pointer;font-weight:600;">X</button>
                 </div>
             </div>
-            <div style="padding:14px 20px;border-bottom:1px solid #eee;background:white;">
-                <input type="text" id="fc-search" placeholder="Hladat VP, meno, text alebo priznak..." style="width:100%;padding:11px 14px;border:1px solid #ddd;border-radius:12px;font-size:14px;outline:none;">
+            <div id="fc-archive-controls" style="padding:14px 20px;border-bottom:1px solid #eee;background:white;">
+                <input type="text" id="fc-search" placeholder="Hladat VP, meno, text alebo priznak..." style="width:100%;padding:11px 14px;border:1px solid #ddd;border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;">
             </div>
             <div id="fc-records" style="flex:1;overflow:auto;padding:16px;background:#f5f7fb;">
         `;
@@ -494,19 +528,28 @@
         panel.innerHTML = html;
         document.body.appendChild(panel);
 
-        document.querySelector('#fc-close-panel').addEventListener('click', () => panel.remove());
-        document.querySelector('#fc-export-json').addEventListener('click', exportJSON);
-
         const searchInput = document.querySelector('#fc-search');
-        searchInput.addEventListener('input', function () {
-            const value = this.value.toLowerCase();
+        const archiveControls = document.querySelector('#fc-archive-controls');
+
+        function applyArchiveFilters() {
+            const value = searchInput.value.toLowerCase();
+            const selectedTags = getSelectedArchiveTags();
 
             document.querySelectorAll('.fc-record').forEach(card => {
                 const text = card.innerText.toLowerCase();
-                const tags = (card.dataset.tags || '').toLowerCase();
-                card.style.display = text.includes(value) || tags.includes(value) ? '' : 'none';
+                const tags = (card.dataset.tags || '').toLowerCase().split(' ').filter(Boolean);
+                const textMatch = !value || text.includes(value) || tags.join(' ').includes(value);
+                const tagMatch = !selectedTags.length || selectedTags.some(tag => tags.includes(tag));
+
+                card.style.display = textMatch && tagMatch ? '' : 'none';
             });
-        });
+        }
+
+        archiveControls.appendChild(createArchiveTagFilters(applyArchiveFilters));
+
+        document.querySelector('#fc-close-panel').addEventListener('click', () => panel.remove());
+        document.querySelector('#fc-export-json').addEventListener('click', exportJSON);
+        searchInput.addEventListener('input', applyArchiveFilters);
     }
 
     async function exportJSON() {
