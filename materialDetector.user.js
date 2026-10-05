@@ -4,20 +4,20 @@
 // @author       mato e.
 // @version      5.3.6-core
 // @description  Material detector core router + modular internal-code detectors.
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/codex/materialdetector-core/materialDetector.user.js
+// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
+// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        GM_download
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_api.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_fotoobrazy.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_41tv.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_42fotoweb.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_67mf.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_67spz.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_68bs.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_49ban.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/detector_49s.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/codex/materialdetector-core/detectors/control_panel.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_api.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_fotoobrazy.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_41tv.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_42fotoweb.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_67mf.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_67spz.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_68bs.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_49ban.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/detector_49s.js
+// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/control_panel.js
 // @run-at       document-start
 // ==/UserScript==
 
