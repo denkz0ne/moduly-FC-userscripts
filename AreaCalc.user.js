@@ -9,6 +9,7 @@
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @run-at       document-end
 // ==/UserScript==
+// FC Userscripts ecosystem: https://github.com/denkz0ne/moduly-FC-userscripts
 
 (function () {
 

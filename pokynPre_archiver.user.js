@@ -3,12 +3,13 @@
 // @namespace    http://faxcopy.sk/
 // @version      1.8
 // @description  Archivacia pokynov a poznamok z VP formulara + interne priznaky pokynov
-// @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
+// @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
+// FC Userscripts ecosystem: https://github.com/denkz0ne/moduly-FC-userscripts
 
 (function () {
     'use strict';
