@@ -10,6 +10,7 @@
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
+// FC Userscripts ecosystem: https://github.com/denkz0ne/moduly-FC-userscripts
 
 (function () {
     'use strict';

@@ -20,6 +20,7 @@
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/detectors/control_panel.js
 // @run-at       document-start
 // ==/UserScript==
+// FC Userscripts ecosystem: https://github.com/denkz0ne/moduly-FC-userscripts
 
 (function () {
     'use strict';
