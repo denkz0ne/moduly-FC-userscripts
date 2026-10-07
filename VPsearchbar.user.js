@@ -4,12 +4,13 @@
 // @author       mato e.
 // @version      1.2.4
 // @description  Pridá input pre číslo VP nalavo od pôvodného vyhľadávania
-// @match        https://moduly.faxcopy.sk/*
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPsearchbar.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/VPsearchbar.user.js
+// @match        https://moduly.faxcopy.sk/*
 // @grant        GM_openInTab
 // @run-at       document-idle
 // ==/UserScript==
+// FC Userscripts ecosystem: https://github.com/denkz0ne/moduly-FC-userscripts
 
 (function () {
     'use strict';

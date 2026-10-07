@@ -2,22 +2,24 @@
 // @name         attendanceBalancePredictor
 // @namespace    https://person.faxcopy.sk/
 // @author       Codex
-// @version      0.1.0
+// @version      0.2.1
 // @description  Prepocet upravenej dochadzky, kumulativnej bilancie a predikcie buducich dni.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/attendanceBalancePredictor.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/attendanceBalancePredictor.user.js
 // @match        https://person.faxcopy.sk/*
 // @run-at       document-end
 // ==/UserScript==
+// FC Userscripts ecosystem: https://github.com/denkz0ne/moduly-FC-userscripts
 
 (function () {
     'use strict';
 
     const TABLE_SELECTOR = '#attendance-month';
-    const DAILY_TARGET_MINUTES = 8 * 60 + 30;
+    const DAILY_PRESENCE_TARGET_MINUTES = 8 * 60 + 30;
+    const DAILY_WORK_TARGET_MINUTES = 8 * 60;
+    const LUNCH_BREAK_MINUTES = 30;
     const FORECAST_ARRIVAL_MINUTES = 6 * 60 + 15;
     const MAX_DAILY_DEVIATION_MINUTES = 45;
-    const FORECAST_STATUS = 'ODH';
 
     const STYLE_ID = 'attendance-balance-predictor-style';
 
@@ -81,7 +83,7 @@
     }
 
     function signedDuration(totalMinutes) {
-        if (totalMinutes === 0) return '+0:00';
+        if (totalMinutes === 0) return '0:00';
         return `${totalMinutes > 0 ? '+' : '-'}${durationToText(totalMinutes)}`;
     }
 
@@ -184,60 +186,36 @@
         return groups;
     }
 
-    function ensureForecastCells(day) {
-        if (day.rows.length > 1) {
+    function ensureAdjustedCells(day) {
+        if (day.adjustedTimeCell && day.adjustedTotalCell) {
             return {
-                actualStatusCell: day.actualRow.cells[1],
-                actualTypeCell: day.actualRow.cells[2],
-                actualTimeCell: day.actualRow.cells[3],
-                actualTotalCell: day.actualRow.cells[4],
-                adjustedTimeCell: day.actualRow.cells[5],
-                adjustedTotalCell: day.actualRow.cells[6]
+                adjustedTimeCell: day.adjustedTimeCell,
+                adjustedTotalCell: day.adjustedTotalCell
             };
         }
 
         const row = day.firstRow;
-        const actualEmptyCell = row.querySelector('td.actual.empty[colspan="4"]');
         const adjustedEmptyCell = row.querySelector('td[colspan="2"]:not(.approved):not(.planned)');
 
-        if (!actualEmptyCell || !adjustedEmptyCell) {
+        if (!adjustedEmptyCell) {
             return null;
         }
 
-        if (!row.dataset.abpForecastExpanded) {
-            const actualCells = [
-                document.createElement('td'),
-                document.createElement('td'),
-                document.createElement('td'),
-                document.createElement('td')
-            ];
+        const adjustedCells = [
+            document.createElement('td'),
+            document.createElement('td')
+        ];
 
-            actualCells[0].className = 'text-center actual';
-            actualCells[1].className = 'text-center actual';
-            actualCells[2].className = 'actual';
-            actualCells[3].className = 'text-right actual';
+        adjustedCells[0].className = '';
+        adjustedCells[1].className = 'text-right';
 
-            actualEmptyCell.replaceWith(...actualCells);
-
-            const adjustedCells = [
-                document.createElement('td'),
-                document.createElement('td')
-            ];
-
-            adjustedCells[0].className = '';
-            adjustedCells[1].className = 'text-right';
-
-            adjustedEmptyCell.replaceWith(...adjustedCells);
-            row.dataset.abpForecastExpanded = '1';
-        }
+        adjustedEmptyCell.replaceWith(...adjustedCells);
+        day.adjustedTimeCell = adjustedCells[0];
+        day.adjustedTotalCell = adjustedCells[1];
 
         return {
-            actualStatusCell: row.cells[6],
-            actualTypeCell: row.cells[7],
-            actualTimeCell: row.cells[8],
-            actualTotalCell: row.cells[9],
-            adjustedTimeCell: row.cells[10],
-            adjustedTotalCell: row.cells[11]
+            adjustedTimeCell: day.adjustedTimeCell,
+            adjustedTotalCell: day.adjustedTotalCell
         };
     }
 
@@ -254,17 +232,11 @@
         const plannedTotal = cleanText(plannedTotalCell ? plannedTotalCell.textContent : '');
 
         let actualTimeCell = null;
-        let actualTotalCell = null;
         let adjustedTimeCell = null;
         let adjustedTotalCell = null;
-        let actualTypeCell = null;
-        let actualStatusCell = null;
 
         if (actualRow && actualRow.cells.length >= 7) {
-            actualStatusCell = actualRow.cells[1] || null;
-            actualTypeCell = actualRow.cells[2] || null;
             actualTimeCell = actualRow.cells[3] || null;
-            actualTotalCell = actualRow.cells[4] || null;
             adjustedTimeCell = actualRow.cells[5] || null;
             adjustedTotalCell = actualRow.cells[6] || null;
         }
@@ -287,10 +259,6 @@
             isNonWorkingDay,
             isSpecialScheduledDay,
             actualTimeText,
-            actualStatusCell,
-            actualTypeCell,
-            actualTimeCell,
-            actualTotalCell,
             adjustedTimeCell,
             adjustedTotalCell,
             balanceCell,
@@ -303,12 +271,11 @@
         return getDayGroups(table).map(parseDay).filter((day) => day.date);
     }
 
-    function computeActualDay(day, today, nowMinutes) {
+    function computeActualDay(day, today) {
         const result = {
-            isForecast: false,
-            isPartialToday: false,
             adjustedArrival: null,
             adjustedDeparture: null,
+            presenceMinutes: null,
             workedMinutes: null,
             balanceMinutes: null,
             planningBalanceMinutes: null,
@@ -316,6 +283,7 @@
         };
 
         if (!day.isScheduled || day.isNonWorkingDay) {
+            result.presenceMinutes = 0;
             result.workedMinutes = 0;
             result.balanceMinutes = 0;
             result.planningBalanceMinutes = 0;
@@ -323,10 +291,11 @@
         }
 
         if (day.isSpecialScheduledDay && day.arrivalRaw == null && day.departureRaw == null) {
-            result.workedMinutes = DAILY_TARGET_MINUTES;
+            result.presenceMinutes = DAILY_PRESENCE_TARGET_MINUTES;
+            result.workedMinutes = DAILY_WORK_TARGET_MINUTES;
             result.balanceMinutes = 0;
             result.planningBalanceMinutes = 0;
-            result.tooltip = 'Osobitny den: pre vypocet sa rata presne 8:30.';
+            result.tooltip = 'Osobitny den: pre vypocet sa rata 8:30 pritomnost a 8:00 dochadzka.';
             return result;
         }
 
@@ -339,22 +308,18 @@
         if (day.departureRaw != null) {
             result.adjustedDeparture = roundDownQuarter(day.departureRaw);
         } else if (sameDay(day.date, today)) {
-            result.isPartialToday = true;
-            result.adjustedDeparture = Math.max(result.adjustedArrival, roundDownQuarter(nowMinutes));
+            result.adjustedDeparture = result.adjustedArrival + DAILY_PRESENCE_TARGET_MINUTES;
+            result.tooltip = `Dnes otvoreny den. Odhadovany odchod pre dennu nulu: ${minutesToTime(result.adjustedDeparture)}.`;
         }
 
         if (result.adjustedDeparture == null) {
             return result;
         }
 
-        result.workedMinutes = Math.max(0, result.adjustedDeparture - result.adjustedArrival);
-        result.balanceMinutes = result.workedMinutes - DAILY_TARGET_MINUTES;
+        result.presenceMinutes = Math.max(0, result.adjustedDeparture - result.adjustedArrival);
+        result.workedMinutes = Math.max(0, result.presenceMinutes - LUNCH_BREAK_MINUTES);
+        result.balanceMinutes = result.workedMinutes - DAILY_WORK_TARGET_MINUTES;
         result.planningBalanceMinutes = day.departureRaw != null ? result.balanceMinutes : 0;
-
-        if (result.isPartialToday) {
-            const departureForZero = result.adjustedArrival + DAILY_TARGET_MINUTES;
-            result.tooltip = `Dnes priebezne k ${minutesToTime(result.adjustedDeparture)}. Odchod pre dennu nulu: ${minutesToTime(departureForZero)}.`;
-        }
 
         return result;
     }
@@ -365,10 +330,9 @@
 
     function allocateForecasts(days, today) {
         let runningBalance = 0;
-        const nowMinutes = getCurrentMinutes();
 
         days.forEach((day) => {
-            day.computed = computeActualDay(day, today, nowMinutes);
+            day.computed = computeActualDay(day, today);
             if (isBeforeDay(day.date, today)) {
                 runningBalance += day.computed.balanceMinutes || 0;
             } else if (sameDay(day.date, today)) {
@@ -380,29 +344,29 @@
         let remainingBalance = runningBalance;
 
         futureDays.forEach((day, index) => {
-            const isSpecial = day.isSpecialScheduledDay;
             const forecast = {
-                isForecast: true,
                 adjustedArrival: null,
                 adjustedDeparture: null,
-                workedMinutes: DAILY_TARGET_MINUTES,
+                presenceMinutes: DAILY_PRESENCE_TARGET_MINUTES,
+                workedMinutes: DAILY_WORK_TARGET_MINUTES,
                 balanceMinutes: 0,
                 planningBalanceMinutes: 0,
                 tooltip: ''
             };
 
-            if (!isSpecial) {
+            if (!day.isSpecialScheduledDay) {
                 const daysLeft = futureDays.length - index;
                 const desiredDailyBalance = roundNearestQuarter((-remainingBalance) / daysLeft);
                 const cappedBalance = Math.max(-MAX_DAILY_DEVIATION_MINUTES, Math.min(MAX_DAILY_DEVIATION_MINUTES, desiredDailyBalance));
                 forecast.balanceMinutes = cappedBalance;
                 forecast.planningBalanceMinutes = cappedBalance;
-                forecast.workedMinutes = DAILY_TARGET_MINUTES + cappedBalance;
+                forecast.workedMinutes = DAILY_WORK_TARGET_MINUTES + cappedBalance;
+                forecast.presenceMinutes = forecast.workedMinutes + LUNCH_BREAK_MINUTES;
                 forecast.adjustedArrival = FORECAST_ARRIVAL_MINUTES;
-                forecast.adjustedDeparture = FORECAST_ARRIVAL_MINUTES + forecast.workedMinutes;
+                forecast.adjustedDeparture = FORECAST_ARRIVAL_MINUTES + forecast.presenceMinutes;
                 forecast.tooltip = `Predikcia pri preferovanom prichode ${minutesToTime(FORECAST_ARRIVAL_MINUTES)}.`;
             } else {
-                forecast.tooltip = 'Osobitny den: pre vypocet sa rata presne 8:30.';
+                forecast.tooltip = 'Osobitny den: pre vypocet sa rata 8:30 pritomnost a 8:00 dochadzka.';
             }
 
             day.forecast = forecast;
@@ -410,65 +374,25 @@
         });
     }
 
-    function getCurrentMinutes() {
-        const now = new Date();
-        return now.getHours() * 60 + now.getMinutes();
-    }
-
     function updateAdjustedCells(day, payload, className) {
-        if (!day.adjustedTimeCell || !day.adjustedTotalCell) return;
+        const cells = ensureAdjustedCells(day);
+        if (!cells) return;
 
         if (payload.adjustedArrival != null && payload.adjustedDeparture != null) {
             setCellValue(
-                day.adjustedTimeCell,
+                cells.adjustedTimeCell,
                 `${minutesToTime(payload.adjustedArrival)} - ${minutesToTime(payload.adjustedDeparture)}`,
                 className,
                 payload.tooltip
             );
-            setCellValue(
-                day.adjustedTotalCell,
-                durationToText(payload.workedMinutes || 0),
-                className,
-                payload.tooltip
-            );
+            setCellValue(cells.adjustedTotalCell, signedDuration(payload.balanceMinutes || 0), className, payload.tooltip);
             return;
         }
 
         if (payload.workedMinutes != null && day.isSpecialScheduledDay) {
-            setCellValue(day.adjustedTimeCell, '', className, payload.tooltip);
-            setCellValue(day.adjustedTotalCell, durationToText(payload.workedMinutes), className, payload.tooltip);
+            setCellValue(cells.adjustedTimeCell, '', className, payload.tooltip);
+            setCellValue(cells.adjustedTotalCell, signedDuration(payload.balanceMinutes || 0), className, payload.tooltip);
         }
-    }
-
-    function updateFutureCells(day, payload) {
-        const cells = ensureForecastCells(day);
-        if (!cells) return;
-
-        setCellValue(cells.actualStatusCell, FORECAST_STATUS, 'abp-forecast', payload.tooltip);
-        setCellValue(cells.actualTypeCell, day.plannedType || 'PrZ', 'abp-forecast', payload.tooltip);
-
-        if (payload.adjustedArrival != null && payload.adjustedDeparture != null) {
-            setCellValue(
-                cells.actualTimeCell,
-                `${minutesToTime(payload.adjustedArrival)} - ${minutesToTime(payload.adjustedDeparture)}`,
-                'abp-forecast',
-                payload.tooltip
-            );
-            setCellValue(cells.actualTotalCell, durationToText(payload.workedMinutes || 0), 'abp-forecast', payload.tooltip);
-            setCellValue(
-                cells.adjustedTimeCell,
-                `${minutesToTime(payload.adjustedArrival)} - ${minutesToTime(payload.adjustedDeparture)}`,
-                'abp-forecast',
-                payload.tooltip
-            );
-            setCellValue(cells.adjustedTotalCell, durationToText(payload.workedMinutes || 0), 'abp-forecast', payload.tooltip);
-            return;
-        }
-
-        setCellValue(cells.actualTimeCell, '', 'abp-forecast', payload.tooltip);
-        setCellValue(cells.actualTotalCell, durationToText(payload.workedMinutes || DAILY_TARGET_MINUTES), 'abp-forecast', payload.tooltip);
-        setCellValue(cells.adjustedTimeCell, '', 'abp-forecast', payload.tooltip);
-        setCellValue(cells.adjustedTotalCell, durationToText(payload.workedMinutes || DAILY_TARGET_MINUTES), 'abp-forecast', payload.tooltip);
     }
 
     function updateBalanceCell(day, cumulativeBalance, isFuture, tooltip) {
@@ -494,36 +418,15 @@
         let cumulativeBalance = 0;
 
         days.forEach((day) => {
-            const isPast = isBeforeDay(day.date, currentDay);
-            const isToday = sameDay(day.date, currentDay);
             const isFuture = isAfterDay(day.date, currentDay);
+            const payload = isFuture ? (day.forecast || null) : day.computed;
 
-            if (isPast || isToday) {
-                const payload = day.computed;
-                if (payload && payload.workedMinutes != null) {
-                    updateAdjustedCells(day, payload, 'abp-muted');
-                    cumulativeBalance += payload.balanceMinutes || 0;
-                }
-
-                const tooltip = payload && payload.tooltip ? payload.tooltip : '';
-                updateBalanceCell(day, cumulativeBalance, false, tooltip);
-                return;
+            if (payload && (day.isScheduled || day.isSpecialScheduledDay)) {
+                updateAdjustedCells(day, payload, isFuture ? 'abp-forecast' : 'abp-muted');
             }
 
-            if (isFuture) {
-                const payload = day.forecast || {
-                    isForecast: true,
-                    workedMinutes: 0,
-                    balanceMinutes: 0,
-                    planningBalanceMinutes: 0,
-                    tooltip: ''
-                };
-                if (day.isScheduled && !day.isNonWorkingDay) {
-                    updateFutureCells(day, payload);
-                }
-                cumulativeBalance += payload.balanceMinutes || 0;
-                updateBalanceCell(day, cumulativeBalance, true, payload.tooltip);
-            }
+            cumulativeBalance += payload && payload.balanceMinutes ? payload.balanceMinutes : 0;
+            updateBalanceCell(day, cumulativeBalance, isFuture, payload ? payload.tooltip : '');
         });
     }
 
