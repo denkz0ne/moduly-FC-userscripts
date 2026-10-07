@@ -2,8 +2,8 @@
 // @name         M2 + A4 kalkulačka
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.8
-// @description  Kalkulačka m2, A4 a univerzálny parser rozmerov
+// @version      1.9
+// @description  Kalkulačka m2 a A4 pre exporty, rozmery a zadané plochy
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
@@ -34,6 +34,11 @@
                 .replace(',', '.')
                 .trim()
         );
+    }
+
+    function isPositiveNumber(value) {
+        return /^\d+(?:[.,]\d+)?$/.test(String(value || '').trim()) &&
+            normalizeNumber(value) > 0;
     }
 
     function unitToMm(value, unit) {
@@ -83,14 +88,36 @@
     //
     function parsePdfExport(line) {
 
-        const parts = line.trim().split('\t');
+        const parts = line.replace(/\r$/, '').split('\t');
 
         if (parts.length < 3) {
             return null;
         }
 
-        const width = normalizeNumber(parts[1]);
-        const height = normalizeNumber(parts[2]);
+        let widthIndex = 1;
+        let heightIndex = 2;
+
+        // TCMD export: cesta, prázdny stĺpec, počet strán, šírka, výška,
+        // šírka rolky, veľkosť, dátum a prípadne CDR verzia.
+        if (parts.length >= 5 && parts[1].trim() === '' &&
+            isPositiveNumber(parts[2]) &&
+            isPositiveNumber(parts[3]) &&
+            isPositiveNumber(parts[4])) {
+            widthIndex = 3;
+            heightIndex = 4;
+        } else if (parts.length >= 4 &&
+            isPositiveNumber(parts[1]) &&
+            Number.isInteger(normalizeNumber(parts[1])) &&
+            normalizeNumber(parts[1]) <= 100 &&
+            isPositiveNumber(parts[2]) &&
+            isPositiveNumber(parts[3])) {
+            // Rovnaké dáta bez úvodného prázdneho stĺpca.
+            widthIndex = 2;
+            heightIndex = 3;
+        }
+
+        const width = normalizeNumber(parts[widthIndex]);
+        const height = normalizeNumber(parts[heightIndex]);
 
         if (isNaN(width) || isNaN(height)) {
             return null;
@@ -101,6 +128,34 @@
             width,
             height,
             qty: 1
+        };
+    }
+
+    function parseArea(line) {
+
+        const match = line.match(
+            /(\d+(?:[.,]\d+)?)\s*(mm(?:2|²)|cm(?:2|²)|sqm|m(?:2|²))(?![a-z])/i
+        );
+
+        if (!match) {
+            return null;
+        }
+
+        const value = normalizeNumber(match[1]);
+        const unit = match[2].toLowerCase().replace('²', '2');
+        const areaM2 = unit.startsWith('mm') ? value / 1000000 :
+            unit.startsWith('cm') ? value / 10000 : value;
+
+        if (!Number.isFinite(areaM2) || areaM2 <= 0) {
+            return null;
+        }
+
+        return {
+            path: line.trim(),
+            areaM2,
+            width: null,
+            height: null,
+            qty: extractQty(line)
         };
     }
 
@@ -143,7 +198,7 @@
         // parser berie LEN prvy rozmer
         //
         const dimMatch = clean.match(
-            /^\s*(\d+(?:[\.,]\d+)?)\s*(mm|cm|m)?\s*x\s*(\d+(?:[\.,]\d+)?)\s*(mm|cm|m)?/i
+            /(\d+(?:[\.,]\d+)?)\s*(mm|cm|m)?\s*[x×*]\s*(\d+(?:[\.,]\d+)?)\s*(mm|cm|m)?/i
         );
 
         if (!dimMatch) {
@@ -155,12 +210,14 @@
 
         const wu = dimMatch[2] || dimMatch[4] || 'cm';
         const hu = dimMatch[4] || dimMatch[2] || 'cm';
+        const qtyText = clean.slice(0, dimMatch.index) +
+            clean.slice(dimMatch.index + dimMatch[0].length);
 
         return {
             path: clean,
             width: unitToMm(w, wu),
             height: unitToMm(h, hu),
-            qty: extractQty(clean)
+            qty: extractQty(qtyText)
         };
     }
 
@@ -168,7 +225,7 @@
     // MAIN PARSER
     //
     function parseLine(line) {
-        return parsePdfExport(line) || parseFreeform(line);
+        return parsePdfExport(line) || parseArea(line) || parseFreeform(line);
     }
 
     //
@@ -176,10 +233,9 @@
     //
     function calc(item) {
 
-        const m2 = (
-            item.width *
-            item.height
-        ) / 1000000;
+        const m2 = item.areaM2 != null
+            ? item.areaM2
+            : (item.width * item.height) / 1000000;
 
         const a4 = m2 / A4_AREA;
 
@@ -262,6 +318,9 @@
 100x500mm 12ks
 A4 66x
 2 x 3m 8 ks
+2,5 m²
+3.2 m2 2x
+banner 300 x 120 cm 4 ks
                 "
                 style="
                     width:100%;
@@ -436,9 +495,9 @@ A4 66x
                     border-top:1px solid #eee;
                     text-align:center;
                 ">
-                    ${Math.round(item.width)}
-                    ×
-                    ${Math.round(item.height)} mm
+                    ${item.areaM2 != null
+                        ? `${item.areaM2.toFixed(2)} m² plocha`
+                        : `${Math.round(item.width)} × ${Math.round(item.height)} mm`}
                 </td>
 
                 <td style="
