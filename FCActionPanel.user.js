@@ -2,7 +2,7 @@
 // @name         FC Action Panel
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.8
+// @version      1.9
 // @description  Spoločný riadok pre tlačidlá a nástroje userscriptov na detaile VP
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
@@ -194,7 +194,9 @@
             if (panel.children[index] !== node) panel.insertBefore(node, panel.children[index] || null);
         });
         const dropdown = document.getElementById(FRONT_QUEUE_ID);
-        if (dropdown && dropdown.parentNode === panel) panel.appendChild(dropdown);
+        if (dropdown && dropdown.parentNode === panel && panel.lastElementChild !== dropdown) {
+            panel.appendChild(dropdown);
+        }
     }
 
     function adoptKnownButtons() {
@@ -229,14 +231,16 @@
     function init() {
         if (!document.body) return;
         adoptKnownButtons();
-        const observer = new MutationObserver(adoptKnownButtons);
+        let scheduled = false;
+        const observer = new MutationObserver(() => {
+            if (scheduled) return;
+            scheduled = true;
+            requestAnimationFrame(() => {
+                scheduled = false;
+                adoptKnownButtons();
+            });
+        });
         observer.observe(document.body, { childList: true, subtree: true });
-        let tries = 0;
-        const interval = setInterval(() => {
-            tries += 1;
-            adoptKnownButtons();
-            if (tries >= 60) clearInterval(interval);
-        }, 500);
     }
 
     if (document.readyState === 'loading') {
