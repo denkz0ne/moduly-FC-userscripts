@@ -211,15 +211,15 @@
         return '';
     }
 
-    function collectPageContext() {
+    function collectPageContext(options = {}) {
         const detailInfo = document.querySelector('#vpDetailInfo') || document;
         const rowTexts = Array.from(document.querySelectorAll('tr')).map(tr => tr.textContent || '');
         const formTexts = Array.from(detailInfo.querySelectorAll('input, select, textarea, option, label, p, span, div'))
             .map(el => (el.textContent || el.value || '').trim())
             .filter(Boolean);
         const productText = [document.querySelector('h1, h2')?.textContent || '', ...rowTexts, ...formTexts].join(' ');
-        const priceCode = getProductCodeFromPriceRows();
-        const productCode = extractKnownProductCode(productText);
+        const priceCode = options.skipProductCode ? '' : getProductCodeFromPriceRows();
+        const productCode = options.skipProductCode ? '' : extractKnownProductCode(productText);
         const internalCode = productCode || priceCode;
         return { detailInfo, rowTexts, formTexts, productText, internalCode, priceCode };
     }
@@ -402,5 +402,3 @@
 
     window.MaterialDetectorNextAPI = api;
 })();
-
-\n

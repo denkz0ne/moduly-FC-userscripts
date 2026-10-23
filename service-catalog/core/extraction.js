@@ -19,9 +19,6 @@
             });
             if (code && (exact || patternMatch)) return service;
         }
-        if (!code && api.detectUniversalSizeAlias(context)) {
-            return services.find(service => service.id === 'common_size') || null;
-        }
         return null;
     }
 
@@ -38,22 +35,58 @@
     }
 
     function detectorFor(service, context) {
+        if (!context.internalCode) return null;
         const byCode = api.findDetector(context.internalCode, context);
         if (byCode) return byCode;
         if (!service || !service.detectorId) return null;
         return api.getDetectors().find(detector => detector.id === service.detectorId) || null;
     }
 
+    function inferField(row, index) {
+        const label = api.clean(row && row.label || '');
+        const key = api.normalizeKey(label).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field_' + (index + 1);
+        const normalizedLabel = api.normalizeKey(label);
+        let type = 'text';
+        if (/rozmer|format|sirka|vyska/.test(normalizedLabel)) type = 'dimension';
+        else if (/pocet|mnozstvo|kusov/.test(normalizedLabel)) type = 'quantity';
+        else if (/material|mediu|foli|papier|platno/.test(normalizedLabel)) type = 'material';
+        return { key, label, sourceLabels: [label], type };
+    }
+
     function genericServiceResult(service, context) {
+        const target = service || {
+            id: 'generic',
+            name: context.serviceName || context.candidateCode || 'Neznáma služba',
+            outputAlias: context.serviceName || context.candidateCode || 'sluzba',
+            labelTemplate: {}
+        };
+        const fields = service && Array.isArray(service.fields) && service.fields.length
+            ? service.fields
+            : (context.rawRows || []).map(inferField);
         const params = {};
         const rawFields = {};
-        (service.fields || []).forEach(field => {
+        const consumedRows = new Set();
+        fields.forEach(field => {
             const sourceLabels = (field.sourceLabels || [field.label || field.key]).map(api.normalizeKey);
             const matches = (context.rawRows || []).filter(row => {
                 const label = api.normalizeKey(row.label);
                 return sourceLabels.some(source => label === source || label.includes(source) || source.includes(label));
             });
             const rawValue = matches.map(row => row.value).filter(Boolean).join(' | ');
+            if (!rawValue) return;
+            matches.forEach(row => consumedRows.add(row));
+            let normalizedValue = rawValue;
+            if (field.type === 'dimension') normalizedValue = api.parseSizeAlias(rawValue) || rawValue;
+            if (field.type === 'quantity') normalizedValue = (rawValue.match(/\d+/) || [rawValue])[0];
+            rawFields[field.key] = rawValue;
+            params[field.key] = normalizedValue;
+            params[field.key + 'Raw'] = rawValue;
+        });
+
+        (context.rawRows || []).forEach((row, index) => {
+            if (consumedRows.has(row)) return;
+            const field = inferField(row, index);
+            const rawValue = api.clean(row.value || '');
             if (!rawValue) return;
             let normalizedValue = rawValue;
             if (field.type === 'dimension') normalizedValue = api.parseSizeAlias(rawValue) || rawValue;
@@ -63,7 +96,8 @@
             params[field.key + 'Raw'] = rawValue;
         });
 
-        const sizeField = (service.fields || []).find(field => field.type === 'dimension' || /size|rozmer|format/i.test(field.key || ''));
+        const allFields = fields.concat((context.rawRows || []).map(inferField));
+        const sizeField = allFields.find(field => field.type === 'dimension' || /size|rozmer|format/i.test(field.key || ''));
         const sizeRaw = sizeField && rawFields[sizeField.key] || params.sizeRaw || rawFields.size || rawFields.rozmer || '';
         let sizeAlias = api.parseSizeAlias(sizeRaw) || params.size || '';
         const widthRaw = Object.entries(rawFields).find(([key]) => /sirka|width/i.test(key))?.[1] || '';
@@ -74,10 +108,10 @@
             if (width && height) sizeAlias = api.parseSizeAlias(width + 'x' + height + ' ' + (/mm/i.test(widthRaw + heightRaw) ? 'mm' : 'cm'));
         }
         const size = api.stripSizeUnitSuffix(sizeAlias);
-        const materialField = (service.fields || []).find(field => field.type === 'material' || /material|media/i.test(field.key || ''));
+        const materialField = allFields.find(field => field.type === 'material' || /material|media/i.test(field.key || ''));
         const materialRaw = materialField && rawFields[materialField.key] || params.materialRaw || params.material || params.mediaTypeRaw || '';
-        const alias = api.resolveMaterialAlias(materialRaw) || service.outputAlias || service.name || context.candidateCode || 'sluzba';
-        const quantityField = (service.fields || []).find(field => field.type === 'quantity' || /quantity|pocet|mnozstvo/i.test(field.key || ''));
+        const alias = api.resolveMaterialAlias(materialRaw) || service && (service.outputAlias || service.name) || context.serviceName || context.candidateCode || 'sluzba';
+        const quantityField = allFields.find(field => field.type === 'quantity' || /quantity|pocet|mnozstvo/i.test(field.key || ''));
         const quantityRaw = quantityField && rawFields[quantityField.key] || params.quantityRaw || params.quantity || '';
         const quantity = quantityRaw ? quantityRaw + 'ks' : '1ks';
         const tokens = Object.assign({}, params, {
@@ -86,18 +120,18 @@
             sizeAlias,
             quantity,
             vp: context.vp || '',
-            code: context.internalCode || context.candidateCode || service.id,
-            detector: service.id,
-            productCode: context.internalCode || context.candidateCode || service.id,
+            code: context.internalCode || context.candidateCode || target.id,
+            detector: target.id,
+            productCode: context.internalCode || context.candidateCode || target.id,
             material: materialRaw,
             materialAlias: api.resolveMaterialAlias(materialRaw) || materialRaw
         });
-        const template = service.labelTemplate || {};
+        const template = target.labelTemplate || {};
         const left = api.renderTemplate(template.left || '{alias}', tokens) || alias;
         const top = api.renderTemplate(template.top || '', tokens);
         const bottom = api.renderTemplate(template.bottom || '', tokens);
         return {
-            detector: service.id,
+            detector: target.id,
             left,
             top,
             bottom,
@@ -109,8 +143,8 @@
                 quantity
             },
             state: {
-                detector: service.id,
-                productCode: context.internalCode || context.candidateCode || service.id,
+                detector: target.id,
+                productCode: context.internalCode || context.candidateCode || target.id,
                 outputAlias: alias,
                 sizeAlias,
                 params: Object.assign({}, params, rawFields, { alias, materialAlias: tokens.materialAlias, quantity, sizeAlias })
@@ -262,7 +296,8 @@
             } catch (error) {
                 console.error('[materialDetectorNext] detekcia zlyhala', detector.id, error);
             }
-        } else if (service) {
+        }
+        if (!result) {
             result = genericServiceResult(service, context);
         }
 

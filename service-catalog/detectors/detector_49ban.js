@@ -163,15 +163,9 @@
             { type: 'text', value: '.' },
             { type: 'token', value: 'ext' }
         ],
-        match(internalCode, context) {
+        match(internalCode) {
             const code = String(internalCode || '').toLowerCase();
-            if (code) return code === '49ban';
-            const text = api.normalizeKey((context && context.productText) || '');
-            return /\b49ban\b/i.test(text)
-                || text.includes('49ban - bannery')
-                || text.includes('material banneru')
-                || text.includes('pocet kusov bannerov')
-                || (text.includes('jednostranny banner') && text.includes('rozmery'));
+            return code === '49ban';
         },
         detect() {
             const details = parseDetails();

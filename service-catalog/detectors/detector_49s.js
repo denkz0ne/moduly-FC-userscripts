@@ -197,10 +197,9 @@
             { type: 'text', value: '.' },
             { type: 'token', value: 'ext' }
         ],
-        match(internalCode, context) {
+        match(internalCode) {
             const code = String(internalCode || '').toLowerCase();
-            const text = api.normalizeKey((context && context.productText) || '');
-            return code === '49s' || /\b49s\b/i.test(text) || (text.includes('samolepky') && text.includes('druh samolepiek'));
+            return code === '49s';
         },
         detect() {
             const details = parseDetails();

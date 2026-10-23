@@ -133,11 +133,9 @@
             { type: 'text', value: '.' },
             { type: 'token', value: 'ext' }
         ],
-        match(internalCode, context) {
+        match(internalCode) {
             const code = String(internalCode || '').toLowerCase();
-            if (code) return code === '67spz';
-            const text = api.normalizeKey((context && context.productText) || '');
-            return /\b67spz\b/i.test(text) || text.includes('vyber materialu vyhotovenia spz');
+            return code === '67spz';
         },
         detect() {
             const details = parseDetails();

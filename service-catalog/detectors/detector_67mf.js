@@ -152,10 +152,9 @@
             { type: 'text', value: '.' },
             { type: 'token', value: 'ext' }
         ],
-        match(internalCode, context) {
+        match(internalCode) {
             const code = String(internalCode || '').toLowerCase();
-            const text = api.normalizeKey((context && context.productText) || '');
-            return code === '67mf' || /\b67mf\b/i.test(text) || text.includes('magneticka folia s potlacou');
+            return code === '67mf';
         },
         detect() {
             const params = api.parseZdParams();

@@ -24,25 +24,41 @@
         }).filter(Boolean);
     }
 
-    function findUnknownCode(context) {
-        if (context.internalCode) return context.internalCode;
-        const rows = Array.from(document.querySelectorAll("tr[title='ceny bez DPH'], tr"));
-        for (const row of rows) {
-            const text = api.clean(row.textContent || '');
-            const match = text.match(/\b(\d{1,4}\s*\/\s*[a-z][a-z0-9]*(?:\/[a-z0-9]+)?|\d{2,4}[a-z][a-z0-9]*(?:\/[a-z0-9]+)?)\b/i);
-            if (match) return match[1].replace(/\s+/g, '').toLowerCase();
+    function findServiceProduct() {
+        const productRoot = document.querySelector('#vpProducts');
+        if (!productRoot) return null;
+        // Service identity is intentionally read only from the product table.
+        // Accept numeric, alphanumeric and slash-form codes without baking in
+        // one service family (for example: 82/f, 49ban, 67spz).
+        const codePrefix = /^\s*([a-z0-9]+(?:\s*\/\s*[a-z0-9]+)*)\s*[-–—]\s*(.*)$/i;
+        for (const row of productRoot.querySelectorAll('tr')) {
+            for (const cell of row.querySelectorAll('td, th')) {
+                const text = api.clean(cell.textContent || '');
+                const match = text.match(codePrefix);
+                if (!match) continue;
+                return {
+                    code: match[1].replace(/\s+/g, '').toLowerCase(),
+                    name: match[2].replace(/\s*\\+\s*\d+\s*$/, '').trim(),
+                    rowText: api.clean(row.textContent || '')
+                };
+            }
         }
-        return '';
+        return null;
     }
 
     function collect() {
         if (!allowedPage()) return null;
-        const context = api.collectPageContext();
+        const context = api.collectPageContext({ skipProductCode: true });
+        const serviceProduct = findServiceProduct();
         const rawRows = collectRawRows();
         return Object.assign({}, context, {
             vp: api.getCurrentVpFromUrl(),
-            candidateCode: findUnknownCode(context),
-            heading: api.clean(document.querySelector('h1, h2')?.textContent || ''),
+            internalCode: serviceProduct && serviceProduct.code || '',
+            priceCode: '',
+            candidateCode: serviceProduct && serviceProduct.code || '',
+            serviceName: serviceProduct && serviceProduct.name || '',
+            serviceProduct: serviceProduct,
+            heading: serviceProduct && serviceProduct.name || '',
             rawRows,
             rawParams: api.parseZdParams() || {},
             pageUrl: window.location.href,
