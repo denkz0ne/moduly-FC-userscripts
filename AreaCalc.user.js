@@ -2,7 +2,7 @@
 // @name         M2 + A4 kalkulačka
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.10
+// @version      1.11
 // @description  Kalkulačka m2 a A4 pre exporty, rozmery a zadané plochy
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/AreaCalc.user.js
@@ -491,28 +491,24 @@ banner 300 x 120 cm 4 ks
             return true;
         }
 
-        const originalButton =
-            document.querySelector('#doGrafikyBtn');
+        const panel = document.querySelector('#fc-userscripts-action-panel');
+        if (!panel) return false;
 
-        if (!originalButton) {
-            return false;
-        }
-
-        const button = originalButton.cloneNode(false);
-
+        const button = document.createElement('button');
+        button.type = 'button';
         button.id = 'm2CalcButton';
-        button.innerText = 'CALC';
+        button.textContent = 'CALC';
         button.title = 'Otvoriť kalkulačku m²/A4';
         button.setAttribute('aria-expanded', 'false');
-        button.href = 'javascript:void(0)';
-
-        [
-            'data-toggle',
-            'data-target',
-            'data-bs-toggle',
-            'data-bs-target',
-            'onclick'
-        ].forEach(attr => button.removeAttribute(attr));
+        button.className = 'fc-action-button';
+        Object.assign(button.style, {
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            flex: '0 0 auto', width: 'auto', minWidth: '0', boxSizing: 'border-box',
+            margin: '0', padding: '6px 9px', border: '1px solid #123149',
+            borderRadius: '2px', background: '#183b56', color: '#fff',
+            font: '700 11px/13px Tahoma, Calibri, "Trebuchet MS", sans-serif',
+            cursor: 'pointer', boxShadow: 'none'
+        });
 
         button.addEventListener('click', (e) => {
 
@@ -524,10 +520,7 @@ banner 300 x 120 cm 4 ks
 
         }, true);
 
-        originalButton.insertAdjacentElement(
-            'afterend',
-            button
-        );
+        panel.appendChild(button);
 
         return true;
     }
@@ -535,7 +528,7 @@ banner 300 x 120 cm 4 ks
     //
     // INIT
     //
-    window.addEventListener('load', () => {
+    function init() {
 
         const togglePanel = createPanel();
 
@@ -554,6 +547,9 @@ banner 300 x 120 cm 4 ks
         console.log(
             '[CALC] kalkulačka m²/A4 pripravená'
         );
-    });
+    }
+
+    if (document.readyState === 'complete') init();
+    else window.addEventListener('load', init, { once: true });
 
 })();

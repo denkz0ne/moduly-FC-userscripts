@@ -2,7 +2,7 @@
 // @name         FC Action Panel
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.7
+// @version      1.8
 // @description  Spoločný riadok pre tlačidlá a nástroje userscriptov na detaile VP
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
@@ -207,10 +207,12 @@
             if (button.parentNode !== panel) panel.appendChild(button);
         });
 
+        // Keep the queue control available even when the optional graphics
+        // userscript has not injected its menu item yet.
+        const dropdown = ensureFrontQueueDropdown(panel);
+        const menu = dropdown.querySelector(`#${FRONT_QUEUE_MENU_ID}`);
         const graphicsButton = document.querySelector('#doGrafikyBtn');
         if (graphicsButton) {
-            const dropdown = ensureFrontQueueDropdown(panel);
-            const menu = dropdown.querySelector(`#${FRONT_QUEUE_MENU_ID}`);
             styleActionButton(graphicsButton, { background: '#7b1fa2', borderColor: '#6a1b9a' });
             graphicsButton.setAttribute('role', 'menuitem');
             if (graphicsButton.parentNode !== menu) menu.appendChild(graphicsButton);
