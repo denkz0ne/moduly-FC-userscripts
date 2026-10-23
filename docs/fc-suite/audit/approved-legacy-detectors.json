@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+  "approvalScope": "Original detector modules plus original API/router/settings semantics; preserve declared order and actual registry behavior.",
+  "providerContract": [
+    {
+      "file": "materialDetector.user.js",
+      "sha256": "d726c08ef82b8ff2a82998292b6b4df3f1709de6ed5951b1c5dffc342294548e"
+    },
+    {
+      "file": "detectors/detector_api.js",
+      "sha256": "59a0ff9d2f15e2f5bb55d048f58d7358ad3f4db7df0dc374c5c2f09abc25b774"
+    },
+    {
+      "file": "detectors/control_panel.js",
+      "sha256": "e6ddd944d7dae5aa15d913ddc9ba07c422ec630f57c2a3df9289aee0d75f83a2"
+    }
+  ],
+  "declaredOrder": [
+    "fotoobrazy",
+    "41tv",
+    "42foto/web",
+    "67mf",
+    "67spz",
+    "68bs",
+    "49ban",
+    "49s"
+  ],
+  "userSettingsProvenance": "not-exported; original localStorage aliases/config must be imported before parity/cutover, not inferred from defaults",
+  "approved": [
+    {
+      "detectorId": "fotoobrazy",
+      "source": "detectors/detector_fotoobrazy.js",
+      "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+      "originalSha256": "c755c1682ed6c9c962366f0a4e9d27e66116f4800088f3b3f460f51f476fad8b",
+      "approval": "approved-as-is-by-owner-2026-10-23",
+      "nextCandidate": "service-catalog/detectors/detector_fotoobrazy.js",
+      "nextCandidateSha256": "ede3258cbfc9e6c97acf82f69fc2ccb8c1bbfb50099f25bb2afa1188bfb48a99",
+      "identicalSource": false,
+      "importState": "planned-not-applied-to-runtime",
+      "acceptance": "Preserve original match/detect results, aliases, size, quantity, zones and rename contract; generic fallback must not overwrite approved output."
+    },
+    {
+      "detectorId": "41tv",
+      "source": "detectors/detector_41tv.js",
+      "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+      "originalSha256": "bcc152b9367f8e7328800fd3b9e354a3776b8a1a72f032cae5d9da7638e47a53",
+      "approval": "approved-as-is-by-owner-2026-10-23",
+      "nextCandidate": "service-catalog/detectors/detector_41tv.js",
+      "nextCandidateSha256": "f47c1794ce8bfb400120866319f60d8bf0daf4dc400c8caade26dec41a4704bf",
+      "identicalSource": false,
+      "importState": "planned-not-applied-to-runtime",
+      "acceptance": "Preserve original match/detect results, aliases, size, quantity, zones and rename contract; generic fallback must not overwrite approved output."
+    },
+    {
+      "detectorId": "42foto/web",
+      "source": "detectors/detector_42fotoweb.js",
+      "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+      "originalSha256": "250158d7bf50c05f9262027f0199fd625de3b34822e05a6ec8fe8320fc71eca2",
+      "approval": "approved-as-is-by-owner-2026-10-23",
+      "nextCandidate": "service-catalog/detectors/detector_42fotoweb.js",
+      "nextCandidateSha256": "b8feb5cb3ca9ce73b63d02d9b890dc23c0545ca3af12c56cf7e8d5ac61a0dd66",
+      "identicalSource": false,
+      "importState": "planned-not-applied-to-runtime",
+      "acceptance": "Preserve original match/detect results, aliases, size, quantity, zones and rename contract; generic fallback must not overwrite approved output."
+    },
+    {
+      "detectorId": "67mf",
+      "source": "detectors/detector_67mf.js",
+      "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+      "originalSha256": "a16431b6aed0f03e1c25f07ad4664a424cc0bfabae6d3fdde04fcd9d09667a61",
+      "approval": "approved-as-is-by-owner-2026-10-23",
+      "nextCandidate": "service-catalog/detectors/detector_67mf.js",
+      "nextCandidateSha256": "ce7f5eb8f1728aceafe185c7f2ef3c1c7834601b8451f19ba826f455754ccfe7",
+      "identicalSource": false,
+      "importState": "planned-not-applied-to-runtime",
+      "acceptance": "Preserve original match/detect results, aliases, size, quantity, zones and rename contract; generic fallback must not overwrite approved output."
+    },
+    {
+      "detectorId": "67spz",
+      "source": "detectors/detector_67spz.js",
+      "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+      "originalSha256": "2bee508d07e257fc636fb529c9b307bf5adc77f6f7b3ba782ddce44445a76f34",
+      "approval": "approved-as-is-by-owner-2026-10-23",
+      "nextCandidate": "service-catalog/detectors/detector_67spz.js",
+      "nextCandidateSha256": "2dbccf848fd001ed2900da8f38195d63f12d24aa5417b30e29195e076c5f77d5",
+      "identicalSource": false,
+      "importState": "planned-not-applied-to-runtime",
+      "acceptance": "Preserve original match/detect results, aliases, size, quantity, zones and rename contract; generic fallback must not overwrite approved output."
+    },
+    {
+      "detectorId": "68bs",
+      "source": "detectors/detector_68bs.js",
+      "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+      "originalSha256": "f9fdecbe0ccdefbd8914b711a0b112cc441f1c18f9538a86d96f01cde028d733",
+      "approval": "approved-as-is-by-owner-2026-10-23",
+      "nextCandidate": "service-catalog/detectors/detector_68bs.js",
+      "nextCandidateSha256": "358697edaf2df756a79dc4b6ca5d633b61d59ce5f223b76181d1fced7d61b649",
+      "identicalSource": false,
+      "importState": "planned-not-applied-to-runtime",
+      "acceptance": "Preserve original match/detect results, aliases, size, quantity, zones and rename contract; generic fallback must not overwrite approved output."
+    },
+    {
+      "detectorId": "49ban",
+      "source": "detectors/detector_49ban.js",
+      "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+      "originalSha256": "b9db304f993b5653d4f1b16538537a484b769aaf6f383e0ba1a544e11ffdb446",
+      "approval": "approved-as-is-by-owner-2026-10-23",
+      "nextCandidate": "service-catalog/detectors/detector_49ban.js",
+      "nextCandidateSha256": "f4f485faae45718f6dab423a90e95e2382e9f5b8b0e9c6fd431fd5e7d5827dc7",
+      "identicalSource": false,
+      "importState": "planned-not-applied-to-runtime",
+      "acceptance": "Preserve original match/detect results, aliases, size, quantity, zones and rename contract; generic fallback must not overwrite approved output."
+    },
+    {
+      "detectorId": "49s",
+      "source": "detectors/detector_49s.js",
+      "baseline": "75087f8c4cbd34190e69318038bda6ef36eee0f2",
+      "originalSha256": "7f928c5de71a36692dd8737ced2147819f845f91b4e4a81fcec595ae05cf0b7b",
+      "approval": "approved-as-is-by-owner-2026-10-23",
+      "nextCandidate": "service-catalog/detectors/detector_49s.js",
+      "nextCandidateSha256": "76a364a7a74265fc456edaad104335986c741e54efbbfa7440b13845864b3cf2",
+      "identicalSource": false,
+      "importState": "planned-not-applied-to-runtime",
+      "acceptance": "Preserve original match/detect results, aliases, size, quantity, zones and rename contract; generic fallback must not overwrite approved output."
+    }
+  ]
+}

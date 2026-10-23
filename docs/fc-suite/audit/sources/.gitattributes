@@ -1,0 +1,2 @@
+# Reference snapshots retain exact source bytes, including original line endings.
+*.js.txt -text whitespace=cr-at-eol
