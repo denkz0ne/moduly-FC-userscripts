@@ -22,6 +22,16 @@ Overiť prípady: kopírovanie z mailu a návrat do FC, validné číslo/okrajov
 
 Podklad: [Clipboard.readText](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard/readText), [Clipboard API – Chromium permission/focus podmienky](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard_API#security_considerations), overené 2026-10-23. Konkrétna implementácia nesmie predpokladať neobmedzený prístup iba preto, že beží ako userscript.
 
+## DO FRONTY – spoločná ponuka výrobných frontov
+
+Prijaté spresnenie vlastníka 2026-10-23: pôvodná funkcia/script Do grafiky sa v FC Party mode zastreší modulom **DO FRONTY** (`queue-actions`). Tlačidlo DO FRONTY zostáva zarovnané napravo v spoločnom action riadku a otvorí ponuku. V ponuke má každý podporovaný výrobný front svoje samostatné tlačidlo. Aktuálne bude dostupná iba položka **Do grafiky** (`queue-actions.graphics`); ďalšie výrobné fronty sa doplnia neskôr podľa konkrétneho zadania.
+
+Otvorenie ponuky nevykonáva zaradenie. Až kliknutie na príslušný front spustí jeho vlastnú akciu, busy stav, výsledok alebo chybovú správu. Prvá položka zachová pôvodný grafický workflow vrátane VF `301`, tagu `602` a reloadu po úspechu. Tieto hodnoty sa nesmú automaticky prevziať ako spoločné pre budúce fronty.
+
+Navrhovaný kontrakt registrácie položky: stabilné ID, názov tlačidla, poradie, dostupnosť pre aktuálnu stránku/VP, vlastné prevádzkové parametre a handler s definovaným výsledkom/chybou. Spoločný UI host vytvára ponuku, jednotlivé workflowy vlastnia svoje serverové požiadavky. Centrála ponúkne prepínač celého modulu, prepínače jednotlivých položiek a príslušnú diagnostiku. Registrácia budúcich položiek nevyžaduje ďalší samostatný plávajúci button ani zmenu existujúceho grafického workflowu.
+
+Ide o prijatý cieľ nového balíka; názov historického zdroja `doGrafiky.user.js` a jeho audit sa zachovávajú ako referencia. Nové fronty, ich názvy, identifikátory a serverové akcie sa zatiaľ nedomýšľajú ani neimplementujú.
+
 ## Pôvodné funkcie
 
 | Oblasť | Vstup → spracovanie → výstup | Nastavenia a životný cyklus |

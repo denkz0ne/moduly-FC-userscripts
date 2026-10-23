@@ -81,6 +81,8 @@ Previesť aj pôvodný termín expedície a publikovanie `TM_testoLeft`, `TM_tes
 
 Jeden panel-host spravuje miesta a poradie config/CALC. Moduly registrujú obsah, nepresúvajú navzájom svoje obaly. Jeden layout owner zarovná hlavičky OBJEDNÁVKA/VÝROBNÝ PRÍKAZ/AKCIA cez dva toolbar priestory rovnakej výšky. Action row bez bledého pozadia, DO FRONTY napravo; nové riešenie musí pokryť i viacriadkový toolbar.
 
+**DO FRONTY** je názov spoločného modulu zaradenia VP do výrobných frontov (`queue-actions`), nie iba premenované tlačidlo jednej serverovej operácie. Dropdown má samostatné registrované tlačidlo pre každý front. Prvá položka Do grafiky zachová pôvodný handler a jeho parametre; ďalšie fronty sa doplnia neskôr. Centrála riadi modul aj jednotlivé položky. Spoločný je render/lifecycle ponuky a diagnostika, konkrétne serverové kroky a tagy zostávajú vo workflowe daného frontu. Detail v [kontrakte DO FRONTY](feature-contracts.md#do-fronty--spoločná-ponuka-výrobných-frontov).
+
 Obsahové listenery sa viažu čo najbližšie k zdroju údajov. Pozorovateľ nemá monitorovať vlastné výstupy; zápisy musia byť idempotentné, spracovanie sa zlučuje a meria. Jeden globálny observer pre úplne všetko by bol ďalšou zlou abstrakciou. SSO, dochádzka a detailové dáta majú odlišné zdroje a rytmus.
 
 Event registry rieši capture priority a modifier klávesy pred presunom handerov. Pre viewer verzus rename zachovať konkrétny rozhodovací strom. Oprava neznámej existujúcej chyby je samostatné rozhodnutie, nie neoznačená zmena pri refaktore.

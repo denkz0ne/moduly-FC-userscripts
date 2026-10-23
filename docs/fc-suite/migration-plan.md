@@ -76,7 +76,7 @@ Parity scenáre: všetkých 8 detektorov a ich varianty, šablóny/aliasy s over
 ## 6. Fronty, výroba, príslušenstvo a pokyny
 
 - [ ] Preniesť queue title/sekcie/EXPR/STORNO/STOP/linky a refresh cez pôvodné DataTables, s uložením viditeľnosti podľa route.
-- [ ] Preniesť DO GRAFIKY ako modul akcie v DO FRONTY s rovnakými serverovými požiadavkami a fallbackmi; network spies/fixture pred reálnou obsluhou.
+- [ ] Pôvodné Do grafiky zastrešiť modulom **DO FRONTY** (`queue-actions`) s registrom samostatných tlačidiel frontov v ponuke. Prvá a zatiaľ jediná položka **Do grafiky** zachová pôvodné serverové požiadavky, tagy a fallbacky; network spies/fixture pred reálnou obsluhou. Overiť, že otvorenie menu nevykoná zaradenie, double-click busy guard a prepínače celého modulu/jednotlivých položiek. Ďalšie výrobné fronty dopĺňať neskôr cez registráciu vlastného workflowu, bez globálneho zdieľania grafických VF/tag ID.
 - [ ] Preniesť výrobu a príslušenstvo vrátane XHR/confirm wrapperov, admin frame a postMessage, tubusov a busy guards. Otestovať stop/start a vlastníctvo wrapperov.
 - [ ] Preniesť archiver a jeho vlastnú IndexedDB bez premenovania, zachovať submit/pobočka/tagy/filter/export a oválne tagy. Otestovať opakované mount a návrat na stránku.
 

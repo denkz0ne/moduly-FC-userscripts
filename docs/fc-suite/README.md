@@ -22,7 +22,7 @@ Autoritatívny je zoznam zapnutých scriptov na screenshote dodanom vlastníkom,
 | setIndustrialState | 2.19 / 2.19 | Rozrobená, spracovanie VP, príslušenstvo, tubusy, potvrdenia, XHR watcher, správy medzi oknami | production + accessories |
 | FaxCopy – interný prehliadač obrázkov | 1.2 / dodaný zdroj | Capture klik na obrázok/Alt+klik, blob viewer, zoom, URL clipboard, download, Escape | image-viewer |
 | setTitleForIndustrialQueue | 1.6.1 / 1.6.1 | Title/favicon, EXPR/STOP/storno, poradie, sekcie, bezpečné odkazy, refresh skrytej fronty | queue |
-| Do grafiky | 3.7 / 3.7 | Zaradenie do VF `301`, tag `602`, požiadavky na server, reload | queue-actions.graphics |
+| Do grafiky | 3.7 / 3.7 | Zaradenie do VF `301`, tag `602`, požiadavky na server, reload | DO FRONTY (`queue-actions`), prvá položka `queue-actions.graphics`; ďalšie fronty neskôr |
 | attendanceBalancePredictor | 0.2.1 / 0.2.1 | Dochádzka person.faxcopy.sk, časové zaokrúhlenie, obed, denný cieľ, prognóza | attendance |
 | VP Searchbar | 1.2.4 / 1.2.4 | Vyhľadávanie VP, odkazy v logu, tlač štítka, otváranie VP na pozadí | navigation |
 | VPclickToCopy | 1.0 / 1.0 | Klik na ID výrobného príkazu → clipboard, spätná väzba | navigation.copy-vp |
