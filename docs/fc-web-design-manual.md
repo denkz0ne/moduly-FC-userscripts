@@ -17,6 +17,8 @@ Tento dokument zachytáva vizuálne pravidlá a opakujúce sa komponenty FC webu
 
 Analyzovaný je web samotný: jeho hlavička, navigácia, obsah, formuláre, tabuľky a stavové prvky. Prvky vložené userscriptmi/Tampermonkey ani externý chat podpory nie sú súčasťou dizajnového systému FC a pri meraní tokenov boli vynechané. Do dokumentu sa neukladajú čísla VP, zákaznícke údaje, osobné údaje, e-maily ani obsah poznámok.
 
+Hoci prvky userscriptov neboli súčasťou merania pôvodného webu, tento manuál je záväzným vizuálnym základom pre UI všetkých FC userscriptov: tlačidlá, formuláre, panely a ostatné prvky vložené do stránky sa majú prispôsobiť konkrétnemu FC modulu a jeho existujúcemu rozhraniu. Výnimkou je samotný dizajn štítka, ktorý zostáva podľa existujúceho riešenia a na ktorý sa tieto pravidlá nevzťahujú.
+
 Kontrola prebehla pri desktopovom viewport-e približne **1524 × 659–710 CSS px**. Ide o opis pozorovaných obrazoviek, nie o zdrojový manuál vydaný vlastníkom webu. Mobilné rozloženie sa priamo neskúmalo. Rozmery nižšie sú orientačné pre pozorovaný viewport a môžu sa meniť podľa zoomu, obsahu a veľkosti okna.
 
 ## 2. Stručný charakter vizuálneho jazyka
@@ -158,6 +160,8 @@ V otvorených stránkach sa načítavali najmä tieto zdroje:
 Toto je inventár pozorovaných importov, nie tvrdenie, že všetky sú globálne dôležité pre každý modul. Hlavný vizuálny jazyk na kontrolovaných stránkach vychádza z master/menu/default štýlov a z CSS konkrétneho modulu.
 
 ## 11. Praktické pravidlá pre budúce FC webové prvky
+
+Tieto pravidlá platia pre všetky FC userscripty, ktoré zobrazujú alebo menia UI priamo na FC webe. Zahŕňajú tlačidlá, formuláre, panely aj ostatné webové prvky; vzhľad každého prvku treba prispôsobiť stránke a modulu, na ktorom sa používa. Dizajn štítka zostáva zachovaný podľa existujúceho riešenia a je z tohto štandardu vyňatý.
 
 1. Zachovať hornú navigáciu a zelenú breadcrumb lištu ako súčasť spoločného shellu.
 2. Používať Tahoma/Calibri stack a existujúcu veľkostnú mierku; pre pracovné údaje neprechádzať na veľkú modernú typografiu.
