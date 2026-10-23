@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": 1,
+  "generatedAt": "2026-10-23T00:00:00.000Z",
+  "updatedAt": "2026-10-23T00:00:00.000Z",
+  "services": [
+    {
+      "id": "41tv",
+      "name": "41tv — tlačové médium",
+      "detectorId": "41tv",
+      "internalCodes": ["41tv"],
+      "materialAliases": {
+        "pauzovaci papier 90g": "pauz",
+        "zakladny papier biely 80g/m2": "80g",
+        "neonovy papier zeleny 90g/m2": "90n_zel",
+        "neonovy papier oranzovy 90g/m2": "90n_or",
+        "neonovy papier ruzovy 90g/m2": "90n_ruz",
+        "neonovy papier zlty 90g/m2": "90n_zlt"
+      },
+      "fields": [
+        {"key":"material","label":"Tlačové médium","sourceLabels":["tlačové médium pre","tlačové médium","materiál"]},
+        {"key":"printType","label":"Druh tlače","sourceLabels":["druh tlače"]},
+        {"key":"folding","label":"Skladanie","sourceLabels":["skladanie"]},
+        {"key":"quantity","label":"Počet kusov","sourceLabels":["počet kusov","počet rovnakých výtlačkov"]},
+        {"key":"size","label":"Rozmer","sourceLabels":["formát","veľkosť","rozmer","šírka","výška"]}
+      ]
+    },
+    {
+      "id": "42foto-web",
+      "name": "42foto/web a 48foto/web",
+      "detectorId": "42foto/web",
+      "internalCodes": ["42foto/web", "48foto/web"],
+      "materialAliases": {
+        "42foto/web|economy plagat|120g": "120",
+        "42foto/web|economy plagat|140g": "140",
+        "42foto/web|economy plagat|180g": "180",
+        "42foto/web|plagatovy papier|135g": "135",
+        "42foto/web|plagatovy papier|200g": "200",
+        "42foto/web|fotopapier|leskly|200g": "200 lesk",
+        "42foto/web|fotopapier|leskly|260g": "260 lesk",
+        "42foto/web|fotopapier|pololeskly|200g": "200 sat",
+        "42foto/web|fotopapier|pololeskly|240g": "240 sat",
+        "42foto/web|fotopapier|pololeskly|260g": "260 sat",
+        "42foto/web|fotopapier|matny|180g": "180",
+        "42foto/web|fotopapier|matny|230g": "230",
+        "42foto/web|platno|standard 280g": "poly",
+        "42foto/web|platno|premium 380g": "canv",
+        "42foto/web|billboardovy papier": "bb",
+        "42foto/web|medium pre rollup|economy": "rld eco",
+        "42foto/web|medium pre rollup|standart": "rld",
+        "42foto/web|medium pre rollup|standard": "rld",
+        "42foto/web|backlit|lesk": "back lesk",
+        "42foto/web|backlit|mat": "back mat"
+      },
+      "fields": [
+        {"key":"mediaType","label":"Typ tlačového média","sourceLabels":["typ tlačového média"]},
+        {"key":"weight","label":"Gramáž","sourceLabels":["gramáž papiera","typ-gramáž plátna"]},
+        {"key":"variant","label":"Povrch alebo variant","sourceLabels":["typ-gramáž plátna","typ tlačového média"]},
+        {"key":"quantity","label":"Počet kusov","sourceLabels":["počet kusov","počet rovnakých výtlačkov"]},
+        {"key":"size","label":"Rozmer","sourceLabels":["rozmer","formát"]}
+      ]
+    },
+    {
+      "id": "fotoobrazy",
+      "name": "Fotoobrazy a HEXA",
+      "detectorId": "fotoobrazy",
+      "internalCodes": [],
+      "internalCodePatterns": ["^48(?:r|rp|fh)\\d{4,6}$", "^48x(?:k|[146])$"],
+      "materialAliases": {},
+      "fields": [
+        {"key":"kind","label":"Typ fotoobrazu","sourceLabels":["kód produktu"]},
+        {"key":"size","label":"Rozmer","sourceLabels":["formát plátna","rozmer"]},
+        {"key":"canvas","label":"Plátno","sourceLabels":["plátno"]},
+        {"key":"stiffener","label":"Výstuha","sourceLabels":["výstuha"]},
+        {"key":"giftPack","label":"Darčekové balenie","sourceLabels":["darčekové balenie"]}
+      ]
+    },
+    {
+      "id": "49ban",
+      "name": "49ban — bannery",
+      "detectorId": "49ban",
+      "internalCodes": ["49ban"],
+      "materialAliases": {},
+      "fields": [
+        {"key":"material","label":"Materiál banneru","sourceLabels":["materiál banneru"]},
+        {"key":"size","label":"Rozmery","sourceLabels":["rozmery"]},
+        {"key":"quantity","label":"Počet kusov","sourceLabels":["počet kusov bannerov","počet kusov"]},
+        {"key":"eyelet","label":"Očkovanie","sourceLabels":["očkovanie"]},
+        {"key":"gluing","label":"Lepenie","sourceLabels":["lepenie"]},
+        {"key":"rope","label":"Napínacie lano","sourceLabels":["napínacie lano"]}
+      ]
+    },
+    {
+      "id": "49s",
+      "name": "49s — samolepky",
+      "detectorId": "49s",
+      "internalCodes": ["49s"],
+      "materialAliases": {},
+      "fields": [
+        {"key":"foilType","label":"Druh fólie","sourceLabels":["druhy fólií"]},
+        {"key":"foilMaterial","label":"Materiál fólie","sourceLabels":["druhy fólií -"]},
+        {"key":"size","label":"Rozmer","sourceLabels":["vlastný rozmer","rozmer samolepky"]},
+        {"key":"quantity","label":"Počet kusov","sourceLabels":["počet kusov"]},
+        {"key":"cutting","label":"Rezanie","sourceLabels":["rezanie"]},
+        {"key":"packing","label":"Balenie","sourceLabels":["balenie"]}
+      ]
+    },
+    {
+      "id": "67mf",
+      "name": "67mf — magnetická fólia",
+      "detectorId": "67mf",
+      "internalCodes": ["67mf"],
+      "materialAliases": {},
+      "fields": [
+        {"key":"stickerType","label":"Typ nálepky","sourceLabels":["typ nálepky"]},
+        {"key":"magneticFoil","label":"Magnetická fólia","sourceLabels":["magnetická fólia"]},
+        {"key":"size","label":"Rozmer fólie","sourceLabels":["vlastný rozmer fólie","rozmer fólie","rozmer"]},
+        {"key":"quantity","label":"Počet kusov","sourceLabels":["počet kusov"]},
+        {"key":"cutting","label":"Typ orezu","sourceLabels":["typ orezu","rezanie"]}
+      ]
+    },
+    {
+      "id": "67spz",
+      "name": "67spz — tabuľky SPZ",
+      "detectorId": "67spz",
+      "internalCodes": ["67spz"],
+      "materialAliases": {},
+      "fields": [
+        {"key":"material","label":"Materiál vyhotovenia SPZ","sourceLabels":["výber materiálu vyhotovenia spz","materiál vyhotovenia spz"]},
+        {"key":"size","label":"Rozmer tabuľky","sourceLabels":["rozmer tabuľky","vlastný rozmer"]},
+        {"key":"quantity","label":"Počet kusov","sourceLabels":["počet kusov"]},
+        {"key":"extraServices","label":"Doplnkové služby","sourceLabels":["doplnkové služby"]}
+      ]
+    },
+    {
+      "id": "68bs",
+      "name": "68bs — rollup/display",
+      "detectorId": "68bs",
+      "internalCodes": ["68bs"],
+      "materialAliases": {},
+      "fields": [
+        {"key":"mode","label":"Režim produktu","sourceLabels":["typ produktu","variant"]},
+        {"key":"quality","label":"Kvalita","sourceLabels":["kvalita"]},
+        {"key":"size","label":"Rozmer","sourceLabels":["rozmer"]},
+        {"key":"quantity","label":"Počet kusov","sourceLabels":["počet kusov"]}
+      ]
+    },
+    {
+      "id": "common_size",
+      "name": "Všeobecný rozmer",
+      "detectorId": "common_size",
+      "internalCodes": [],
+      "materialAliases": {},
+      "fields": [
+        {"key":"size","label":"Rozmer","sourceLabels":["formát","veľkosť","rozmer"]}
+      ]
+    }
+  ]
+}
