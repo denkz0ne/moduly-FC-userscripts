@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         stylesheetTune
 // @namespace    http://tvoj-namespace.example
-// @version      1.1
+// @version      1.2
 // @description  Prepis Stylebot CSS na Tampermonkey script + zväčšenie tlačidla accept a skrytie posuvníkov v celej tabuľke
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/stylesheetTune.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/stylesheetTune.user.js
@@ -26,31 +26,17 @@
     a.button.green.small.block.mt5 {font-size: 12px;}
     #fc-wrapper > .content.container_12 {padding-top: 6px;}
     #fc-wrapper #vp-detail {padding-top: 6px;}
-    #vp-detail > .box.grid_6:has(> #material-detector-summary-row) {
-      display: flex !important;
-      flex-flow: row wrap !important;
-      align-items: stretch !important;
-    }
-    #vp-detail > .box.grid_6:has(> #material-detector-summary-row) > #material-detector-summary-row {
-      flex: 0 0 100% !important;
-      width: 100% !important;
-      clear: none !important;
-      margin-bottom: 2px !important;
-    }
-    #vp-detail > .box.grid_6:has(> #material-detector-summary-row) > .box.grid_6.detail,
-    #vp-detail > .box.grid_6:has(> #material-detector-summary-row) > .box.grid_6.statuses {
-      display: flex !important;
-      flex-direction: column !important;
-      float: none !important;
-      box-sizing: border-box !important;
-    }
     #vp-detail > .box.grid_6:has(> #material-detector-summary-row) > .box.grid_6.detail {
-      flex: 0 0 49.5% !important;
+      float: left !important;
+      display: block !important;
+      box-sizing: border-box !important;
       width: 49.5% !important;
       margin: 0 .5% 15px 0 !important;
     }
     #vp-detail > .box.grid_6:has(> #material-detector-summary-row) > .box.grid_6.statuses {
-      flex: 0 0 49% !important;
+      float: left !important;
+      display: block !important;
+      box-sizing: border-box !important;
       width: 49% !important;
       margin: 0 .5% 15px !important;
     }
@@ -69,4 +55,46 @@
     const style = document.createElement('style');
     style.textContent = css;
     document.head.appendChild(style);
+
+    const findVpCards = () => {
+        const summary = document.querySelector('#vp-detail #material-detector-summary-row');
+        const group = summary && summary.parentElement;
+        if (!group) return null;
+        const order = group.querySelector(':scope > .box.grid_6.detail');
+        const status = group.querySelector(':scope > .box.grid_6.statuses');
+        return order && status ? [order, status] : null;
+    };
+
+    const equalizeVpCards = (cards) => {
+        cards.forEach(card => card.style.removeProperty('min-height'));
+        const height = Math.ceil(Math.max(...cards.map(card => card.getBoundingClientRect().height)));
+        cards.forEach(card => card.style.setProperty('min-height', `${height}px`));
+    };
+
+    const initializeVpCardSizing = () => {
+        const cards = findVpCards();
+        if (!cards) return false;
+
+        let frame = 0;
+        const scheduleEqualize = () => {
+            if (frame) cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
+                frame = 0;
+                equalizeVpCards(cards);
+            });
+        };
+
+        scheduleEqualize();
+        window.addEventListener('resize', scheduleEqualize, { passive: true });
+        const contentObserver = new MutationObserver(scheduleEqualize);
+        cards.forEach(card => contentObserver.observe(card, { childList: true, characterData: true, subtree: true }));
+        return true;
+    };
+
+    if (!initializeVpCardSizing()) {
+        const pageObserver = new MutationObserver(() => {
+            if (initializeVpCardSizing()) pageObserver.disconnect();
+        });
+        pageObserver.observe(document.documentElement, { childList: true, subtree: true });
+    }
 })();
