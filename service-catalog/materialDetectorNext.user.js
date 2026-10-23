@@ -2,8 +2,8 @@
 // @name         Material Detector Next
 // @namespace    https://moduly.faxcopy.sk/material-detector-next
 // @author       mato e.
-// @version      0.1.5
-// @description  Nový katalóg služieb, detekcia parametrov a izolovaný náhľad štítka.
+// @version      0.1.6
+// @description  Nový katalóg služieb a kontrola detegovaných parametrov.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/materialDetectorNext.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/materialDetectorNext.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
@@ -23,7 +23,6 @@
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/core/database.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/core/extraction.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/core/proposals.js
-// @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/core/preview.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/core/consumer_api.js
 // @require      https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/config/config_panel.js
 // @run-at       document-end
@@ -37,7 +36,6 @@
     let databaseState = null;
     let lastSignature = '';
     let scheduled = false;
-    const PREVIEW_BUTTON_ID = 'material-detector-next-preview-toggle';
 
     function isAllowedPage() {
         return window.MaterialDetectorNextPageContext
@@ -84,58 +82,14 @@
         window.dispatchEvent(new CustomEvent(window.MaterialDetectorNextClient.eventName, { detail: payload }));
     }
 
-    function ensurePreviewActionButton() {
-        // Separate Tampermonkey scripts can run in isolated JavaScript worlds,
-        // so discover the shared Action Panel through the DOM first.
-        const actionPanelApi = window.FCUserscripts;
-        let panel = document.getElementById('fc-userscripts-action-panel');
-        if (!panel && actionPanelApi && typeof actionPanelApi.ensureActionPanel === 'function') {
-            panel = actionPanelApi.ensureActionPanel();
-        }
-        if (!panel) return null;
-        let button = document.getElementById(PREVIEW_BUTTON_ID);
-        if (!button) {
-            button = document.createElement('button');
-            button.id = PREVIEW_BUTTON_ID;
-            button.type = 'button';
-            button.setAttribute('aria-pressed', 'false');
-            button.title = 'Zobraziť alebo skryť náhľad štítka';
-            button.addEventListener('click', () => {
-                const visible = window.MaterialDetectorNextPreview.setVisible(!window.MaterialDetectorNextPreview.isVisible());
-                button.textContent = visible ? 'Skryť náhľad' : 'Náhľad štítka';
-                button.setAttribute('aria-pressed', String(visible));
-            });
-        }
-        const visible = window.MaterialDetectorNextPreview.isVisible();
-        const label = visible ? 'Skryť náhľad' : 'Náhľad štítka';
-        if (button.textContent !== label) button.textContent = label;
-        button.setAttribute('aria-pressed', String(visible));
-        if (actionPanelApi && typeof actionPanelApi.styleActionButton === 'function') {
-            actionPanelApi.styleActionButton(button, { background: '#315b79', borderColor: '#244661' });
-        } else {
-            Object.assign(button.style, {
-                position: 'static', right: 'auto', bottom: 'auto', display: 'block',
-                width: '100%', minWidth: '0', boxSizing: 'border-box', margin: '0',
-                padding: '8px 10px', textAlign: 'center', lineHeight: '13px',
-                fontWeight: '700', color: '#fff', background: '#315b79',
-                border: '1px solid #244661', borderRadius: '5px', cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.18)', textDecoration: 'none'
-            });
-        }
-        if (button.parentNode !== panel) panel.appendChild(button);
-        return button;
-    }
-
     function renderCurrent() {
         if (!isAllowedPage()) return null;
-        ensurePreviewActionButton();
         const context = window.MaterialDetectorNextPageContext.collect();
         if (!context) return null;
         const signature = currentSignature(context);
         if (signature === lastSignature && window.__materialDetectorNextState) return window.__materialDetectorNextState;
         lastSignature = signature;
         const detection = window.MaterialDetectorNextExtraction.detect(databaseState, context);
-        window.MaterialDetectorNextPreview.render(detection);
         publishPublicState(detection);
         window.dispatchEvent(new CustomEvent('materialDetectorNext:updated', { detail: detection }));
         return detection;

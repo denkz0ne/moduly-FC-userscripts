@@ -19,47 +19,49 @@
         const style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
-            '#'+PANEL_ID+'{position:fixed;z-index:10001;right:20px;top:94px;width:520px;max-width:calc(100vw - 30px);max-height:calc(100vh - 115px);overflow:hidden;background:#f7f9fc;color:#17283b;border:1px solid #d6e0ec;border-radius:16px;box-shadow:0 18px 55px rgba(15,36,59,.27);font:13px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;display:none}',
+            '#'+PANEL_ID+'{position:relative;z-index:2;display:grid;grid-template-rows:0fr;width:100%;max-width:100%;max-height:none;margin:0 0 0;overflow:hidden;background:#fff;color:#000;border:0 solid #bbb;border-radius:3px;box-shadow:none;font:11px/1.35 Tahoma,Calibri,"Trebuchet MS",sans-serif;opacity:0;transition:grid-template-rows .24s ease,opacity .18s ease,margin-bottom .24s ease,border-width .24s ease}',
+            '#'+PANEL_ID+'[data-open="true"]{grid-template-rows:1fr;margin-bottom:8px;border-width:1px;opacity:1}',
             '#'+PANEL_ID+' *{box-sizing:border-box}',
-            '#'+PANEL_ID+' .mdn-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;background:#183b56;color:#fff}',
-            '#'+PANEL_ID+' .mdn-title{font-size:16px;font-weight:760}',
-            '#'+PANEL_ID+' .mdn-subtitle{margin-top:2px;color:#c4d6e5;font-size:11px}',
-            '#'+PANEL_ID+' .mdn-close{border:0;background:transparent;color:#fff;font-size:22px;cursor:pointer;padding:2px 7px;border-radius:8px}',
-            '#'+PANEL_ID+' .mdn-tabs{display:flex;gap:4px;padding:8px 10px;background:#eaf0f6;border-bottom:1px solid #dce5ef;overflow-x:auto}',
-            '#'+PANEL_ID+' .mdn-tab{border:0;border-radius:8px;padding:8px 10px;background:transparent;color:#60748a;font-weight:700;white-space:nowrap;cursor:pointer}',
-            '#'+PANEL_ID+' .mdn-tab[aria-selected="true"]{background:#fff;color:#183b56;box-shadow:0 1px 4px rgba(28,53,78,.12)}',
-            '#'+PANEL_ID+' .mdn-content{padding:15px 17px;overflow:auto;max-height:calc(100vh - 220px)}',
-            '#'+PANEL_ID+' .mdn-card{padding:13px;margin-bottom:11px;background:#fff;border:1px solid #e1e8f0;border-radius:12px}',
-            '#'+PANEL_ID+' .mdn-card h3{margin:0 0 9px;font-size:13px;color:#203a54}',
-            '#'+PANEL_ID+' .mdn-help{margin:4px 0 0;color:#718096;font-size:11px}',
-            '#'+PANEL_ID+' .mdn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
-            '#'+PANEL_ID+' .mdn-stat{padding:10px;border-radius:9px;background:#f3f7fb}',
-            '#'+PANEL_ID+' .mdn-stat-label{display:block;color:#718096;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}',
-            '#'+PANEL_ID+' .mdn-stat-value{display:block;margin-top:3px;color:#183b56;font-weight:750;overflow-wrap:anywhere}',
-            '#'+PANEL_ID+' label{display:block;margin:10px 0 5px;color:#445a70;font-weight:700;font-size:11px}',
-            '#'+PANEL_ID+' input,#'+PANEL_ID+' textarea{width:100%;padding:9px 10px;border:1px solid #d2dce8;border-radius:8px;background:#fff;color:#17283b;font:inherit}',
+            '#'+PANEL_ID+' .mdn-shell{min-height:0;overflow:hidden}',
+            '#'+PANEL_ID+' .mdn-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#141414;color:#fff}',
+            '#'+PANEL_ID+' .mdn-title{font-size:12px;font-weight:700;text-transform:uppercase}',
+            '#'+PANEL_ID+' .mdn-subtitle{margin-top:2px;color:#ddd;font-size:11px}',
+            '#'+PANEL_ID+' .mdn-close{border:1px solid #666;background:#292929;color:#fff;font-size:16px;cursor:pointer;padding:2px 7px;border-radius:2px}',
+            '#'+PANEL_ID+' .mdn-tabs{display:flex;gap:3px;padding:5px 6px;background:#EBE7D4;border-bottom:1px solid #bbb;overflow-x:auto}',
+            '#'+PANEL_ID+' .mdn-tab{border:1px solid #ccc;border-radius:2px;padding:5px 8px;background:#f3f3f3;color:#292929;font:700 11px Tahoma,Calibri,"Trebuchet MS",sans-serif;white-space:nowrap;cursor:pointer}',
+            '#'+PANEL_ID+' .mdn-tab[aria-selected="true"]{background:#fff;color:#183b56;border-color:#aaa;box-shadow:none}',
+            '#'+PANEL_ID+' .mdn-content{padding:8px 9px;overflow:visible;max-height:none;background:#fff}',
+            '#'+PANEL_ID+' .mdn-card{padding:8px;margin-bottom:7px;background:#fff;border:1px solid #ccc;border-radius:3px}',
+            '#'+PANEL_ID+' .mdn-card h3{margin:0 0 7px;font-size:12px;color:#292929}',
+            '#'+PANEL_ID+' .mdn-help{margin:4px 0 0;color:#555;font-size:11px}',
+            '#'+PANEL_ID+' .mdn-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}',
+            '#'+PANEL_ID+' .mdn-stat{padding:7px;border-radius:2px;background:#F3F3F3}',
+            '#'+PANEL_ID+' .mdn-stat-label{display:block;color:#555;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}',
+            '#'+PANEL_ID+' .mdn-stat-value{display:block;margin-top:2px;color:#183b56;font-weight:700;overflow-wrap:anywhere}',
+            '#'+PANEL_ID+' label{display:block;margin:8px 0 4px;color:#292929;font-weight:700;font-size:11px}',
+            '#'+PANEL_ID+' input,#'+PANEL_ID+' textarea{width:100%;padding:6px 7px;border:1px solid #bbb;border-radius:0;background:#fff;color:#000;font:11px Tahoma,Calibri,"Trebuchet MS",sans-serif}',
             '#'+PANEL_ID+' textarea{min-height:68px;resize:vertical}',
             '#'+PANEL_ID+' .mdn-row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}',
-            '#'+PANEL_ID+' .mdn-button{border:1px solid #cbd7e4;border-radius:8px;padding:8px 11px;background:#fff;color:#294862;font:inherit;font-weight:700;cursor:pointer}',
-            '#'+PANEL_ID+' .mdn-button:hover{background:#edf4fa}',
-            '#'+PANEL_ID+' .mdn-button.primary{background:#176b5b;border-color:#176b5b;color:#fff}',
-            '#'+PANEL_ID+' .mdn-button.primary:hover{background:#125747}',
-            '#'+PANEL_ID+' .mdn-button.subtle{background:#183b56;border-color:#183b56;color:#fff}',
-            '#'+PANEL_ID+' .mdn-badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:99px;background:#e8f5ef;color:#176b5b;font-size:10px;font-weight:800}',
+            '#'+PANEL_ID+' .mdn-button{border:1px solid #779904;border-radius:2px;padding:6px 9px;background:#fff;color:#294862;font:700 11px Tahoma,Calibri,"Trebuchet MS",sans-serif;cursor:pointer}',
+            '#'+PANEL_ID+' .mdn-button:hover{background:#f3f3f3}',
+            '#'+PANEL_ID+' .mdn-button.primary{background:#8BB400;border-color:#779904;color:#fff}',
+            '#'+PANEL_ID+' .mdn-button.primary:hover{background:#779904}',
+            '#'+PANEL_ID+' .mdn-button.subtle{background:#183b56;border-color:#123149;color:#fff}',
+            '#'+PANEL_ID+' .mdn-badge{display:inline-flex;align-items:center;padding:3px 6px;border-radius:2px;background:#e8f5ef;color:#176b5b;font-size:10px;font-weight:700}',
             '#'+PANEL_ID+' .mdn-badge.warn{background:#fff1d9;color:#8a5710}',
             '#'+PANEL_ID+' .mdn-list{display:grid;gap:8px}',
-            '#'+PANEL_ID+' .mdn-field{padding:10px;border:1px solid #e1e8f0;border-radius:9px;background:#fff}',
+            '#'+PANEL_ID+' .mdn-field{padding:8px;border:1px solid #ccc;border-radius:2px;background:#fff}',
             '#'+PANEL_ID+' .mdn-field-title{font-weight:750;color:#294862}',
             '#'+PANEL_ID+' .mdn-field-meta{font-size:10px;color:#718096;margin-top:2px;overflow-wrap:anywhere}',
-            '#'+PANEL_ID+' .mdn-proposal{padding:11px;border:1px solid #dce5ef;border-radius:10px;background:#fff}',
+            '#'+PANEL_ID+' .mdn-proposal{padding:8px;border:1px solid #ccc;border-radius:3px;background:#fff}',
             '#'+PANEL_ID+' .mdn-proposal-head{display:flex;justify-content:space-between;gap:8px;align-items:center}',
             '#'+PANEL_ID+' .mdn-proposal-fields{display:grid;gap:7px;margin-top:8px}',
             '#'+PANEL_ID+' .mdn-proposal-field{display:grid;grid-template-columns:1fr 1fr;gap:7px}',
             '#'+PANEL_ID+' .mdn-field-options{display:grid;gap:5px;padding:3px 0 7px}',
             '#'+PANEL_ID+' .mdn-inline-label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500}',
             '#'+PANEL_ID+' .mdn-inline-label input{width:auto}',
-            '#'+PANEL_ID+' .mdn-empty{padding:20px;text-align:center;color:#718096;background:#fff;border:1px dashed #ccd8e5;border-radius:10px}',
-            '@media(max-width:700px){#'+PANEL_ID+'{right:8px;top:90px;width:calc(100vw - 16px);max-height:calc(100vh - 100px)}#'+PANEL_ID+' .mdn-content{max-height:calc(100vh - 200px)}}'
+            '#'+PANEL_ID+' .mdn-empty{padding:14px;text-align:center;color:#555;background:#fff;border:1px dashed #bbb;border-radius:2px}',
+            '@media(max-width:700px){#'+PANEL_ID+' .mdn-grid{grid-template-columns:1fr}#'+PANEL_ID+' .mdn-proposal-field{grid-template-columns:1fr}}'
         ].join('');
         (document.head || document.documentElement).appendChild(style);
     }
@@ -80,6 +82,7 @@
             button.title = 'Otvoriť nastavenia a návrhy Material Detector Next';
             button.addEventListener('click', toggle);
         }
+        button.setAttribute('aria-expanded', String(document.getElementById(PANEL_ID)?.dataset.open === 'true'));
         if (actionPanelApi && typeof actionPanelApi.styleActionButton === 'function') {
             actionPanelApi.styleActionButton(button, { background: '#183b56', borderColor: '#123149' });
         } else {
@@ -92,8 +95,52 @@
                 boxShadow: '0 2px 8px rgba(0,0,0,0.18)', textDecoration: 'none'
             });
         }
-        if (button.parentNode !== actionPanel) actionPanel.insertBefore(button, actionPanel.firstChild);
+        if (button.parentNode !== actionPanel) actionPanel.appendChild(button);
         return button;
+    }
+
+    function findActivitySection() {
+        const heading = Array.from(document.querySelectorAll('h1,h2,h3,h4,.box-head,.box-title,.box_header'))
+            .find(node => String(node.textContent || '').replace(/\s+/g, ' ').trim().toLocaleUpperCase('sk') === 'AKTIVITY');
+        if (!heading) return null;
+        return {
+            box: heading.closest('.box') || heading.closest('[class*="grid_"]'),
+            heading: heading.closest('.box-head,.box-title,.box_header') || heading.parentElement
+        };
+    }
+
+    function mountPanel(panel) {
+        panel = panel || document.getElementById(PANEL_ID);
+        if (!panel) return false;
+        const section = findActivitySection();
+        if (!section) return false;
+
+        if (section.box && section.box.parentNode) {
+            Array.from(panel.classList).forEach(name => {
+                if (/^(grid_|alpha$|omega$)/.test(name)) panel.classList.remove(name);
+            });
+            Array.from(section.box.classList).forEach(name => {
+                if (/^(grid_|alpha$|omega$)/.test(name)) panel.classList.add(name);
+            });
+            if (panel.parentNode !== section.box.parentNode || panel.nextSibling !== section.box) {
+                section.box.parentNode.insertBefore(panel, section.box);
+            }
+            return true;
+        }
+        if (section.heading && section.heading.parentNode) {
+            section.heading.parentNode.insertBefore(panel, section.heading);
+            return true;
+        }
+        return false;
+    }
+
+    function setPanelOpen(panel, open) {
+        const nextOpen = !!open;
+        panel.dataset.open = String(nextOpen);
+        panel.setAttribute('aria-hidden', String(!nextOpen));
+        panel.inert = !nextOpen;
+        const button = document.getElementById(BUTTON_ID);
+        if (button) button.setAttribute('aria-expanded', String(nextOpen));
     }
 
     function waitForActionPanel() {
@@ -110,7 +157,10 @@
         panel = document.createElement('section');
         panel.id = PANEL_ID;
         panel.setAttribute('aria-label', 'Material Detector Next konfigurácia');
-        document.body.appendChild(panel);
+        panel.dataset.open = 'false';
+        panel.setAttribute('aria-hidden', 'true');
+        panel.inert = true;
+        mountPanel(panel);
         return panel;
     }
 
@@ -468,12 +518,14 @@
         const panel = ensurePanel();
         panel.replaceChildren();
         const head = el('div', 'mdn-head');
+        const isOpen = panel.dataset.open === 'true';
+        const shell = el('div', 'mdn-shell');
         const titleWrap = document.createElement('div');
-        titleWrap.append(el('div', 'mdn-title', 'Material Detector Next'), el('div', 'mdn-subtitle', 'Správa služieb a náhľad štítka'));
+        titleWrap.append(el('div', 'mdn-title', 'Material Detector Next'), el('div', 'mdn-subtitle', 'Správa služieb a kontrola detegovaných parametrov'));
         const close = el('button', 'mdn-close', '×');
         close.type = 'button';
         close.setAttribute('aria-label', 'Zavrieť panel');
-        close.addEventListener('click', () => { panel.style.display = 'none'; });
+        close.addEventListener('click', () => setPanelOpen(panel, false));
         head.append(titleWrap, close);
         const tabs = el('nav', 'mdn-tabs');
         const tabLabels = [
@@ -491,22 +543,25 @@
             tab.addEventListener('click', () => { activeTab = id; render(); });
             tabs.appendChild(tab);
         });
-        panel.append(head, tabs, content);
+        shell.append(head, tabs, content);
+        panel.appendChild(shell);
         if (activeTab === 'overview') renderOverview(content);
         else if (activeTab === 'service') renderService(content);
         else if (activeTab === 'templates') renderTemplates(content);
         else if (activeTab === 'proposals') renderProposals(content);
         else renderDatabase(content);
+        panel.dataset.open = String(isOpen);
+        mountPanel(panel);
     }
 
     function toggle() {
         const panel = ensurePanel();
-        if (panel.style.display === 'block') {
-            panel.style.display = 'none';
+        if (panel.dataset.open === 'true') {
+            setPanelOpen(panel, false);
             return;
         }
         render();
-        panel.style.display = 'block';
+        setPanelOpen(panel, true);
     }
 
     function init() {
@@ -516,10 +571,17 @@
         }
         styles();
         waitForActionPanel();
-        ensurePanel();
+        const panel = ensurePanel();
+        mountPanel(panel);
+        if (!findActivitySection()) {
+            const observer = new MutationObserver(() => {
+                if (mountPanel(panel)) observer.disconnect();
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
         window.addEventListener('materialDetectorNext:updated', () => {
             const panel = document.getElementById(PANEL_ID);
-            if (panel && panel.style.display === 'block') render();
+            if (panel && panel.dataset.open === 'true') render();
         });
     }
 

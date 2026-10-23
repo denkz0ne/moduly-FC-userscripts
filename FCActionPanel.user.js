@@ -2,10 +2,10 @@
 // @name         FC Action Panel
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.3
-// @description  Spoločný kontajner pre tlačidlá a nástroje userscriptov na detaile VP
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/FCActionPanel.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/FCActionPanel.user.js
+// @version      1.4
+// @description  Spoločný riadok pre tlačidlá a nástroje userscriptov na detaile VP
+// @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
+// @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @run-at       document-end
 // ==/UserScript==
@@ -15,160 +15,141 @@
     'use strict';
 
     const PANEL_ID = 'fc-userscripts-action-panel';
-    const TOP_ROW_SELECTOR = '#top-row';
-    const PANEL_TOP_GAP = 8;
-    const PANEL_Z_INDEX = '900';
+    const STYLE_ID = 'fc-userscripts-action-panel-style';
+    const ACTION_HEADING = 'AKCIA';
+    const KNOWN_BUTTONS = [
+        { selector: '#material-detector-next-config-button', order: 10, background: '#183b56', borderColor: '#123149' },
+        { selector: '#materialDetectorConfigButton', order: 20, background: '#263238', borderColor: '#111111' },
+        { selector: '#doGrafikyBtn', order: 30, background: '#7b1fa2', borderColor: '#6a1b9a' },
+        { selector: '#m2CalcButton', order: 40, background: '#00897b', borderColor: '#00695c' }
+    ];
 
-    function getPanelTop() {
-
-        const topRow = document.querySelector(TOP_ROW_SELECTOR);
-
-        if (!topRow) {
-            return 20;
-        }
-
-        const rect = topRow.getBoundingClientRect();
-
-        return Math.max(8, Math.round(rect.bottom + PANEL_TOP_GAP));
+    function normalizeText(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim().toLocaleUpperCase('sk');
     }
 
-    function positionActionPanel(panel) {
+    function findActionSection() {
+        const candidates = Array.from(document.querySelectorAll('h1,h2,h3,h4,.box-head,.box-title,.box_header'));
+        const heading = candidates.find(node => normalizeText(node.textContent) === ACTION_HEADING);
+        if (!heading) return null;
 
-        panel.style.top = `${getPanelTop()}px`;
-        panel.style.bottom = 'auto';
-        panel.style.zIndex = PANEL_Z_INDEX;
+        const box = heading.closest('.box') || heading.closest('[class*="grid_"]');
+        if (!box) return { box: null, heading: heading.closest('.box-head,.box-title,.box_header') || heading.parentElement };
+        return {
+            box,
+            heading: heading.closest('.box-head,.box-title,.box_header') || heading.parentElement
+        };
+    }
+
+    function addStyles() {
+        if (document.getElementById(STYLE_ID)) return;
+        const style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.textContent = `
+            #${PANEL_ID}{position:relative;z-index:2;display:flex;flex-flow:row wrap;align-items:center;gap:5px;width:100%;box-sizing:border-box;margin:0 0 6px;padding:4px 5px;background:#fff;border:1px solid #ccc;border-radius:2px;font:11px/1.2 Tahoma,Calibri,"Trebuchet MS",sans-serif}
+            #${PANEL_ID} .fc-action-button{position:static!important;inset:auto!important;display:inline-flex!important;flex:0 0 auto;align-items:center;justify-content:center;width:auto!important;min-width:0!important;max-width:100%;box-sizing:border-box;margin:0!important;padding:6px 9px!important;border-width:1px!important;border-style:solid!important;border-radius:2px!important;box-shadow:none!important;color:#fff!important;font:700 11px/1.2 Tahoma,Calibri,"Trebuchet MS",sans-serif!important;text-align:center;text-decoration:none!important;white-space:nowrap;cursor:pointer}
+            #${PANEL_ID} .fc-action-button:hover{filter:brightness(.94)}
+            @media(max-width:700px){#${PANEL_ID}{gap:4px;padding:4px}#${PANEL_ID} .fc-action-button{white-space:normal}}
+        `;
+        (document.head || document.documentElement).appendChild(style);
     }
 
     function ensureActionPanel() {
-
-        let panel = document.querySelector(`#${PANEL_ID}`);
-
-        if (panel) {
-            positionActionPanel(panel);
-            panel.style.width = '94px';
-            return panel;
+        if (!document.body) return null;
+        addStyles();
+        let panel = document.getElementById(PANEL_ID);
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = PANEL_ID;
+            panel.setAttribute('role', 'group');
+            panel.setAttribute('aria-label', 'Akcie userscriptov');
         }
-
-        panel = document.createElement('div');
-        panel.id = PANEL_ID;
-
         Object.assign(panel.style, {
-            position: 'fixed',
-            right: '20px',
-            top: `${getPanelTop()}px`,
-            bottom: 'auto',
-            zIndex: PANEL_Z_INDEX,
-            width: '94px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'stretch',
-            gap: '5px'
+            position: 'relative', top: 'auto', right: 'auto', bottom: 'auto', left: 'auto',
+            zIndex: '2', display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
+            alignItems: 'center', gap: '5px', width: '100%', boxSizing: 'border-box',
+            margin: '0 0 6px', padding: '4px 5px', background: '#fff',
+            border: '1px solid #ccc', borderRadius: '2px',
+            font: '11px/1.2 Tahoma, Calibri, "Trebuchet MS", sans-serif'
         });
 
-        document.body.appendChild(panel);
-
+        const section = findActionSection();
+        if (section && section.box && section.heading && section.heading.parentNode === section.box) {
+            if (panel.parentNode !== section.box || panel.nextSibling !== section.heading) {
+                section.box.insertBefore(panel, section.heading);
+            }
+        } else if (section && section.heading && section.heading.parentNode) {
+            if (panel.parentNode !== section.heading.parentNode || panel.nextSibling !== section.heading) {
+                section.heading.parentNode.insertBefore(panel, section.heading);
+            }
+        } else if (!panel.isConnected) {
+            document.body.appendChild(panel);
+        }
         return panel;
     }
 
     function styleActionButton(button, options = {}) {
-
-        const background = options.background || '#4a5568';
-        const borderColor = options.borderColor || background;
-
+        const background = options.background || '#8BB400';
+        const borderColor = options.borderColor || '#779904';
+        button.classList.add('fc-action-button');
         Object.assign(button.style, {
-            position: 'static',
-            right: 'auto',
-            bottom: 'auto',
-            display: 'block',
-            width: '100%',
-            minWidth: '0',
-            boxSizing: 'border-box',
-            margin: '0',
-            padding: '8px 10px',
-            textAlign: 'center',
-            lineHeight: '13px',
-            fontWeight: '700',
-            color: '#fff',
-            background,
-            border: `1px solid ${borderColor}`,
-            borderRadius: '5px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-            textDecoration: 'none'
+            position: 'static', top: 'auto', right: 'auto', bottom: 'auto', left: 'auto',
+            display: 'inline-flex', width: 'auto', minWidth: '0', boxSizing: 'border-box',
+            margin: '0', padding: '6px 9px', textAlign: 'center', lineHeight: '13px',
+            fontWeight: '700', fontFamily: 'Tahoma, Calibri, "Trebuchet MS", sans-serif',
+            fontSize: '11px', color: '#fff', background, border: `1px solid ${borderColor}`,
+            borderRadius: '2px', cursor: 'pointer', boxShadow: 'none', textDecoration: 'none',
+            whiteSpace: 'nowrap'
         });
-
         return button;
     }
 
-    function adoptKnownButtons() {
-
-        const panel = ensureActionPanel();
-
-        [
-            {
-                selector: '#doGrafikyBtn',
-                background: '#7b1fa2',
-                borderColor: '#6a1b9a'
-            },
-            {
-                selector: '#m2CalcButton',
-                background: '#00897b',
-                borderColor: '#00695c'
-            }
-        ].forEach(config => {
-
-            const button = document.querySelector(config.selector);
-
-            if (!button) {
-                return;
-            }
-
-            styleActionButton(button, config);
-
-            if (button.parentNode !== panel) {
-                panel.appendChild(button);
-            }
+    function orderButtons(panel) {
+        const children = Array.from(panel.children);
+        const indexed = children.map((node, index) => {
+            const known = KNOWN_BUTTONS.find(item => item.selector && node.matches(item.selector));
+            return { node, index, order: known ? known.order : 100 + index };
         });
+        indexed.sort((a, b) => a.order - b.order || a.index - b.index);
+        indexed.forEach(({ node }, index) => {
+            if (panel.children[index] !== node) panel.insertBefore(node, panel.children[index] || null);
+        });
+    }
+
+    function adoptKnownButtons() {
+        const panel = ensureActionPanel();
+        if (!panel) return;
+        KNOWN_BUTTONS.forEach(config => {
+            const button = document.querySelector(config.selector);
+            if (!button) return;
+            styleActionButton(button, config);
+            if (button.parentNode !== panel) panel.appendChild(button);
+        });
+        orderButtons(panel);
     }
 
     window.FCUserscripts = Object.assign(window.FCUserscripts || {}, {
         ensureActionPanel,
         styleActionButton,
-        positionActionPanel,
         adoptKnownButtons
     });
 
-    window.addEventListener('load', () => {
-
+    function init() {
+        if (!document.body) return;
         adoptKnownButtons();
-
-        let tries = 0;
-
-        const interval = setInterval(() => {
-
-            tries++;
-            adoptKnownButtons();
-
-            if (tries > 60) {
-                clearInterval(interval);
-            }
-
-        }, 500);
-
         const observer = new MutationObserver(adoptKnownButtons);
+        observer.observe(document.body, { childList: true, subtree: true });
+        let tries = 0;
+        const interval = setInterval(() => {
+            tries += 1;
+            adoptKnownButtons();
+            if (tries >= 60) clearInterval(interval);
+        }, 500);
+    }
 
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        window.addEventListener('resize', () => {
-            positionActionPanel(ensureActionPanel());
-        });
-
-        window.addEventListener('scroll', () => {
-            positionActionPanel(ensureActionPanel());
-        }, { passive: true });
-    });
-
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+        init();
+    }
 })();
