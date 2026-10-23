@@ -2,7 +2,7 @@
 // @name         FC Action Panel
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.5
+// @version      1.6
 // @description  Spoločný riadok pre tlačidlá a nástroje userscriptov na detaile VP
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
@@ -22,8 +22,8 @@
     const KNOWN_BUTTONS = [
         { selector: '#material-detector-next-config-button', order: 10, background: '#183b56', borderColor: '#123149' },
         { selector: '#materialDetectorConfigButton', order: 20, background: '#263238', borderColor: '#111111' },
-        { selector: `#${FRONT_QUEUE_ID}`, order: 30 },
-        { selector: '#m2CalcButton', order: 40, background: '#00897b', borderColor: '#00695c' }
+        { selector: '#m2CalcButton', order: 30, background: '#00897b', borderColor: '#00695c' },
+        { selector: `#${FRONT_QUEUE_ID}`, order: 10000 }
     ];
 
     function normalizeText(value) {
@@ -51,7 +51,7 @@
             #${PANEL_ID}{position:relative;z-index:2;display:flex;flex-flow:row wrap;align-items:center;gap:5px;width:100%;box-sizing:border-box;margin:0 0 6px;padding:0;background:transparent;border:0;border-radius:0;font:11px/1.2 Tahoma,Calibri,"Trebuchet MS",sans-serif}
             #${PANEL_ID} .fc-action-button{position:static!important;inset:auto!important;display:inline-flex!important;flex:0 0 auto;align-items:center;justify-content:center;width:auto!important;min-width:0!important;max-width:100%;box-sizing:border-box;margin:0!important;padding:6px 9px!important;border-width:1px!important;border-style:solid!important;border-radius:2px!important;box-shadow:none!important;color:#fff!important;font:700 11px/1.2 Tahoma,Calibri,"Trebuchet MS",sans-serif!important;text-align:center;text-decoration:none!important;white-space:nowrap;cursor:pointer}
             #${PANEL_ID} .fc-action-button:hover{filter:brightness(.94)}
-            #${PANEL_ID} .fc-front-queue{position:relative;display:inline-flex;flex:0 0 auto}
+            #${PANEL_ID} .fc-front-queue{position:relative;display:inline-flex;flex:0 0 auto;margin-left:auto}
             #${PANEL_ID} .fc-front-queue-menu{position:absolute;top:calc(100% + 3px);left:0;z-index:10000;display:flex;flex-direction:column;gap:3px;min-width:160px;padding:4px;background:#fff;border:1px solid #bbb;border-radius:2px;box-shadow:0 3px 8px rgba(0,0,0,.2)}
             #${PANEL_ID} .fc-front-queue-menu[hidden]{display:none}
             #${PANEL_ID} .fc-front-queue-menu .fc-action-button{display:flex!important;justify-content:flex-start!important;width:100%!important;white-space:normal}

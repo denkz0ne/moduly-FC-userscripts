@@ -165,7 +165,7 @@ Tieto pravidlá platia pre všetky FC userscripty, ktoré zobrazujú alebo menia
 
 Oválne tagy a príznaky sú povoleným a zachovávaným prvkom rozhrania. Ak slúžia na označenie stavu, kategórie alebo filtra, ponechať ich pill tvar, farebné rozlíšenie a čitateľný kontrast; neprevádzať ich na hranaté tlačidlá ani bežné obdĺžnikové štítky. Ich konkrétne farby a správanie prispôsobiť významu a existujúcemu modulu.
 
-Pomocné premenne zobrazované nad súvisiacimi panelmi môžu byť zoskupené do samostatného priehľadného riadka bez vlastného pozadia a rámika. Spoločný riadok akčných tlačidiel môže byť rovnako bez podkladového bloku; súvisiace menej časté akcie možno zoskupiť pod rozbaľovací ovládač, pričom menu sa otvára priamo pod ním.
+Pomocné premenne zobrazované nad súvisiacimi panelmi môžu byť zoskupené do samostatného priehľadného riadka bez vlastného pozadia a rámika. Spoločný riadok akčných tlačidiel môže byť rovnako bez podkladového bloku. Bežné akčné tlačidlá zostávajú zarovnané vľavo; rozbaľovací ovládač „DO FRONTY“ je zarovnaný vpravo a jeho menu sa otvára priamo pod ním.
 
 1. Zachovať hornú navigáciu a zelenú breadcrumb lištu ako súčasť spoločného shellu.
 2. Používať Tahoma/Calibri stack a existujúcu veľkostnú mierku; pre pracovné údaje neprechádzať na veľkú modernú typografiu.
