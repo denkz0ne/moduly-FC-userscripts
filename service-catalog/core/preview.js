@@ -2,12 +2,14 @@
     'use strict';
     const ROOT_ID = 'material-detector-next-preview';
     const STYLE_ID = 'material-detector-next-preview-style';
+    let visible = false;
     function addStyles() {
         if (document.getElementById(STYLE_ID)) return;
         const style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
             '#material-detector-next-preview{position:fixed;z-index:899;right:124px;top:94px;width:340px;max-width:calc(100vw - 150px);font:13px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#182536}',
+            '#material-detector-next-preview[hidden]{display:none!important}',
             '#material-detector-next-preview *{box-sizing:border-box}',
             '#material-detector-next-preview .mdn-card{background:#fff;border:1px solid #dbe3ee;border-radius:14px;box-shadow:0 12px 38px rgba(18,38,63,.2);overflow:hidden}',
             '#material-detector-next-preview .mdn-head{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:#183b56;color:#fff}',
@@ -35,6 +37,9 @@
         root = document.createElement('section');
         root.id = ROOT_ID;
         root.setAttribute('aria-label', 'Material Detector Next náhľad štítka');
+        root.setAttribute('aria-hidden', String(!visible));
+        root.hidden = !visible;
+        root.style.display = visible ? 'block' : 'none';
         (document.body || document.documentElement).appendChild(root);
         return root;
     }
@@ -125,5 +130,15 @@
         root.appendChild(card);
         return root;
     }
-    window.MaterialDetectorNextPreview = { render };
+    function setVisible(nextVisible) {
+        visible = !!nextVisible;
+        const root = document.getElementById(ROOT_ID);
+        if (root) {
+            root.hidden = !visible;
+            root.style.display = visible ? 'block' : 'none';
+            root.setAttribute('aria-hidden', String(!visible));
+        }
+        return visible;
+    }
+    window.MaterialDetectorNextPreview = { render, setVisible, isVisible: () => visible };
 })();

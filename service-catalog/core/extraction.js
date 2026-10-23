@@ -47,8 +47,8 @@
         const key = api.normalizeKey(label).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field_' + (index + 1);
         const normalizedLabel = api.normalizeKey(label);
         let type = 'text';
-        if (/rozmer|format|sirka|vyska/.test(normalizedLabel)) type = 'dimension';
-        else if (/pocet|mnozstvo|kusov/.test(normalizedLabel)) type = 'quantity';
+        if (/rozmer|format|velkost|size|dimension|sirka|vyska|width|height/.test(normalizedLabel)) type = 'dimension';
+        else if (/pocet|mnozstvo|quantity|qty|count|kusov|kusy|vytlack|naklad|menge|cantidad|anzahl|(?:^|\s)ks(?:\s|$)/.test(normalizedLabel)) type = 'quantity';
         else if (/material|mediu|foli|papier|platno/.test(normalizedLabel)) type = 'material';
         return { key, label, sourceLabels: [label], type };
     }
@@ -65,6 +65,21 @@
             : (context.rawRows || []).map(inferField);
         const params = {};
         const rawFields = {};
+        const universal = api.parseUniversalParameters(context.rawRows || [], service && service.fields || []);
+        const universalFields = {};
+        if (universal.widthCm != null && universal.heightCm != null) {
+            Object.assign(universalFields, {
+                width: universal.widthCm,
+                height: universal.heightCm,
+                widthCm: universal.widthCm,
+                heightCm: universal.heightCm,
+                sizeAlias: universal.sizeAlias
+            });
+        }
+        if (universal.quantityCount != null) {
+            universalFields.quantityCount = universal.quantityCount;
+            universalFields.quantity = universal.quantity;
+        }
         const consumedRows = new Set();
         fields.forEach(field => {
             const sourceLabels = (field.sourceLabels || [field.label || field.key]).map(api.normalizeKey);
@@ -96,10 +111,12 @@
             params[field.key + 'Raw'] = rawValue;
         });
 
+        Object.assign(params, universalFields);
+
         const allFields = fields.concat((context.rawRows || []).map(inferField));
         const sizeField = allFields.find(field => field.type === 'dimension' || /size|rozmer|format/i.test(field.key || ''));
         const sizeRaw = sizeField && rawFields[sizeField.key] || params.sizeRaw || rawFields.size || rawFields.rozmer || '';
-        let sizeAlias = api.parseSizeAlias(sizeRaw) || params.size || '';
+        let sizeAlias = universal.sizeAlias || api.parseSizeAlias(sizeRaw) || params.size || '';
         const widthRaw = Object.entries(rawFields).find(([key]) => /sirka|width/i.test(key))?.[1] || '';
         const heightRaw = Object.entries(rawFields).find(([key]) => /vyska|height/i.test(key))?.[1] || '';
         if (!sizeAlias && widthRaw && heightRaw) {
@@ -113,7 +130,7 @@
         const alias = api.resolveMaterialAlias(materialRaw) || service && (service.outputAlias || service.name) || context.serviceName || context.candidateCode || 'sluzba';
         const quantityField = allFields.find(field => field.type === 'quantity' || /quantity|pocet|mnozstvo/i.test(field.key || ''));
         const quantityRaw = quantityField && rawFields[quantityField.key] || params.quantityRaw || params.quantity || '';
-        const quantity = quantityRaw ? quantityRaw + 'ks' : '1ks';
+        const quantity = universal.quantity || (quantityRaw ? quantityRaw + 'ks' : '1ks');
         const tokens = Object.assign({}, params, {
             alias,
             size,
@@ -147,10 +164,45 @@
                 productCode: context.internalCode || context.candidateCode || target.id,
                 outputAlias: alias,
                 sizeAlias,
-                params: Object.assign({}, params, rawFields, { alias, materialAlias: tokens.materialAlias, quantity, sizeAlias })
+                params: Object.assign({}, params, rawFields, universalFields, { alias, materialAlias: tokens.materialAlias, quantity, sizeAlias })
             },
-            debug: Object.assign({}, params, rawFields, { alias, materialAlias: tokens.materialAlias, quantity, sizeAlias })
+            debug: Object.assign({}, params, rawFields, universalFields, { alias, materialAlias: tokens.materialAlias, quantity, sizeAlias })
         };
+    }
+
+    function addUniversalParameters(result, service, context) {
+        if (!result) return result;
+        const parsed = api.parseUniversalParameters(context.rawRows || [], service && service.fields || []);
+        const hasDimensions = parsed.widthCm != null && parsed.heightCm != null;
+        const hasQuantity = parsed.quantityCount != null;
+        if (!hasDimensions && !hasQuantity) return result;
+
+        const shared = {};
+        if (hasDimensions) {
+            Object.assign(shared, {
+                width: parsed.widthCm,
+                height: parsed.heightCm,
+                widthCm: parsed.widthCm,
+                heightCm: parsed.heightCm,
+                sizeAlias: parsed.sizeAlias
+            });
+            result.width = parsed.widthCm;
+            result.height = parsed.heightCm;
+            result.widthCm = parsed.widthCm;
+            result.heightCm = parsed.heightCm;
+            result.rename = Object.assign({}, result.rename || {}, { sizeAlias: parsed.sizeAlias });
+            if (result.state) result.state.sizeAlias = parsed.sizeAlias;
+        }
+        if (hasQuantity) {
+            shared.quantityCount = parsed.quantityCount;
+            shared.quantity = parsed.quantity;
+            result.quantityCount = parsed.quantityCount;
+            result.rename = Object.assign({}, result.rename || {}, { quantity: parsed.quantity });
+        }
+        result.debug = Object.assign({}, result.debug || {}, shared);
+        result.state = Object.assign({}, result.state || {});
+        result.state.params = Object.assign({}, result.state.params || {}, shared);
+        return result;
     }
 
     function detectDeliveryDate() {
@@ -302,6 +354,7 @@
         }
 
         if (result) {
+            result = addUniversalParameters(result, service, context);
             result = applySettings(result, context);
             result.renameDebug = buildRenameDebug(result);
         }
@@ -328,6 +381,7 @@
         detect,
         findService,
         detectDeliveryDate,
-        makeTokens
+        makeTokens,
+        addUniversalParameters
     };
 })();

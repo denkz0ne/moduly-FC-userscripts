@@ -306,6 +306,115 @@
         return clean(sizeAlias).replace(/_?cm$/i, '');
     }
 
+    function numericValue(value) {
+        const number = Number(String(value || '').replace(',', '.'));
+        return Number.isFinite(number) ? number : null;
+    }
+
+    function dimensionToCm(value, unit) {
+        if (value == null) return null;
+        if (unit === 'mm') return value / 10;
+        if (unit === 'm') return value * 100;
+        return value;
+    }
+
+    function cleanDimensionNumber(value) {
+        return Math.round(value * 100) / 100;
+    }
+
+    function parseDimensionPair(value, unitHint = '') {
+        const raw = clean(String(unitHint || '') + ' ' + String(value || ''))
+            .replace(/[\u00d7\u2715]/g, 'x')
+            .replace(/,/g, '.')
+            .toLowerCase();
+        const match = raw.match(/(\d+(?:\.\d+)?)\s*(mm|cm|m)?\s*[x*]\s*(\d+(?:\.\d+)?)\s*(mm|cm|m)?\b/i);
+        if (!match) return null;
+        const first = Number(match[1]);
+        const second = Number(match[3]);
+        const unit = match[2] || match[4] || ((raw.match(/\b(mm|cm|m)\b/i) || [])[1]) || '';
+        const inferredUnit = unit || (Math.max(first, second) > 200 ? 'mm' : 'cm');
+        const widthCm = cleanDimensionNumber(dimensionToCm(first, match[2] || inferredUnit));
+        const heightCm = cleanDimensionNumber(dimensionToCm(second, match[4] || inferredUnit));
+        return { widthCm, heightCm };
+    }
+
+    function parseDimensionValue(value, unitHint = '') {
+        const raw = clean(String(unitHint || '') + ' ' + String(value || ''))
+            .replace(/,/g, '.')
+            .toLowerCase();
+        const match = raw.match(/(?:^|[^\d])(\d+(?:\.\d+)?)\s*(mm|cm|m)?\b/i);
+        if (!match) return null;
+        const number = Number(match[1]);
+        const unit = match[2] || ((raw.match(/\b(mm|cm|m)\b/i) || [])[1]) || (number > 200 ? 'mm' : 'cm');
+        return cleanDimensionNumber(dimensionToCm(number, unit));
+    }
+
+    function parseQuantityValue(value) {
+        const raw = clean(value).replace(/\u00a0/g, ' ');
+        const match = raw.match(/\d+(?:[\s.,]\d{3})*(?:[.,]\d+)?/);
+        if (!match) return null;
+        const token = match[0].replace(/\s/g, '');
+        const separators = token.match(/[.,]/g) || [];
+        if (separators.length && /\d{1,3}(?:[.,]\d{3})+$/.test(token)) {
+            return Number(token.replace(/[.,]/g, ''));
+        }
+        return numericValue(token.replace(',', '.'));
+    }
+
+    function parseUniversalParameters(rows = [], serviceFields = []) {
+        const fields = Array.isArray(serviceFields) ? serviceFields : [];
+        const normalizedRows = (Array.isArray(rows) ? rows : []).map(row => ({
+            label: clean(row && row.label || ''),
+            key: normalizeKey(row && row.label || ''),
+            value: clean(row && (row.value || (row.values || []).join(' | ')) || '')
+        })).filter(row => row.label && row.value);
+        const fieldLabels = field => [field.key, field.label].concat(field.sourceLabels || [])
+            .map(normalizeKey).filter(Boolean);
+        const rowsFor = (kind, pattern) => normalizedRows.filter(row => pattern.test(row.key)
+            || fields.some(field => {
+                const identity = normalizeKey([field.key, field.type].join(' '));
+                const relevant = kind === 'dimension'
+                    ? /size|dimension|width|height|rozmer|format/.test(identity)
+                    : /quantity|count|pocet|mnozstvo|qty/.test(identity);
+                return relevant && fieldLabels(field).some(label => row.key === label || row.key.includes(label) || label.includes(row.key));
+            }));
+        const rowsForConfiguredField = keyPattern => normalizedRows.filter(row => fields.some(field => {
+            const identity = normalizeKey([field.key, field.type].join(' '));
+            return keyPattern.test(identity) && fieldLabels(field).some(label => row.key === label || row.key.includes(label) || label.includes(row.key));
+        }));
+
+        const dimensionRows = Array.from(new Set(rowsFor('dimension', /rozmer|format|velkost|size|dimension|sirka|vyska|width|height/)));
+        const widthRows = Array.from(new Set(dimensionRows.filter(row => /sirka|width|breite/.test(row.key)).concat(rowsForConfiguredField(/width|sirka/))));
+        const heightRows = Array.from(new Set(dimensionRows.filter(row => /vyska|height|hoehe/.test(row.key)).concat(rowsForConfiguredField(/height|vyska/))));
+        let dimensions = null;
+        for (const row of dimensionRows) {
+            dimensions = parseDimensionPair(row.value, row.label);
+            if (dimensions) break;
+        }
+        if (!dimensions && widthRows.length && heightRows.length) {
+            const unitHint = [widthRows[0].label, widthRows[0].value, heightRows[0].label, heightRows[0].value].join(' ').match(/\b(mm|cm|m)\b/i);
+            const sharedUnit = unitHint ? unitHint[1] : '';
+            const widthCm = parseDimensionValue(widthRows[0].value, `${widthRows[0].label} ${sharedUnit}`);
+            const heightCm = parseDimensionValue(heightRows[0].value, `${heightRows[0].label} ${sharedUnit}`);
+            if (widthCm != null && heightCm != null) dimensions = { widthCm, heightCm };
+        }
+
+        const quantityRows = rowsFor('quantity', /pocet|mnozstvo|quantity|qty|kusov|kusy|vytlack|naklad|menge|cantidad|anzahl|(?:^|\s)ks(?:\s|$)/);
+        const quantityCount = quantityRows.map(row => parseQuantityValue(row.value)).find(value => value != null);
+        const sizeAlias = dimensions
+            ? parseSizeAlias(`${dimensions.widthCm}x${dimensions.heightCm} cm`)
+            : '';
+        return Object.assign({
+            width: dimensions ? dimensions.widthCm : null,
+            height: dimensions ? dimensions.heightCm : null,
+            widthCm: dimensions ? dimensions.widthCm : null,
+            heightCm: dimensions ? dimensions.heightCm : null,
+            sizeAlias,
+            quantityCount: quantityCount == null ? null : quantityCount,
+            quantity: quantityCount == null ? '' : `${quantityCount}ks`
+        });
+    }
+
     function detectUniversalSizeAlias() {
         const root = document.querySelector('#zd-form-container #VPZDParams');
         if (root) {
@@ -388,6 +497,10 @@
         templateToPattern,
         renderTemplate,
         parseSizeAlias,
+        parseDimensionPair,
+        parseDimensionValue,
+        parseQuantityValue,
+        parseUniversalParameters,
         detectUniversalSizeAlias,
         stripSizeUnitSuffix,
         hasGiftPack,

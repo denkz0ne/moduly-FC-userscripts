@@ -2,7 +2,7 @@
 // @name         Material Detector Next
 // @namespace    https://moduly.faxcopy.sk/material-detector-next
 // @author       mato e.
-// @version      0.1.2
+// @version      0.1.3
 // @description  Nový katalóg služieb, detekcia parametrov a izolovaný náhľad štítka.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/materialDetectorNext.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/materialDetectorNext.user.js
@@ -37,6 +37,7 @@
     let databaseState = null;
     let lastSignature = '';
     let scheduled = false;
+    const PREVIEW_BUTTON_ID = 'material-detector-next-preview-toggle';
 
     function isAllowedPage() {
         return window.MaterialDetectorNextPageContext
@@ -83,8 +84,36 @@
         window.dispatchEvent(new CustomEvent(window.MaterialDetectorNextClient.eventName, { detail: payload }));
     }
 
+    function ensurePreviewActionButton() {
+        const actionPanel = window.FCUserscripts;
+        if (!actionPanel || typeof actionPanel.ensureActionPanel !== 'function' || typeof actionPanel.styleActionButton !== 'function') return null;
+        const panel = actionPanel.ensureActionPanel();
+        if (!panel) return null;
+        let button = document.getElementById(PREVIEW_BUTTON_ID);
+        if (!button) {
+            button = document.createElement('button');
+            button.id = PREVIEW_BUTTON_ID;
+            button.type = 'button';
+            button.setAttribute('aria-pressed', 'false');
+            button.title = 'Zobraziť alebo skryť náhľad štítka';
+            button.addEventListener('click', () => {
+                const visible = window.MaterialDetectorNextPreview.setVisible(!window.MaterialDetectorNextPreview.isVisible());
+                button.textContent = visible ? 'Skryť náhľad' : 'Náhľad štítka';
+                button.setAttribute('aria-pressed', String(visible));
+            });
+        }
+        const visible = window.MaterialDetectorNextPreview.isVisible();
+        const label = visible ? 'Skryť náhľad' : 'Náhľad štítka';
+        if (button.textContent !== label) button.textContent = label;
+        button.setAttribute('aria-pressed', String(visible));
+        actionPanel.styleActionButton(button, { background: '#315b79', borderColor: '#244661' });
+        if (button.parentNode !== panel) panel.appendChild(button);
+        return button;
+    }
+
     function renderCurrent() {
         if (!isAllowedPage()) return null;
+        ensurePreviewActionButton();
         const context = window.MaterialDetectorNextPageContext.collect();
         if (!context) return null;
         const signature = currentSignature(context);
