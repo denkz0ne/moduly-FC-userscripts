@@ -48,6 +48,7 @@ Kontrola: viac otvorených panelov, úzky/široký viewport, zoom, vypnutý modu
 ## 3. Nezávislé a navigačné funkcie
 
 - [ ] Preniesť copy VP a VP Searchbar so zachovaním background/modifier správania.
+- [ ] Doplniť novú samostatne vypínateľnú funkciu [Clipboard VP](feature-contracts.md#clipboard-vp--nová-požadovaná-funkcia): automatický návrh otvorenia čísla zo schránky, plávajúci panel, otvorenie klikom a ignorovanie krížikom. Overiť permission/focus, formát, deduplikáciu/ignore, nové číslo, vypnutie, pause v skrytej karte a žiadne logovanie obsahu schránky. Je to nová funkcia, nie zmena pôvodného search/copy správania.
 - [ ] Preniesť Session Keeper vrátane pracovných hodín a oficiálneho SSO flow; overiť viditeľnú/skrytú kartu a offline zlyhanie.
 - [ ] Preniesť dochádzku s pôvodnými defaultmi a scénarmi quarter rounding/obed/rozdiel kalendárnych dní.
 - [ ] Preniesť CALC s vlastnými view/styles a pôvodným parserom; porovnať formáty A4, mm/cm/m, m², ks, editáciu množstva a súčty.

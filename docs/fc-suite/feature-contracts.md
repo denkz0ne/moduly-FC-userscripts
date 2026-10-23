@@ -2,6 +2,28 @@
 
 Ku každému zdroju patrí úplný mechanický index funkcií/premenných v [audite](audit/INDEX.md). Tu je význam a migračná hranica; názvy parametrov sú z aktuálneho kódu, nie nový schválený settings API.
 
+## Clipboard VP – nová požadovaná funkcia
+
+Zaznamenané na požiadanie vlastníka 2026-10-23. Stav: prijatá požiadavka do FC Party mode, zatiaľ neimplementovaná; nejde o súčasť pôvodných 15 inštalácií ani baseline auditu.
+
+Po skopírovaní čísla VP (napríklad `3591344`) do systémovej schránky script automaticky rozpozná kandidáta a hore na FC stránke zobrazí malý plávajúci panel **VP 3591344 – Otvoriť ↗ · ×**. Kliknutie otvorí `/vyrobne_prikazy/detail/index/3591344` na `https://moduly.faxcopy.sk` v novej karte. Krížik znamená ignorovanie; rovnaká hodnota sa nemá opakovane vnucovať. Samotné rozpoznanie neotvára stránku a nedokazuje existenciu VP.
+
+Funkcia patrí pod Navigácia, má samostatný prepínač v centrálnych nastaveniach a vlastnú diagnostiku. Panel používa FC dizajn manuál. Prístup k schránke sa povoľuje vedome používateľským úkonom; automatická kontrola po povolení prebieha na aktívnej podporovanej FC stránke a pri návrate z inej aplikácie/karty. Nie je sľúbené čítanie pri práci mimo aktívneho browserového dokumentu. Pri odmietnutí oprávnenia sa opakované čítanie pozastaví a zobrazí sa zrozumiteľný stav.
+
+Navrhované implementačné predvoľby na overenie:
+
+- Stabilné ID funkcie `navigation.clipboard-vp`; text zo schránky orezať a akceptovať iba samostatných sedem číslic, nie ľubovoľné čísla vložené vo väčšom texte. Dĺžka formátu je zatiaľ návrh odvodený z príkladu.
+- Kontrola cez `navigator.clipboard.readText()` pri focus/visibility návrate a najviac raz za 2 sekundy pri aktívnej karte. Žiadne paralelné read promise ani polling skrytej/neaktívnej karty; po vypnutí odstrániť timer/listenery/panel. Konkrétne správanie focus a permission treba overiť v aktuálnom Chrome/Tampermonkey.
+- Ignorované čísla držať pre aktuálnu kartu/reláciu a deduplikovať zobrazovaný návrh. Obnovenie stránky začne novú reláciu; toto je navrhovaná hranica ignorovania, nie požiadavka na trvalú blacklist DB.
+- Aktivovať v hlavnom dokumente podporovaných stránok moduly.faxcopy.sk; nezdvojovať panel v iframe, tlačovom okne alebo label stránke. Odkaz vytvárať len z validovaného čísla a pevného FC originu.
+- Obsah schránky ani nerozpoznaný text neukladať do diagnostických logov, služby DB či GH. Logovať iba stav funkcie/permission/error a počty akcií; žiadne neobmedzené konzolové výpisy pri každom pollingu.
+
+Overiť prípady: kopírovanie z mailu a návrat do FC, validné číslo/okrajové medzery/neplatný text, opakovaný rovnaký obsah, ignorovanie, nové číslo, klik otvorí práve jeden VP, zamietnuté oprávnenie, chýbajúce API/HTTP, strata focus, iframe/popup, vypnutie a opätovné zapnutie. Odmietnutie oprávnenia nesmie ovplyvniť ostatné funkcie balíka.
+
+Podklad: [Clipboard.readText](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard/readText), [Clipboard API – Chromium permission/focus podmienky](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard_API#security_considerations), overené 2026-10-23. Konkrétna implementácia nesmie predpokladať neobmedzený prístup iba preto, že beží ako userscript.
+
+## Pôvodné funkcie
+
 | Oblasť | Vstup → spracovanie → výstup | Nastavenia a životný cyklus |
 |---|---|---|
 | Action panel | Nadpis AKCIA → ensureActionPanel/adoptKnownButtons/orderButtons → NEXT CFG, MD CFG, CALC a DO FRONTY/menu | KNOWN_BUTTONS + ID/style hodnoty, body observer s RAF; jediný spoločný vlastník. Technické ID sú interný kontrakt, nie používateľská hodnota. |

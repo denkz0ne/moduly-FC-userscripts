@@ -12,6 +12,7 @@
 - Pôvodný MD nahradí Next. Osem jeho deklarovaných detektorov preniesť ako schválené v pôvodnom stave.
 - MD/Next nastavenia zlúčiť a redizajnovať pre jednoduchší používateľský a admin pohľad. Toto spresňuje pôvodnú požiadavku zachovať samostatné configy; doménové možnosti zostávajú, rozhranie sa konsoliduje.
 - Zdroj vieweru 1.2 bol dodaný používateľom ako text; archivovaný bez úpravy v audit/sources.
+- Nová funkcia Clipboard VP: po rozpoznaní skopírovaného čísla VP automaticky ponúknuť plávajúci panel hore, otvoriť VP až kliknutím, krížikom ignorovať bez opakovaného vnucovania rovnakej hodnoty. Samostatný prepínač v centrále; realizácia rešpektuje browserové permission/focus podmienky. Podrobnosti a navrhované predvoľby sú vo feature-contracts.md; zatiaľ iba zaznamenaná požiadavka, nie implementácia.
 
 ### Vykonané
 
