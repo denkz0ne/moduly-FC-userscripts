@@ -2,7 +2,7 @@
 // @name         FC Action Panel
 // @namespace    faxcopy-userscripts
 // @author       mato e.
-// @version      1.6
+// @version      1.7
 // @description  Spoločný riadok pre tlačidlá a nástroje userscriptov na detaile VP
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/FCActionPanel.user.js
@@ -22,7 +22,7 @@
     const KNOWN_BUTTONS = [
         { selector: '#material-detector-next-config-button', order: 10, background: '#183b56', borderColor: '#123149' },
         { selector: '#materialDetectorConfigButton', order: 20, background: '#263238', borderColor: '#111111' },
-        { selector: '#m2CalcButton', order: 30, background: '#00897b', borderColor: '#00695c' },
+        { selector: '#m2CalcButton', order: 30, background: '#183b56', borderColor: '#123149' },
         { selector: `#${FRONT_QUEUE_ID}`, order: 10000 }
     ];
 
@@ -117,6 +117,11 @@
         dropdown = document.createElement('div');
         dropdown.id = FRONT_QUEUE_ID;
         dropdown.className = 'fc-front-queue';
+        Object.assign(dropdown.style, {
+            marginLeft: 'auto',
+            order: '10000',
+            flex: '0 0 auto'
+        });
 
         const trigger = document.createElement('button');
         trigger.type = 'button';
@@ -188,6 +193,8 @@
         indexed.forEach(({ node }, index) => {
             if (panel.children[index] !== node) panel.insertBefore(node, panel.children[index] || null);
         });
+        const dropdown = document.getElementById(FRONT_QUEUE_ID);
+        if (dropdown && dropdown.parentNode === panel) panel.appendChild(dropdown);
     }
 
     function adoptKnownButtons() {

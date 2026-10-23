@@ -165,7 +165,7 @@ Tieto pravidlá platia pre všetky FC userscripty, ktoré zobrazujú alebo menia
 
 Oválne tagy a príznaky sú povoleným a zachovávaným prvkom rozhrania. Ak slúžia na označenie stavu, kategórie alebo filtra, ponechať ich pill tvar, farebné rozlíšenie a čitateľný kontrast; neprevádzať ich na hranaté tlačidlá ani bežné obdĺžnikové štítky. Ich konkrétne farby a správanie prispôsobiť významu a existujúcemu modulu.
 
-Pomocné premenne zobrazované nad súvisiacimi panelmi môžu byť zoskupené do samostatného priehľadného riadka bez vlastného pozadia a rámika. Spoločný riadok akčných tlačidiel môže byť rovnako bez podkladového bloku. Bežné akčné tlačidlá zostávajú zarovnané vľavo; rozbaľovací ovládač „DO FRONTY“ je zarovnaný vpravo a jeho menu sa otvára priamo pod ním.
+Pomocné premenne zobrazované nad súvisiacimi panelmi môžu byť zoskupené do samostatného priehľadného riadka bez vlastného pozadia a rámika. Spoločný riadok akčných tlačidiel môže byť rovnako bez podkladového bloku. Bežné akčné tlačidlá zostávajú zarovnané vľavo; rozbaľovací ovládač „DO FRONTY“ je zarovnaný vpravo a jeho menu sa otvára priamo pod ním. Tlačidlo, ktoré otvára nástrojový panel, používa rovnaký vzhľad ako konfiguračné tlačidlá. Rozbaľovací panel má tmavú hlavičku, svetlý obsah a zobrazuje sa bez prekrytia stránky nad AKTIVITY.
 
 Na detaile výrobného príkazu ponechať malý odstup od zelenej breadcrumb lišty. Hlavičky kariet OBJEDNÁVKA, VÝROBNÝ PRÍKAZ a AKCIA majú začínať v rovnakej výške. Pôvodný floatový layout stĺpcov a ostatných sekcií stránky musí zostať zachovaný.
 

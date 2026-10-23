@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         stylesheetTune
 // @namespace    http://tvoj-namespace.example
-// @version      1.3
+// @version      1.4
 // @description  Prepis Stylebot CSS na Tampermonkey script + zväčšenie tlačidla accept a skrytie posuvníkov v celej tabuľke
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/stylesheetTune.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/stylesheetTune.user.js
@@ -63,7 +63,7 @@
         const order = group.querySelector(':scope > .box.grid_6.detail');
         const status = group.querySelector(':scope > .box.grid_6.statuses');
         const actionHeader = Array.from(document.querySelectorAll('#vp-detail .box.grid_12.overview > .box-head'))
-            .find(header => header.textContent.trim() === 'AKCIA');
+            .find(header => header.textContent.replace(/\s+/g, ' ').trim().toLocaleUpperCase('sk-SK') === 'AKCIA');
         return order && status && actionHeader ? { cards: [order, status], actionHeader } : null;
     };
 
@@ -72,7 +72,7 @@
         const actionTop = actionHeader.getBoundingClientRect().top;
         const firstCardTop = Math.min(...cards.map(card => card.getBoundingClientRect().top));
         const offset = Math.round((actionTop - firstCardTop) * 100) / 100;
-        cards.forEach(card => card.style.setProperty('margin-top', `${offset}px`));
+        cards.forEach(card => card.style.setProperty('margin-top', `${offset}px`, 'important'));
     };
 
     const initializeVpPanelAlignment = () => {
