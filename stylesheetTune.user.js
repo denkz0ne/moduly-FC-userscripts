@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         stylesheetTune
 // @namespace    http://tvoj-namespace.example
-// @version      1.2
+// @version      1.3
 // @description  Prepis Stylebot CSS na Tampermonkey script + zväčšenie tlačidla accept a skrytie posuvníkov v celej tabuľke
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/stylesheetTune.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/stylesheetTune.user.js
@@ -56,44 +56,49 @@
     style.textContent = css;
     document.head.appendChild(style);
 
-    const findVpCards = () => {
+    const findVpPanels = () => {
         const summary = document.querySelector('#vp-detail #material-detector-summary-row');
         const group = summary && summary.parentElement;
         if (!group) return null;
         const order = group.querySelector(':scope > .box.grid_6.detail');
         const status = group.querySelector(':scope > .box.grid_6.statuses');
-        return order && status ? [order, status] : null;
+        const actionHeader = Array.from(document.querySelectorAll('#vp-detail .box.grid_12.overview > .box-head'))
+            .find(header => header.textContent.trim() === 'AKCIA');
+        return order && status && actionHeader ? { cards: [order, status], actionHeader } : null;
     };
 
-    const equalizeVpCards = (cards) => {
-        cards.forEach(card => card.style.removeProperty('min-height'));
-        const height = Math.ceil(Math.max(...cards.map(card => card.getBoundingClientRect().height)));
-        cards.forEach(card => card.style.setProperty('min-height', `${height}px`));
+    const alignVpPanelStarts = ({ cards, actionHeader }) => {
+        cards.forEach(card => card.style.removeProperty('margin-top'));
+        const actionTop = actionHeader.getBoundingClientRect().top;
+        const firstCardTop = Math.min(...cards.map(card => card.getBoundingClientRect().top));
+        const offset = Math.round((actionTop - firstCardTop) * 100) / 100;
+        cards.forEach(card => card.style.setProperty('margin-top', `${offset}px`));
     };
 
-    const initializeVpCardSizing = () => {
-        const cards = findVpCards();
-        if (!cards) return false;
+    const initializeVpPanelAlignment = () => {
+        const panels = findVpPanels();
+        if (!panels) return false;
 
         let frame = 0;
-        const scheduleEqualize = () => {
+        const scheduleAlignment = () => {
             if (frame) cancelAnimationFrame(frame);
             frame = requestAnimationFrame(() => {
                 frame = 0;
-                equalizeVpCards(cards);
+                alignVpPanelStarts(panels);
             });
         };
 
-        scheduleEqualize();
-        window.addEventListener('resize', scheduleEqualize, { passive: true });
-        const contentObserver = new MutationObserver(scheduleEqualize);
-        cards.forEach(card => contentObserver.observe(card, { childList: true, characterData: true, subtree: true }));
+        scheduleAlignment();
+        window.addEventListener('resize', scheduleAlignment, { passive: true });
+        window.addEventListener('load', scheduleAlignment, { once: true });
+        const contentObserver = new MutationObserver(scheduleAlignment);
+        contentObserver.observe(document.getElementById('vp-detail'), { childList: true, characterData: true, subtree: true });
         return true;
     };
 
-    if (!initializeVpCardSizing()) {
+    if (!initializeVpPanelAlignment()) {
         const pageObserver = new MutationObserver(() => {
-            if (initializeVpCardSizing()) pageObserver.disconnect();
+            if (initializeVpPanelAlignment()) pageObserver.disconnect();
         });
         pageObserver.observe(document.documentElement, { childList: true, subtree: true });
     }

@@ -167,7 +167,7 @@ Oválne tagy a príznaky sú povoleným a zachovávaným prvkom rozhrania. Ak sl
 
 Pomocné premenne zobrazované nad súvisiacimi panelmi môžu byť zoskupené do samostatného priehľadného riadka bez vlastného pozadia a rámika. Spoločný riadok akčných tlačidiel môže byť rovnako bez podkladového bloku. Bežné akčné tlačidlá zostávajú zarovnané vľavo; rozbaľovací ovládač „DO FRONTY“ je zarovnaný vpravo a jeho menu sa otvára priamo pod ním.
 
-Na detaile výrobného príkazu ponechať malý odstup od zelenej breadcrumb lišty. Karty OBJEDNÁVKA a VÝROBNÝ PRÍKAZ môžu mať dorovnanú výšku, pričom sa musí zachovať pôvodný floatový layout stĺpcov aj ostatných sekcií stránky.
+Na detaile výrobného príkazu ponechať malý odstup od zelenej breadcrumb lišty. Hlavičky kariet OBJEDNÁVKA, VÝROBNÝ PRÍKAZ a AKCIA majú začínať v rovnakej výške. Pôvodný floatový layout stĺpcov a ostatných sekcií stránky musí zostať zachovaný.
 
 1. Zachovať hornú navigáciu a zelenú breadcrumb lištu ako súčasť spoločného shellu.
 2. Používať Tahoma/Calibri stack a existujúcu veľkostnú mierku; pre pracovné údaje neprechádzať na veľkú modernú typografiu.
