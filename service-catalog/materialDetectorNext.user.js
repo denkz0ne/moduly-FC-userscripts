@@ -2,7 +2,7 @@
 // @name         Material Detector Next
 // @namespace    https://moduly.faxcopy.sk/material-detector-next
 // @author       mato e.
-// @version      0.1.3
+// @version      0.1.4
 // @description  Nový katalóg služieb, detekcia parametrov a izolovaný náhľad štítka.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/materialDetectorNext.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/materialDetectorNext.user.js
@@ -85,9 +85,13 @@
     }
 
     function ensurePreviewActionButton() {
-        const actionPanel = window.FCUserscripts;
-        if (!actionPanel || typeof actionPanel.ensureActionPanel !== 'function' || typeof actionPanel.styleActionButton !== 'function') return null;
-        const panel = actionPanel.ensureActionPanel();
+        // Separate Tampermonkey scripts can run in isolated JavaScript worlds,
+        // so discover the shared Action Panel through the DOM first.
+        const actionPanelApi = window.FCUserscripts;
+        let panel = document.getElementById('fc-userscripts-action-panel');
+        if (!panel && actionPanelApi && typeof actionPanelApi.ensureActionPanel === 'function') {
+            panel = actionPanelApi.ensureActionPanel();
+        }
         if (!panel) return null;
         let button = document.getElementById(PREVIEW_BUTTON_ID);
         if (!button) {
@@ -106,7 +110,18 @@
         const label = visible ? 'Skryť náhľad' : 'Náhľad štítka';
         if (button.textContent !== label) button.textContent = label;
         button.setAttribute('aria-pressed', String(visible));
-        actionPanel.styleActionButton(button, { background: '#315b79', borderColor: '#244661' });
+        if (actionPanelApi && typeof actionPanelApi.styleActionButton === 'function') {
+            actionPanelApi.styleActionButton(button, { background: '#315b79', borderColor: '#244661' });
+        } else {
+            Object.assign(button.style, {
+                position: 'static', right: 'auto', bottom: 'auto', display: 'block',
+                width: '100%', minWidth: '0', boxSizing: 'border-box', margin: '0',
+                padding: '8px 10px', textAlign: 'center', lineHeight: '13px',
+                fontWeight: '700', color: '#fff', background: '#315b79',
+                border: '1px solid #244661', borderRadius: '5px', cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.18)', textDecoration: 'none'
+            });
+        }
         if (button.parentNode !== panel) panel.appendChild(button);
         return button;
     }
