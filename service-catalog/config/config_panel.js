@@ -59,22 +59,49 @@
             '#'+PANEL_ID+' .mdn-inline-label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500}',
             '#'+PANEL_ID+' .mdn-inline-label input{width:auto}',
             '#'+PANEL_ID+' .mdn-empty{padding:20px;text-align:center;color:#718096;background:#fff;border:1px dashed #ccd8e5;border-radius:10px}',
-            '#'+BUTTON_ID+'{position:fixed;z-index:10000;right:20px;top:54px;border:1px solid #123149;border-radius:9px;padding:8px 11px;background:#183b56;color:white;font:700 11px Inter,system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;box-shadow:0 3px 10px rgba(15,36,59,.18)}',
-            '@media(max-width:700px){#'+PANEL_ID+'{right:8px;top:90px;width:calc(100vw - 16px);max-height:calc(100vh - 100px)}#'+PANEL_ID+' .mdn-content{max-height:calc(100vh - 200px)}#'+BUTTON_ID+'{right:8px;top:50px}}'
+            '@media(max-width:700px){#'+PANEL_ID+'{right:8px;top:90px;width:calc(100vw - 16px);max-height:calc(100vh - 100px)}#'+PANEL_ID+' .mdn-content{max-height:calc(100vh - 200px)}}'
         ].join('');
         (document.head || document.documentElement).appendChild(style);
     }
 
     function ensureButton() {
+        const actionPanelApi = window.FCUserscripts;
+        let actionPanel = document.getElementById('fc-userscripts-action-panel');
+        if (!actionPanel && actionPanelApi && typeof actionPanelApi.ensureActionPanel === 'function') {
+            actionPanel = actionPanelApi.ensureActionPanel();
+        }
+        if (!actionPanel) return null;
+
         let button = document.getElementById(BUTTON_ID);
-        if (button) return button;
-        button = el('button', '', 'NEXT CFG');
-        button.id = BUTTON_ID;
-        button.type = 'button';
-        button.title = 'Otvoriť nastavenia a návrhy Material Detector Next';
-        button.addEventListener('click', toggle);
-        document.body.appendChild(button);
+        if (!button) {
+            button = el('button', '', 'NEXT CFG');
+            button.id = BUTTON_ID;
+            button.type = 'button';
+            button.title = 'Otvoriť nastavenia a návrhy Material Detector Next';
+            button.addEventListener('click', toggle);
+        }
+        if (actionPanelApi && typeof actionPanelApi.styleActionButton === 'function') {
+            actionPanelApi.styleActionButton(button, { background: '#183b56', borderColor: '#123149' });
+        } else {
+            Object.assign(button.style, {
+                position: 'static', right: 'auto', bottom: 'auto', display: 'block',
+                width: '100%', minWidth: '0', boxSizing: 'border-box', margin: '0',
+                padding: '8px 10px', textAlign: 'center', lineHeight: '13px',
+                fontWeight: '700', color: '#fff', background: '#183b56',
+                border: '1px solid #123149', borderRadius: '5px', cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.18)', textDecoration: 'none'
+            });
+        }
+        if (button.parentNode !== actionPanel) actionPanel.insertBefore(button, actionPanel.firstChild);
         return button;
+    }
+
+    function waitForActionPanel() {
+        if (!document.body || ensureButton()) return;
+        const observer = new MutationObserver(() => {
+            if (ensureButton()) observer.disconnect();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     function ensurePanel() {
@@ -488,7 +515,7 @@
             return;
         }
         styles();
-        ensureButton();
+        waitForActionPanel();
         ensurePanel();
         window.addEventListener('materialDetectorNext:updated', () => {
             const panel = document.getElementById(PANEL_ID);

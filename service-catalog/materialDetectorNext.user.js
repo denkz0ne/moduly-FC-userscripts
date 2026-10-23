@@ -2,7 +2,7 @@
 // @name         Material Detector Next
 // @namespace    https://moduly.faxcopy.sk/material-detector-next
 // @author       mato e.
-// @version      0.1.4
+// @version      0.1.5
 // @description  Nový katalóg služieb, detekcia parametrov a izolovaný náhľad štítka.
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/materialDetectorNext.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/service-catalog/materialDetectorNext.user.js
