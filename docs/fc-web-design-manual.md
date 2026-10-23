@@ -163,6 +163,8 @@ Toto je inventár pozorovaných importov, nie tvrdenie, že všetky sú globáln
 
 Tieto pravidlá platia pre všetky FC userscripty, ktoré zobrazujú alebo menia UI priamo na FC webe. Zahŕňajú tlačidlá, formuláre, panely aj ostatné webové prvky; vzhľad každého prvku treba prispôsobiť stránke a modulu, na ktorom sa používa. Dizajn štítka zostáva zachovaný podľa existujúceho riešenia a je z tohto štandardu vyňatý.
 
+Oválne tagy a príznaky sú povoleným a zachovávaným prvkom rozhrania. Ak slúžia na označenie stavu, kategórie alebo filtra, ponechať ich pill tvar, farebné rozlíšenie a čitateľný kontrast; neprevádzať ich na hranaté tlačidlá ani bežné obdĺžnikové štítky. Ich konkrétne farby a správanie prispôsobiť významu a existujúcemu modulu.
+
 1. Zachovať hornú navigáciu a zelenú breadcrumb lištu ako súčasť spoločného shellu.
 2. Používať Tahoma/Calibri stack a existujúcu veľkostnú mierku; pre pracovné údaje neprechádzať na veľkú modernú typografiu.
 3. Sekcie zasadiť do existujúcich boxov s tmavou hlavičkou a bielym obsahom.

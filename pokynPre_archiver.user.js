@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pokyny Pre - Archiv
 // @namespace    http://faxcopy.sk/
-// @version      1.9
+// @version      1.10
 // @description  Archivacia pokynov a poznamok z VP formulara + interne priznaky pokynov
 // @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/pokynPre_archiver.user.js
 // @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/pokynPre_archiver.user.js
@@ -178,17 +178,16 @@
             border: selected ? `2px solid ${tag.color}` : '1px solid #d6d6d6',
             background: selected ? tag.background : '#fff',
             color: selected ? tag.color : '#555',
-            borderRadius: '2px',
-            padding: selected ? '3px 7px' : '4px 8px',
+            borderRadius: '6px',
+            padding: selected ? '2px 6px' : '3px 7px',
             fontSize: '11px',
-            fontFamily: 'Tahoma, Calibri, "Trebuchet MS", sans-serif',
             fontWeight: selected ? '700' : '600',
             lineHeight: '13px',
             boxSizing: 'border-box',
             cursor: 'pointer',
             userSelect: 'none',
             transition: '0.12s ease',
-            boxShadow: 'none'
+            boxShadow: selected ? `0 0 0 1px ${tag.border}` : 'none'
         });
     }
 
@@ -256,9 +255,9 @@
         }
 
         return `
-            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px;">
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
                 ${tags.map(tag => `
-                    <span style="background:${tag.background};color:${tag.color};border:1px solid ${tag.border};padding:2px 6px;border-radius:2px;font-size:10px;font-family:Tahoma,Calibri,'Trebuchet MS',sans-serif;font-weight:700;">
+                    <span style="background:${tag.background};color:${tag.color};border:1px solid ${tag.border};padding:3px 7px;border-radius:999px;font-size:11px;font-weight:700;">
                         ${escapeHtml(tag.label)}
                     </span>
                 `).join('')}
