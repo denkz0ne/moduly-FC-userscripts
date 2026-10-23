@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Pokyny Pre - Archiv
 // @namespace    http://faxcopy.sk/
-// @version      1.8
+// @version      1.9
 // @description  Archivacia pokynov a poznamok z VP formulara + interne priznaky pokynov
-// @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
-// @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/pokynPre_archiver.user.js
+// @updateURL    https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/pokynPre_archiver.user.js
+// @downloadURL  https://raw.githubusercontent.com/denkz0ne/moduly-FC-userscripts/main/pokynPre_archiver.user.js
 // @match        https://moduly.faxcopy.sk/vyrobne_prikazy/detail/index/*
 // @grant        none
 // @run-at       document-idle
@@ -17,6 +17,7 @@
     const DB_NAME = 'fc_pokyny_archiv';
     const STORE_NAME = 'pokyny';
     const DB_VERSION = 1;
+    const STYLE_ID = 'fc-archiver-ui-style';
 
     const POKYN_TAGS = [
         {
@@ -177,16 +178,17 @@
             border: selected ? `2px solid ${tag.color}` : '1px solid #d6d6d6',
             background: selected ? tag.background : '#fff',
             color: selected ? tag.color : '#555',
-            borderRadius: '6px',
-            padding: selected ? '2px 6px' : '3px 7px',
+            borderRadius: '2px',
+            padding: selected ? '3px 7px' : '4px 8px',
             fontSize: '11px',
+            fontFamily: 'Tahoma, Calibri, "Trebuchet MS", sans-serif',
             fontWeight: selected ? '700' : '600',
             lineHeight: '13px',
             boxSizing: 'border-box',
             cursor: 'pointer',
             userSelect: 'none',
             transition: '0.12s ease',
-            boxShadow: selected ? `0 0 0 1px ${tag.border}` : 'none'
+            boxShadow: 'none'
         });
     }
 
@@ -197,6 +199,7 @@
         button.className = className;
         button.textContent = tag.label;
         button.title = `Interny priznak: ${tag.label}`;
+        button.setAttribute('aria-pressed', 'false');
 
         applyTagButtonStyle(button, false);
 
@@ -230,12 +233,12 @@
         wrapper.dataset.internalOnly = '1';
 
         Object.assign(wrapper.style, {
-            marginTop: '8px',
+            marginTop: '6px',
             display: 'flex',
             flexWrap: 'wrap',
             gap: '4px',
             alignItems: 'center',
-            maxWidth: '340px'
+            maxWidth: '360px'
         });
 
         POKYN_TAGS.forEach(tag => {
@@ -253,9 +256,9 @@
         }
 
         return `
-            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px;">
                 ${tags.map(tag => `
-                    <span style="background:${tag.background};color:${tag.color};border:1px solid ${tag.border};padding:3px 7px;border-radius:999px;font-size:11px;font-weight:700;">
+                    <span style="background:${tag.background};color:${tag.color};border:1px solid ${tag.border};padding:2px 6px;border-radius:2px;font-size:10px;font-family:Tahoma,Calibri,'Trebuchet MS',sans-serif;font-weight:700;">
                         ${escapeHtml(tag.label)}
                     </span>
                 `).join('')}
@@ -268,7 +271,7 @@
         wrapper.id = 'fc-archive-tag-filters';
 
         Object.assign(wrapper.style, {
-            marginTop: '10px',
+            marginTop: '7px',
             display: 'flex',
             flexWrap: 'wrap',
             gap: '5px',
@@ -382,28 +385,25 @@
 
             if (!document.querySelector('#fc-archive-btn')) {
                 submitBtn.value = 'Potvrdit a archivovat';
+                Object.assign(submitBtn.style, {
+                    border: '1px solid #779904',
+                    borderRadius: '2px',
+                    padding: '6px 10px',
+                    background: '#8BB400',
+                    color: '#fff',
+                    fontFamily: 'Tahoma, Calibri, "Trebuchet MS", sans-serif',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                });
 
-                const archiveBtn = document.createElement('span');
+                const archiveBtn = document.createElement('button');
                 archiveBtn.id = 'fc-archive-btn';
-                archiveBtn.innerText = 'Archiv';
-                archiveBtn.style.marginLeft = '12px';
-                archiveBtn.style.cursor = 'pointer';
-                archiveBtn.style.color = '#2b6cb0';
-                archiveBtn.style.fontWeight = '600';
-                archiveBtn.style.fontSize = '13px';
-                archiveBtn.style.verticalAlign = 'middle';
-                archiveBtn.style.userSelect = 'none';
-                archiveBtn.style.transition = '0.15s';
-
-                archiveBtn.addEventListener('mouseenter', () => {
-                    archiveBtn.style.opacity = '0.75';
-                    archiveBtn.style.textDecoration = 'underline';
-                });
-
-                archiveBtn.addEventListener('mouseleave', () => {
-                    archiveBtn.style.opacity = '1';
-                    archiveBtn.style.textDecoration = 'none';
-                });
+                archiveBtn.type = 'button';
+                archiveBtn.className = 'fc-archive-open';
+                archiveBtn.textContent = 'Archív';
+                archiveBtn.title = 'Otvoriť archív pokynov';
+                archiveBtn.setAttribute('aria-haspopup', 'dialog');
 
                 archiveBtn.addEventListener('click', openViewer);
                 submitBtn.insertAdjacentElement('afterend', archiveBtn);
@@ -458,6 +458,41 @@
         }, 300);
     }
 
+    function addViewerStyles() {
+        if (document.getElementById(STYLE_ID)) return;
+        const style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.textContent = `
+            #fc-archive-btn{margin-left:8px;padding:5px 9px;border:1px solid #779904;border-radius:2px;background:#8BB400;color:#fff;font:700 11px Tahoma,Calibri,"Trebuchet MS",sans-serif;cursor:pointer}
+            #fc-archive-btn:hover{background:#779904}
+            #fc-archiv-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;width:950px;max-width:95vw;height:82vh;overflow:hidden;z-index:999999;background:#fff;border:1px solid #777;border-radius:3px;box-shadow:0 8px 28px rgba(0,0,0,.32);color:#000;font:11px/1.35 Tahoma,Calibri,"Trebuchet MS",sans-serif}
+            #fc-archiv-panel *{box-sizing:border-box}
+            #fc-archiv-panel .fc-archiv-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;background:linear-gradient(#292929,#141414);color:#fff}
+            #fc-archiv-panel .fc-archiv-title{font-size:12px;font-weight:700;text-transform:uppercase}
+            #fc-archiv-panel .fc-archiv-count{margin-top:2px;color:#ddd;font-size:11px}
+            #fc-archiv-panel .fc-archiv-actions{display:flex;align-items:center;gap:5px}
+            #fc-archiv-panel .fc-archive-button{padding:6px 9px;border:1px solid #777;border-radius:2px;background:#292929;color:#fff;font:700 11px Tahoma,Calibri,"Trebuchet MS",sans-serif;cursor:pointer}
+            #fc-archiv-panel .fc-archive-button.primary{border-color:#779904;background:#8BB400}
+            #fc-archiv-panel .fc-archive-button:hover{filter:brightness(.94)}
+            #fc-archive-controls{padding:8px 9px;border-bottom:1px solid #ccc;background:#fff}
+            #fc-search{width:100%;padding:6px 8px;border:1px solid #bbb;border-radius:0;background:#fff;color:#000;font:11px Tahoma,Calibri,"Trebuchet MS",sans-serif}
+            #fc-archive-tag-filters{margin-top:7px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+            #fc-records{flex:1;overflow:auto;padding:9px;background:#D8D6D8}
+            #fc-archiv-panel .fc-record{background:#fff;border:1px solid #ccc;border-radius:3px;padding:9px;margin-bottom:7px}
+            #fc-archiv-panel .fc-record:nth-child(even){background:#F3F3F3}
+            #fc-archiv-panel .fc-record-identities{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
+            #fc-archiv-panel .fc-record-badge{display:inline-block;padding:3px 6px;border:1px solid #ccc;border-radius:2px;background:#EBE7D4;color:#292929;font-size:10px;font-weight:700}
+            #fc-archiv-panel .fc-record-badge.type{border-color:#b7cdfc;background:#e7f0ff;color:#1d4ed8}
+            #fc-archiv-panel .fc-record-badge.recipient{border-color:#9ddbaf;background:#dcfce7;color:#15803d}
+            #fc-archiv-panel .fc-record-message{margin-bottom:8px;color:#222;font-size:12px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+            #fc-archiv-panel .fc-record-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #ddd;padding-top:5px;color:#555;font-size:10px}
+            #fc-archiv-panel .fc-record-footer a{color:#83AB24;text-decoration:none;font-weight:700}
+            #fc-archiv-panel .fc-record-footer a:hover{text-decoration:underline}
+            @media(max-width:700px){#fc-archiv-panel{width:96vw;height:88vh;max-width:96vw}#fc-archiv-panel .fc-archiv-head{align-items:flex-start}#fc-archiv-panel .fc-record-footer{align-items:flex-start}}
+        `;
+        (document.head || document.documentElement).appendChild(style);
+    }
+
     async function openViewer() {
         const records = await getAllRecords();
         records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -468,39 +503,28 @@
             return;
         }
 
-        const panel = document.createElement('div');
+        addViewerStyles();
+        const panel = document.createElement('section');
         panel.id = 'fc-archiv-panel';
-        panel.style.position = 'fixed';
-        panel.style.top = '50%';
-        panel.style.left = '50%';
-        panel.style.transform = 'translate(-50%, -50%)';
-        panel.style.width = '950px';
-        panel.style.maxWidth = '95vw';
-        panel.style.height = '82vh';
-        panel.style.background = '#fff';
-        panel.style.zIndex = '999999';
-        panel.style.borderRadius = '18px';
-        panel.style.overflow = 'hidden';
-        panel.style.boxShadow = '0 20px 80px rgba(0,0,0,0.35)';
-        panel.style.display = 'flex';
-        panel.style.flexDirection = 'column';
-        panel.style.fontFamily = 'Arial, sans-serif';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+        panel.setAttribute('aria-label', 'Archív pokynov');
 
         let html = `
-            <div style="padding:18px 22px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;">
+            <div class="fc-archiv-head">
                 <div>
-                    <div style="font-size:20px;font-weight:700;color:#111;">Archiv pokynov</div>
-                    <div style="font-size:12px;color:#666;margin-top:3px;">${records.length} zaznamov</div>
+                    <div class="fc-archiv-title">Archív pokynov</div>
+                    <div class="fc-archiv-count">${records.length} záznamov</div>
                 </div>
-                <div style="display:flex;gap:8px;">
-                    <button id="fc-export-json" style="border:none;background:#2d3748;color:white;padding:9px 13px;border-radius:10px;cursor:pointer;font-weight:600;">Export</button>
-                    <button id="fc-close-panel" style="border:none;background:#e2e8f0;padding:9px 13px;border-radius:10px;cursor:pointer;font-weight:600;">X</button>
+                <div class="fc-archiv-actions">
+                    <button id="fc-export-json" class="fc-archive-button primary" type="button">Exportovať JSON</button>
+                    <button id="fc-close-panel" class="fc-archive-button" type="button" aria-label="Zavrieť archív">Zavrieť</button>
                 </div>
             </div>
-            <div id="fc-archive-controls" style="padding:14px 20px;border-bottom:1px solid #eee;background:white;">
-                <input type="text" id="fc-search" placeholder="Hladat VP, meno, text alebo priznak..." style="width:100%;padding:11px 14px;border:1px solid #ddd;border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;">
+            <div id="fc-archive-controls">
+                <input type="text" id="fc-search" placeholder="Hľadať VP, meno, text alebo príznak..." aria-label="Hľadať v archíve">
             </div>
-            <div id="fc-records" style="flex:1;overflow:auto;padding:16px;background:#f5f7fb;">
+            <div id="fc-records">
         `;
 
         records.forEach(r => {
@@ -508,18 +532,18 @@
             const tagSearchText = getTagLabels(tags).join(' ');
 
             html += `
-                <div class="fc-record" data-tags="${escapeHtml(tags.join(' '))}" style="background:white;border:1px solid #ececec;border-radius:16px;padding:14px;margin-bottom:12px;">
-                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                        <span style="background:#edf2f7;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;">VP ${r.vp}</span>
-                        <span style="background:#ebf8ff;color:#2b6cb0;padding:5px 10px;border-radius:999px;font-size:12px;">${escapeHtml(r.typ)}</span>
-                        <span style="background:#f0fff4;color:#276749;padding:5px 10px;border-radius:999px;font-size:12px;">${escapeHtml(r.recipientText)}</span>
+                <div class="fc-record" data-tags="${escapeHtml(tags.join(' '))}">
+                    <div class="fc-record-identities">
+                        <span class="fc-record-badge">VP ${escapeHtml(String(r.vp || ''))}</span>
+                        <span class="fc-record-badge type">${escapeHtml(r.typ)}</span>
+                        <span class="fc-record-badge recipient">${escapeHtml(r.recipientText)}</span>
                     </div>
                     ${renderRecordTags(tags)}
-                    <div style="white-space:pre-wrap;line-height:1.5;color:#222;font-size:14px;margin-bottom:12px;">${escapeHtml(r.message)}</div>
+                    <div class="fc-record-message">${escapeHtml(r.message)}</div>
                     <div style="display:none;">${escapeHtml(tagSearchText)}</div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:#777;flex-wrap:wrap;">
+                    <div class="fc-record-footer">
                         <div>${new Date(r.timestamp).toLocaleString()}</div>
-                        <a href="${r.url}" target="_blank" style="color:#2b6cb0;text-decoration:none;font-weight:600;">Otvorit VP</a>
+                        <a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">Otvoriť VP</a>
                     </div>
                 </div>
             `;
@@ -529,14 +553,14 @@
         panel.innerHTML = html;
         document.body.appendChild(panel);
 
-        const searchInput = document.querySelector('#fc-search');
-        const archiveControls = document.querySelector('#fc-archive-controls');
+        const searchInput = panel.querySelector('#fc-search');
+        const archiveControls = panel.querySelector('#fc-archive-controls');
 
         function applyArchiveFilters() {
             const value = searchInput.value.toLowerCase();
             const selectedTags = getSelectedArchiveTags();
 
-            document.querySelectorAll('.fc-record').forEach(card => {
+            panel.querySelectorAll('.fc-record').forEach(card => {
                 const text = card.innerText.toLowerCase();
                 const tags = (card.dataset.tags || '').toLowerCase().split(' ').filter(Boolean);
                 const textMatch = !value || text.includes(value) || tags.join(' ').includes(value);
@@ -548,8 +572,8 @@
 
         archiveControls.appendChild(createArchiveTagFilters(applyArchiveFilters));
 
-        document.querySelector('#fc-close-panel').addEventListener('click', () => panel.remove());
-        document.querySelector('#fc-export-json').addEventListener('click', exportJSON);
+        panel.querySelector('#fc-close-panel').addEventListener('click', () => panel.remove());
+        panel.querySelector('#fc-export-json').addEventListener('click', exportJSON);
         searchInput.addEventListener('input', applyArchiveFilters);
     }
 
@@ -566,6 +590,7 @@
 
     async function init() {
         await openDB();
+        addViewerStyles();
         initFormWatcher();
         customizeButtons();
         initPokynPrePobockuSetter();
