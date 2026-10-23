@@ -29,8 +29,8 @@
         const rows = Array.from(document.querySelectorAll("tr[title='ceny bez DPH'], tr"));
         for (const row of rows) {
             const text = api.clean(row.textContent || '');
-            const match = text.match(/\b(\d{2,4}[a-z][a-z0-9]*(?:\/[a-z0-9]+)?)\b/i);
-            if (match) return match[1].toLowerCase();
+            const match = text.match(/\b(\d{1,4}\s*\/\s*[a-z][a-z0-9]*(?:\/[a-z0-9]+)?|\d{2,4}[a-z][a-z0-9]*(?:\/[a-z0-9]+)?)\b/i);
+            if (match) return match[1].replace(/\s+/g, '').toLowerCase();
         }
         return '';
     }
