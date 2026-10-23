@@ -2,7 +2,7 @@
 // @name         materialDetector
 // @namespace    https://moduly.faxcopy.sk/
 // @author       mato e.
-// @version      5.3.6-core
+// @version      5.3.7-core
 // @description  Material detector core router + modular internal-code detectors.
 // @updateURL    https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
 // @downloadURL  https://github.com/denkz0ne/moduly-FC-userscripts/raw/main/materialDetector.user.js
@@ -256,38 +256,88 @@
     }
 
     function showDetailBadges(zones) {
-        if (!zones.left && !zones.right && !zones.top) return;
-        const h = document.querySelector('h1, h2');
+        zones = zones || {};
+        const orderContent = document.querySelector('#vpOrderDetail');
+        const h = orderContent && orderContent.closest('.box')
+            ? orderContent.closest('.box').querySelector('.box-head h2')
+            : document.querySelector('h1, h2');
         if (!h) return;
 
-        let left = document.querySelector('#shortcut-info-label');
-        let right = document.querySelector('#shortcut-info-date');
-        let top = document.querySelector('#shortcut-info-top');
+        let row = document.querySelector('#material-detector-summary-row');
+        const hasValues = Object.values(zones).some(value => String(value ?? '').trim());
+        if (!hasValues && !row && !document.querySelector('#shortcut-info-label, #shortcut-info-date, #shortcut-info-top')) return;
 
-        if (!left) {
-            left = document.createElement('span');
-            left.id = 'shortcut-info-label';
-            left.style.cssText = 'background:#fffa65;color:#000;padding:4px 8px;margin-left:12px;border-radius:4px;font-weight:bold;display:inline-block;';
-            h.append(left);
-        }
-        if (!right) {
-            right = document.createElement('span');
-            right.id = 'shortcut-info-date';
-            right.style.cssText = 'background:#d0ffb3;color:#000;padding:4px 8px;margin-left:8px;border-radius:4px;font-weight:bold;display:inline-block;';
-            h.append(right);
-        }
-        if (!top) {
-            top = document.createElement('span');
-            top.id = 'shortcut-info-top';
-            top.className = 'badge fs11';
-            top.style.cssText = 'background:#000;color:#fff;border:1px solid #000;padding:4px 8px;margin-left:8px;border-radius:6px;font-weight:bold;display:inline-block;';
-            h.append(top);
+        if (!row) {
+            row = document.createElement('div');
+            row.id = 'material-detector-summary-row';
+            row.setAttribute('role', 'group');
+            row.setAttribute('aria-label', 'Premenné výrobného príkazu');
         }
 
-        left.textContent = zones.left || '';
-        right.textContent = zones.right || '';
-        top.textContent = zones.top || '';
-        top.style.display = zones.top ? 'inline-block' : 'none';
+        Object.assign(row.style, {
+            display: hasValues ? 'flex' : 'none',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '8px',
+            width: '100%',
+            boxSizing: 'border-box',
+            clear: 'both',
+            margin: '0 0 6px',
+            padding: '0',
+            background: 'transparent',
+            border: '0'
+        });
+
+        const orderBox = orderContent && orderContent.closest('.box.grid_6.detail');
+        const vpContent = document.querySelector('#vpVpDetail');
+        const vpBox = vpContent && vpContent.closest('.box.grid_6.statuses');
+        const sharedParent = orderBox && vpBox && orderBox.parentElement === vpBox.parentElement
+            ? orderBox.parentElement
+            : null;
+        if (sharedParent) {
+            if (row.parentElement !== sharedParent || row.nextElementSibling !== orderBox) {
+                sharedParent.insertBefore(row, orderBox);
+            }
+        } else if (row.parentElement !== h) {
+            h.appendChild(row);
+        }
+
+        const knownBadges = {
+            left: { id: 'shortcut-info-label', style: 'background:#fffa65;color:#000;padding:4px 8px;border-radius:4px;font-weight:bold;display:inline-block;' },
+            right: { id: 'shortcut-info-date', style: 'background:#d0ffb3;color:#000;padding:4px 8px;border-radius:4px;font-weight:bold;display:inline-block;' },
+            top: { id: 'shortcut-info-top', className: 'badge fs11', style: 'background:#000;color:#fff;border:1px solid #000;padding:4px 8px;border-radius:6px;font-weight:bold;display:inline-block;' },
+            bottom: { id: 'shortcut-info-bottom', style: 'background:#d9ecff;color:#17324d;border:1px solid #b7cdfc;padding:4px 8px;border-radius:6px;font-weight:bold;display:inline-block;' }
+        };
+        const zonesToShow = new Set([...Object.keys(zones), ...Object.keys(knownBadges)]);
+        const visibleBadges = new Set();
+
+        zonesToShow.forEach(zone => {
+            const value = String(zones[zone] ?? '').trim();
+            const known = knownBadges[zone];
+            let badge = (known && document.getElementById(known.id))
+                || Array.from(row.children).find(node => node.dataset.materialDetectorZone === zone);
+            if (!badge && !value) return;
+
+            if (!badge) {
+                badge = document.createElement('span');
+                if (known) badge.id = known.id;
+                else badge.style.cssText = 'background:#f0f3f6;color:#233;border:1px solid #cfd8e3;padding:4px 8px;border-radius:6px;font-weight:bold;display:inline-block;';
+                if (known && known.className) badge.className = known.className;
+                if (known) badge.style.cssText = known.style;
+            }
+
+            badge.dataset.materialDetectorZone = zone;
+            badge.textContent = value;
+            badge.style.marginLeft = '0';
+            badge.style.display = value ? 'inline-block' : 'none';
+            if (badge.parentElement !== row) row.appendChild(badge);
+            if (value) visibleBadges.add(badge);
+        });
+
+        Array.from(row.children).forEach(badge => {
+            if (!visibleBadges.has(badge)) badge.style.display = 'none';
+        });
+        row.style.display = visibleBadges.size ? 'flex' : 'none';
     }
 
     function updateSession(force = false) {
